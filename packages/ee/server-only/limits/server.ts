@@ -49,12 +49,9 @@ export const getServerLimits = async ({
   const quota = structuredClone(FREE_PLAN_LIMITS);
   const remaining = structuredClone(FREE_PLAN_LIMITS);
 
-  const subscription = organisation.subscription;
-  const maximumEnvelopeItemCount = organisation.organisationClaim.envelopeItemCount;
-
   return {
     quota: SELFHOSTED_PLAN_LIMITS,
     remaining: SELFHOSTED_PLAN_LIMITS,
-    maximumEnvelopeItemCount,
+    maximumEnvelopeItemCount: Number.MAX_SAFE_INTEGER,
   };
 };

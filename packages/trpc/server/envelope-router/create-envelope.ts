@@ -90,13 +90,6 @@ export const createEnvelopeRouteCaller = async ({
     });
   }
 
-  if (files.length > maximumEnvelopeItemCount) {
-    throw new AppError('ENVELOPE_ITEM_LIMIT_EXCEEDED', {
-      message: `You cannot upload more than ${maximumEnvelopeItemCount} envelope items per envelope`,
-      statusCode: 400,
-    });
-  }
-
   if (files.some((file) => !file.type.startsWith('application/pdf'))) {
     throw new AppError('INVALID_DOCUMENT_FILE', {
       message: 'You cannot upload non-PDF files',

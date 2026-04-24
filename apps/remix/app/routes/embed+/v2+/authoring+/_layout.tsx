@@ -151,7 +151,7 @@ export default function AuthoringLayout() {
             initialValue={{
               quota: PAID_PLAN_LIMITS,
               remaining: PAID_PLAN_LIMITS,
-              maximumEnvelopeItemCount: organisationClaim.envelopeItemCount,
+              maximumEnvelopeItemCount: Number.MAX_SAFE_INTEGER,
             }}
             teamId={team.id}
           >
