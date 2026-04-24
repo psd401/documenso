@@ -24,12 +24,6 @@ export const deleteOrganisationEmailDomainRoute = authenticatedProcedure
       },
     });
 
-    if (!IS_BILLING_ENABLED()) {
-      throw new AppError(AppErrorCode.INVALID_REQUEST, {
-        message: 'Billing is not enabled',
-      });
-    }
-
     const emailDomain = await prisma.emailDomain.findFirst({
       where: {
         id: emailDomainId,

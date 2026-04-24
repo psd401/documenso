@@ -414,33 +414,8 @@ const BillingPlanForm = ({
           </button>
         ))}
 
-        <Link
-          to="https://documen.so/enterprise-cta"
-          target="_blank"
-          className="bg-muted/30 flex items-center space-x-2 rounded-md border p-4"
-        >
-          <div className="flex-1 font-normal">
-            <p className="text-muted-foreground font-medium">
-              <Trans>Enterprise</Trans>
-            </p>
-            <p className="text-muted-foreground flex flex-row items-center gap-1">
-              <Trans>Contact sales here</Trans>
-              <ExternalLinkIcon className="h-4 w-4" />
-            </p>
-          </div>
-        </Link>
       </div>
 
-      <div className="mt-6 text-center">
-        <Link
-          to="https://documenso.com/pricing"
-          className="text-primary hover:text-primary/80 flex items-center justify-center gap-1 text-sm hover:underline"
-          target="_blank"
-        >
-          <Trans>Compare all plans and features in detail</Trans>
-          <ExternalLinkIcon className="h-4 w-4" />
-        </Link>
-      </div>
     </div>
   );
 };

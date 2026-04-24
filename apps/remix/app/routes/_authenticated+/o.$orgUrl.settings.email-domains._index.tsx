@@ -28,10 +28,6 @@ export default function OrganisationSettingsEmailDomains() {
 
   const isEmailDomainsEnabled = organisation.organisationClaim.flags.emailDomains;
 
-  if (!IS_BILLING_ENABLED()) {
-    return null;
-  }
-
   return (
     <div>
       <SettingsHeader

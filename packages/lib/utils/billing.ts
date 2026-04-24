@@ -23,17 +23,5 @@ export const generateStripeOrganisationCreateMetadata = (
  * Throws an error if billing is enabled and no subscription is found.
  */
 export const validateIfSubscriptionIsRequired = (subscription?: Subscription | null) => {
-  const isBillingEnabled = IS_BILLING_ENABLED();
-
-  if (!isBillingEnabled) {
-    return;
-  }
-
-  if (isBillingEnabled && !subscription) {
-    throw new AppError(AppErrorCode.NOT_FOUND, {
-      message: 'Subscription not found',
-    });
-  }
-
   return subscription;
 };

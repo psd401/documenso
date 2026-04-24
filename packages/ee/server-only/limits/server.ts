@@ -52,76 +52,9 @@ export const getServerLimits = async ({
   const subscription = organisation.subscription;
   const maximumEnvelopeItemCount = organisation.organisationClaim.envelopeItemCount;
 
-  if (!IS_BILLING_ENABLED()) {
-    return {
-      quota: SELFHOSTED_PLAN_LIMITS,
-      remaining: SELFHOSTED_PLAN_LIMITS,
-      maximumEnvelopeItemCount,
-    };
-  }
-
-  // Bypass all limits even if plan expired for ENTERPRISE.
-  if (organisation.organisationClaimId === INTERNAL_CLAIM_ID.ENTERPRISE) {
-    return {
-      quota: PAID_PLAN_LIMITS,
-      remaining: PAID_PLAN_LIMITS,
-      maximumEnvelopeItemCount,
-    };
-  }
-
-  // Early return for users with an expired subscription.
-  if (subscription && subscription.status === SubscriptionStatus.INACTIVE) {
-    return {
-      quota: INACTIVE_PLAN_LIMITS,
-      remaining: INACTIVE_PLAN_LIMITS,
-      maximumEnvelopeItemCount,
-    };
-  }
-
-  // Allow unlimited documents for users with an unlimited documents claim.
-  // This also allows "free" claim users without subscriptions if they have this flag.
-  if (organisation.organisationClaim.flags.unlimitedDocuments) {
-    return {
-      quota: PAID_PLAN_LIMITS,
-      remaining: PAID_PLAN_LIMITS,
-      maximumEnvelopeItemCount,
-    };
-  }
-
-  const [documents, directTemplates] = await Promise.all([
-    prisma.envelope.count({
-      where: {
-        type: EnvelopeType.DOCUMENT,
-        team: {
-          organisationId: organisation.id,
-        },
-        createdAt: {
-          gte: DateTime.utc().startOf('month').toJSDate(),
-        },
-        source: {
-          not: DocumentSource.TEMPLATE_DIRECT_LINK,
-        },
-      },
-    }),
-    prisma.envelope.count({
-      where: {
-        type: EnvelopeType.TEMPLATE,
-        team: {
-          organisationId: organisation.id,
-        },
-        directLink: {
-          isNot: null,
-        },
-      },
-    }),
-  ]);
-
-  remaining.documents = Math.max(remaining.documents - documents, 0);
-  remaining.directTemplates = Math.max(remaining.directTemplates - directTemplates, 0);
-
   return {
-    quota,
-    remaining,
+    quota: SELFHOSTED_PLAN_LIMITS,
+    remaining: SELFHOSTED_PLAN_LIMITS,
     maximumEnvelopeItemCount,
   };
 };
