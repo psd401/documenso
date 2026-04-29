@@ -6,6 +6,7 @@ import { createEnvelope } from '@documenso/lib/server-only/envelope/create-envel
 import { extractPdfPlaceholders } from '@documenso/lib/server-only/pdf/auto-place-fields';
 import { normalizePdf } from '@documenso/lib/server-only/pdf/normalize-pdf';
 import type { ApiRequestMetadata } from '@documenso/lib/universal/extract-request-metadata';
+import { convertToPdf } from '@documenso/lib/server-only/utils/convert-to-pdf';
 import { putPdfFileServerSide } from '@documenso/lib/universal/upload/put-file.server';
 
 import { insertFormValuesInPdf } from '../../../lib/server-only/pdf/insert-form-values-in-pdf';
@@ -90,17 +91,40 @@ export const createEnvelopeRouteCaller = async ({
     });
   }
 
-  if (files.some((file) => !file.type.startsWith('application/pdf'))) {
+  const ALLOWED_TYPES = new Set([
+    'application/pdf',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/msword',
+  ]);
+
+  if (files.some((file) => !ALLOWED_TYPES.has(file.type))) {
     throw new AppError('INVALID_DOCUMENT_FILE', {
-      message: 'You cannot upload non-PDF files',
+      message: 'Only PDF and Word documents are allowed',
       statusCode: 400,
     });
   }
 
-  // For each file: normalize, extract & clean placeholders, then upload.
+  const OFFICE_MIME_TO_EXT: Record<string, string> = {
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+    'application/msword': 'doc',
+  };
+
+  // For each file: convert if needed, normalize, extract & clean placeholders, then upload.
   const envelopeItems = await Promise.all(
     files.map(async (file) => {
-      let pdf = Buffer.from(await file.arrayBuffer());
+      let pdf: Buffer;
+      let fileName = file.name;
+      const officeExt = OFFICE_MIME_TO_EXT[file.type];
+
+      if (officeExt) {
+        pdf = await convertToPdf(Buffer.from(await file.arrayBuffer()), officeExt);
+        fileName = fileName.replace(/\.[^.]+$/, '.pdf');
+        if (!fileName.endsWith('.pdf')) {
+          fileName = `${fileName}.pdf`;
+        }
+      } else {
+        pdf = Buffer.from(await file.arrayBuffer());
+      }
 
       if (formValues) {
         // eslint-disable-next-line require-atomic-updates
@@ -118,13 +142,13 @@ export const createEnvelopeRouteCaller = async ({
       const { cleanedPdf, placeholders } = await extractPdfPlaceholders(normalized);
 
       const { documentData } = await putPdfFileServerSide({
-        name: file.name,
+        name: fileName,
         type: 'application/pdf',
         arrayBuffer: async () => Promise.resolve(cleanedPdf),
       });
 
       return {
-        title: file.name,
+        title: fileName,
         documentDataId: documentData.id,
         placeholders,
       };
