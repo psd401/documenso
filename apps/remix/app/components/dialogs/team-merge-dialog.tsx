@@ -75,7 +75,7 @@ export const TeamMergeDialog = ({ sourceTeamIds, onMerged }: TeamMergeDialogProp
       destinationTeamId,
     },
     {
-      enabled: open && sourceTeamIds.length > 0 && (!!destinationTeamId || isCreatingNew),
+      enabled: open && sourceTeamIds.length > 0 && !!destinationTeamId,
     },
   );
 
