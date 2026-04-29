@@ -122,11 +122,26 @@ export const putNormalizedPdfFileServerSide = async (
   file: File,
   options: { flattenForm?: boolean } = {},
 ) => {
-  const buffer = Buffer.from(await file.arrayBuffer());
+  let arrayBuffer = await file.arrayBuffer();
+  let fileName = file.name;
+
+  const officeExt = getOfficeExtension(file);
+  if (officeExt) {
+    const converted = await convertToPdf(Buffer.from(arrayBuffer), officeExt);
+    arrayBuffer = converted.buffer as ArrayBuffer;
+    fileName = fileName.replace(/\.[^.]+$/, '.pdf');
+    if (!fileName.endsWith('.pdf')) {
+      fileName = `${fileName}.pdf`;
+    }
+  }
+
+  const buffer = Buffer.from(arrayBuffer);
 
   const normalized = await normalizePdf(buffer, options);
 
-  const fileName = file.name.endsWith('.pdf') ? file.name : `${file.name}.pdf`;
+  if (!fileName.endsWith('.pdf')) {
+    fileName = `${fileName}.pdf`;
+  }
 
   const documentData = await putFileServerSide({
     name: fileName,
