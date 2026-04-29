@@ -1,4 +1,4 @@
-// ABOUTME: Tests for decrypt-pdf utility covering successful decryption, wrong password, and non-encrypted PDF handling.
+// ABOUTME: Tests for decrypt-pdf utility covering successful decryption, wrong password, and cleanup.
 // ABOUTME: Mocks find-binary and child_process to avoid real qpdf dependency in tests.
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -14,9 +14,8 @@ vi.mock('child_process', () => ({
 vi.mock('fs/promises', () => ({
   writeFile: vi.fn().mockResolvedValue(undefined),
   readFile: vi.fn().mockResolvedValue(Buffer.from('decrypted pdf content')),
-  unlink: vi.fn().mockResolvedValue(undefined),
+  rm: vi.fn().mockResolvedValue(undefined),
   mkdtemp: vi.fn().mockResolvedValue('/tmp/decrypt-abc123'),
-  constants: { X_OK: 1 },
 }));
 
 describe('decryptPdf', () => {
@@ -37,8 +36,7 @@ describe('decryptPdf', () => {
     });
 
     const { decryptPdf } = await import('./decrypt-pdf');
-    const input = Buffer.from('encrypted pdf');
-    const result = await decryptPdf(input, 'secret');
+    const result = await decryptPdf(Buffer.from('encrypted pdf'), 'secret');
 
     expect(result).toBeInstanceOf(Buffer);
     expect(result.toString()).toBe('decrypted content');
@@ -94,7 +92,7 @@ describe('decryptPdf', () => {
     expect(capturedArgs).toContain('--password=');
   });
 
-  it('should clean up temp files after success', async () => {
+  it('should clean up temp directory after success', async () => {
     const childProcess = await import('child_process');
     const fsPromises = await import('fs/promises');
 
@@ -107,10 +105,10 @@ describe('decryptPdf', () => {
     const { decryptPdf } = await import('./decrypt-pdf');
     await decryptPdf(Buffer.from('pdf'), 'pass');
 
-    expect(fsPromises.unlink).toHaveBeenCalledTimes(2);
+    expect(fsPromises.rm).toHaveBeenCalledWith('/tmp/decrypt-abc123', { recursive: true, force: true });
   });
 
-  it('should clean up temp files after failure', async () => {
+  it('should clean up temp directory after failure', async () => {
     const childProcess = await import('child_process');
     const fsPromises = await import('fs/promises');
 
@@ -124,6 +122,6 @@ describe('decryptPdf', () => {
     const { decryptPdf } = await import('./decrypt-pdf');
 
     await expect(decryptPdf(Buffer.from('pdf'), 'pass')).rejects.toBeDefined();
-    expect(fsPromises.unlink).toHaveBeenCalledTimes(2);
+    expect(fsPromises.rm).toHaveBeenCalledWith('/tmp/decrypt-abc123', { recursive: true, force: true });
   });
 });

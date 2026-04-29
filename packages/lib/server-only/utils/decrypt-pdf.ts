@@ -1,21 +1,21 @@
 // ABOUTME: Decrypts password-protected PDF files using qpdf as an external process.
-// ABOUTME: Writes to temp files, invokes qpdf, reads output, and cleans up regardless of outcome.
+// ABOUTME: Writes to a private temp directory, invokes qpdf --decrypt, reads output, and cleans up the whole directory.
 
 import * as childProcess from 'child_process';
-import { constants, mkdtemp, readFile, unlink, writeFile } from 'fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
 
 import { AppError } from '../../errors/app-error';
 import { findBinary } from './find-binary';
 
-// qpdf exit codes: 0 = success, 2 = bad password, 3+ = other errors
+const QPDF_TIMEOUT_MS = 30_000;
 const QPDF_EXIT_BAD_PASSWORD = 2;
 
 const execFileAsync = (
   cmd: string,
   args: string[],
-  options: { timeout?: number },
+  options: { timeout?: number; killSignal?: NodeJS.Signals },
 ): Promise<void> =>
   new Promise((resolve, reject) => {
     childProcess.execFile(cmd, args, options, (err) => {
@@ -34,35 +34,35 @@ export const decryptPdf = async (pdf: Buffer, password = ''): Promise<Buffer> =>
   const inputPath = join(tmpDir, 'input.pdf');
   const outputPath = join(tmpDir, 'output.pdf');
 
-  const cleanup = async () => {
-    await unlink(inputPath).catch(() => undefined);
-    await unlink(outputPath).catch(() => undefined);
-  };
-
-  await writeFile(inputPath, pdf);
-
   try {
+    await writeFile(inputPath, pdf, { mode: 0o600 });
+
     await execFileAsync(
       qpdfPath,
       [`--password=${password}`, '--decrypt', inputPath, outputPath],
-      { timeout: 30_000 },
+      { timeout: QPDF_TIMEOUT_MS, killSignal: 'SIGKILL' },
     );
+
+    return await readFile(outputPath);
   } catch (err: any) {
-    await cleanup();
+    if (err instanceof AppError) throw err;
+
+    if (err?.killed) {
+      throw new AppError('DECRYPTION_FAILED', {
+        message: 'PDF decryption timed out',
+      });
+    }
 
     if (err?.code === QPDF_EXIT_BAD_PASSWORD) {
       throw new AppError('ENCRYPTED_DOCUMENT_REQUIRES_PASSWORD', {
-        message: 'The PDF requires a valid password to decrypt.',
+        message: 'This PDF is password-protected. Please remove the password or export an unencrypted version.',
       });
     }
 
     throw new AppError('DECRYPTION_FAILED', {
       message: `qpdf decryption failed: ${err?.message ?? String(err)}`,
     });
+  } finally {
+    await rm(tmpDir, { recursive: true, force: true }).catch(() => undefined);
   }
-
-  const output = await readFile(outputPath);
-  await cleanup();
-
-  return output;
 };

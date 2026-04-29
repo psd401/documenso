@@ -1,4 +1,4 @@
-// ABOUTME: Tests for convert-to-pdf utility covering successful conversion, timeout, failure, and temp file cleanup.
+// ABOUTME: Tests for convert-to-pdf utility covering validation, conversion, timeout, and cleanup.
 // ABOUTME: Mocks find-binary and child_process to avoid real LibreOffice dependency in tests.
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -14,10 +14,14 @@ vi.mock('child_process', () => ({
 vi.mock('fs/promises', () => ({
   writeFile: vi.fn().mockResolvedValue(undefined),
   readFile: vi.fn().mockResolvedValue(Buffer.from('pdf output')),
-  unlink: vi.fn().mockResolvedValue(undefined),
+  rm: vi.fn().mockResolvedValue(undefined),
   mkdtemp: vi.fn().mockResolvedValue('/tmp/convert-abc123'),
-  constants: { X_OK: 1 },
 }));
+
+// Valid DOCX magic bytes (PK ZIP header)
+const VALID_DOCX = Buffer.concat([Buffer.from([0x50, 0x4b, 0x03, 0x04]), Buffer.alloc(100)]);
+// Valid DOC magic bytes (CFBF header)
+const VALID_DOC = Buffer.concat([Buffer.from([0xd0, 0xcf, 0x11, 0xe0]), Buffer.alloc(100)]);
 
 describe('convertToPdf', () => {
   beforeEach(async () => {
@@ -37,10 +41,43 @@ describe('convertToPdf', () => {
     });
 
     const { convertToPdf } = await import('./convert-to-pdf');
-    const result = await convertToPdf(Buffer.from('docx content'), 'docx');
+    const result = await convertToPdf(VALID_DOCX, 'docx');
 
     expect(result).toBeInstanceOf(Buffer);
     expect(result.toString()).toBe('converted pdf');
+  });
+
+  it('should accept valid .doc files with CFBF header', async () => {
+    const childProcess = await import('child_process');
+    const fsPromises = await import('fs/promises');
+
+    vi.mocked(fsPromises.readFile).mockResolvedValue(Buffer.from('pdf') as any);
+    vi.mocked(childProcess.execFile).mockImplementation((_cmd, _args, _opts, callback: any) => {
+      callback(null, '', '');
+      return {} as any;
+    });
+
+    const { convertToPdf } = await import('./convert-to-pdf');
+    const result = await convertToPdf(VALID_DOC, 'doc');
+    expect(result).toBeInstanceOf(Buffer);
+  });
+
+  it('should reject files with invalid magic bytes', async () => {
+    const { convertToPdf } = await import('./convert-to-pdf');
+    const notDocx = Buffer.from('This is plain text, not a DOCX');
+
+    await expect(convertToPdf(notDocx, 'docx')).rejects.toMatchObject({
+      code: 'INVALID_DOCUMENT_FILE',
+    });
+  });
+
+  it('should reject files larger than 25MB', async () => {
+    const { convertToPdf } = await import('./convert-to-pdf');
+    const largeBuffer = Buffer.concat([Buffer.from([0x50, 0x4b, 0x03, 0x04]), Buffer.alloc(26 * 1024 * 1024)]);
+
+    await expect(convertToPdf(largeBuffer, 'docx')).rejects.toMatchObject({
+      code: 'CONVERSION_FAILED',
+    });
   });
 
   it('should invoke soffice with --convert-to pdf and --outdir flags', async () => {
@@ -56,7 +93,7 @@ describe('convertToPdf', () => {
     });
 
     const { convertToPdf } = await import('./convert-to-pdf');
-    await convertToPdf(Buffer.from('content'), 'docx');
+    await convertToPdf(VALID_DOCX, 'docx');
 
     expect(capturedArgs).toContain('--convert-to');
     expect(capturedArgs).toContain('pdf');
@@ -75,7 +112,7 @@ describe('convertToPdf', () => {
     });
 
     const { convertToPdf } = await import('./convert-to-pdf');
-    await expect(convertToPdf(Buffer.from('content'), 'docx')).rejects.toMatchObject({
+    await expect(convertToPdf(VALID_DOCX, 'docx')).rejects.toMatchObject({
       code: 'CONVERSION_FAILED',
     });
   });
@@ -91,12 +128,12 @@ describe('convertToPdf', () => {
     });
 
     const { convertToPdf } = await import('./convert-to-pdf');
-    await expect(convertToPdf(Buffer.from('content'), 'docx')).rejects.toMatchObject({
+    await expect(convertToPdf(VALID_DOCX, 'docx')).rejects.toMatchObject({
       code: 'CONVERSION_TIMEOUT',
     });
   });
 
-  it('should clean up temp files after success', async () => {
+  it('should clean up temp directory after success', async () => {
     const childProcess = await import('child_process');
     const fsPromises = await import('fs/promises');
 
@@ -107,12 +144,12 @@ describe('convertToPdf', () => {
     });
 
     const { convertToPdf } = await import('./convert-to-pdf');
-    await convertToPdf(Buffer.from('content'), 'docx');
+    await convertToPdf(VALID_DOCX, 'docx');
 
-    expect(fsPromises.unlink).toHaveBeenCalledTimes(2);
+    expect(fsPromises.rm).toHaveBeenCalledWith('/tmp/convert-abc123', { recursive: true, force: true });
   });
 
-  it('should clean up temp files after failure', async () => {
+  it('should clean up temp directory after failure', async () => {
     const childProcess = await import('child_process');
     const fsPromises = await import('fs/promises');
 
@@ -124,8 +161,8 @@ describe('convertToPdf', () => {
     });
 
     const { convertToPdf } = await import('./convert-to-pdf');
-    await expect(convertToPdf(Buffer.from('content'), 'docx')).rejects.toBeDefined();
+    await expect(convertToPdf(VALID_DOCX, 'docx')).rejects.toBeDefined();
 
-    expect(fsPromises.unlink).toHaveBeenCalledTimes(2);
+    expect(fsPromises.rm).toHaveBeenCalledWith('/tmp/convert-abc123', { recursive: true, force: true });
   });
 });

@@ -2,7 +2,9 @@
 // ABOUTME: Handles typed signatures (with auto-sized font via fitFontSize) and drawn/image signatures.
 import Konva from 'konva';
 
-import { DEFAULT_SIGNATURE_TEXT_FONT_SIZE, MIN_HANDWRITING_FONT_SIZE } from '../../constants/pdf';
+import { DEFAULT_SIGNATURE_TEXT_FONT_SIZE } from '../../constants/pdf';
+
+const AUTO_FIT_MIN_FONT_SIZE = 10;
 import { AppError } from '../../errors/app-error';
 import {
   createFieldHoverInteraction,
@@ -88,7 +90,7 @@ const createFieldSignature = (
         fieldWidth,
         fieldHeight,
         configuredFontSize,
-        MIN_HANDWRITING_FONT_SIZE,
+        AUTO_FIT_MIN_FONT_SIZE,
       );
     }
 
@@ -222,7 +224,7 @@ export const renderSignatureFieldElement = (
         rectWidth,
         rectHeight,
         maxFontSize,
-        MIN_HANDWRITING_FONT_SIZE,
+        AUTO_FIT_MIN_FONT_SIZE,
       );
       fieldSignature.fontSize(autoFontSize);
     }
