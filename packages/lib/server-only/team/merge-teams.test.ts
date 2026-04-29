@@ -1,25 +1,32 @@
-// ABOUTME: Unit tests for the getMergeImpact helper in the team merge feature.
-// ABOUTME: Mocks @documenso/prisma to verify count aggregation and member dedup logic.
+// ABOUTME: Unit tests for getMergeImpact and mergeTeams validation paths in the team merge feature.
+// ABOUTME: Mocks @documenso/prisma to verify count aggregation, member dedup logic, and input validation.
 import { OrganisationGroupType, TeamMemberRole } from '@prisma/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const mockPrisma = {
-  envelope: { count: vi.fn() },
-  folder: { count: vi.fn() },
-  teamGroup: { findMany: vi.fn(), count: vi.fn() },
+const mockTx = {
+  envelope: { count: vi.fn(), updateMany: vi.fn() },
+  folder: { count: vi.fn(), updateMany: vi.fn() },
+  teamGroup: { findMany: vi.fn(), count: vi.fn(), createMany: vi.fn() },
   webhook: { count: vi.fn() },
   apiToken: { count: vi.fn() },
   teamEmail: { count: vi.fn() },
-  teamGlobalSettings: { count: vi.fn() },
+  teamGlobalSettings: { count: vi.fn(), create: vi.fn(), deleteMany: vi.fn() },
   organisation: { findFirst: vi.fn() },
-  team: { count: vi.fn(), findFirst: vi.fn() },
+  team: { count: vi.fn(), findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), delete: vi.fn() },
+  organisationGroup: { deleteMany: vi.fn() },
+  $queryRaw: vi.fn(),
+};
+
+const mockPrisma = {
+  ...mockTx,
+  $transaction: vi.fn(),
 };
 
 vi.mock('@documenso/prisma', () => ({
   prisma: mockPrisma,
 }));
 
-const { getMergeImpact } = await import('./merge-teams');
+const { getMergeImpact, mergeTeams } = await import('./merge-teams');
 
 describe('getMergeImpact', () => {
   beforeEach(() => {
@@ -163,6 +170,59 @@ describe('getMergeImpact', () => {
         teamId: 20,
         organisationGroupId: { in: expect.arrayContaining(['grp-1', 'grp-2']) },
       },
+    });
+  });
+});
+
+describe('mergeTeams', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    // Default: $transaction passes the callback through with mockTx as the client.
+    mockPrisma.$transaction.mockImplementation(
+      async (callback: (tx: typeof mockTx) => Promise<unknown>) => callback(mockTx),
+    );
+  });
+
+  it('rejects when source teams belong to a different org', async () => {
+    // Organisation lookup succeeds.
+    mockTx.organisation.findFirst.mockResolvedValueOnce({ id: 'org-1' });
+
+    // findMany returns fewer teams than requested — one team doesn't belong to this org.
+    mockTx.team.findMany.mockResolvedValueOnce([{ id: 10, teamGlobalSettingsId: 'ts-10' }]);
+
+    await expect(
+      mergeTeams({
+        userId: 1,
+        organisationId: 'org-1',
+        sourceTeamIds: [10, 99],
+        destinationTeamId: 10,
+      }),
+    ).rejects.toMatchObject({
+      message: 'One or more source teams do not belong to this organisation.',
+    });
+  });
+
+  it('rejects when all source teams equal the destination team', async () => {
+    // Organisation lookup succeeds.
+    mockTx.organisation.findFirst.mockResolvedValueOnce({ id: 'org-1' });
+
+    // findMany returns exactly the one team that is also the destination.
+    mockTx.team.findMany.mockResolvedValueOnce([{ id: 10, teamGlobalSettingsId: 'ts-10' }]);
+
+    // Destination validation succeeds.
+    mockTx.team.findFirst.mockResolvedValueOnce({ id: 10 });
+    mockTx.$queryRaw.mockResolvedValueOnce([{ id: 10 }]);
+
+    await expect(
+      mergeTeams({
+        userId: 1,
+        organisationId: 'org-1',
+        sourceTeamIds: [10],
+        destinationTeamId: 10,
+      }),
+    ).rejects.toMatchObject({
+      message: 'No source teams remaining after excluding the destination team.',
     });
   });
 });
