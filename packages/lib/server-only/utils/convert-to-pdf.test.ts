@@ -16,6 +16,7 @@ vi.mock('fs/promises', () => ({
   readFile: vi.fn().mockResolvedValue(Buffer.from('pdf output')),
   rm: vi.fn().mockResolvedValue(undefined),
   mkdtemp: vi.fn().mockResolvedValue('/tmp/convert-abc123'),
+  access: vi.fn().mockResolvedValue(undefined),
 }));
 
 // Valid DOCX magic bytes (PK ZIP header)

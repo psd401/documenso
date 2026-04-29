@@ -145,7 +145,7 @@ describe('putPdfFileServerSide', () => {
     expect(result.filePageCount).toBe(4);
   });
 
-  it('should no longer throw INVALID_DOCUMENT_FILE for encrypted PDFs', async () => {
+  it('should not throw INVALID_DOCUMENT_FILE for encrypted PDFs', async () => {
     const { PDF } = await import('@libpdf/core');
     const { decryptPdf } = await import('../../server-only/utils/decrypt-pdf');
 

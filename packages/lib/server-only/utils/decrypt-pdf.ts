@@ -53,7 +53,7 @@ export const decryptPdf = async (pdf: Buffer, password = ''): Promise<Buffer> =>
       });
     }
 
-    if (err?.code === QPDF_EXIT_BAD_PASSWORD) {
+    if (Number(err?.code) === QPDF_EXIT_BAD_PASSWORD) {
       throw new AppError('ENCRYPTED_DOCUMENT_REQUIRES_PASSWORD', {
         message: 'This PDF is password-protected. Please remove the password or export an unencrypted version.',
       });

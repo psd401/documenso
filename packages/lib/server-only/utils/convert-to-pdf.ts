@@ -2,7 +2,7 @@
 // ABOUTME: Validates magic bytes and size before conversion, uses temp files, and cleans up.
 
 import * as childProcess from 'child_process';
-import { mkdtemp, readFile, rm, writeFile } from 'fs/promises';
+import { access, mkdtemp, readFile, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
 
@@ -10,6 +10,13 @@ import { AppError } from '../../errors/app-error';
 import { findBinary } from './find-binary';
 
 const CONVERSION_TIMEOUT_MS = 60_000;
+
+let conversionQueue: Promise<void> = Promise.resolve();
+const enqueue = <T>(fn: () => Promise<T>): Promise<T> => {
+  const result = conversionQueue.then(fn, fn);
+  conversionQueue = result.then(() => undefined, () => undefined);
+  return result;
+};
 const MAX_CONVERSION_SIZE = 25 * 1024 * 1024;
 
 const DOCX_MAGIC = Buffer.from([0x50, 0x4b, 0x03, 0x04]); // PK ZIP header (OOXML)
@@ -58,11 +65,19 @@ export const convertToPdf = async (input: Buffer, extension: string): Promise<Bu
   try {
     await writeFile(inputPath, input);
 
-    await execFileAsync(
-      sofficePath,
-      ['--headless', '--convert-to', 'pdf', '--outdir', tmpDir, inputPath],
-      { timeout: CONVERSION_TIMEOUT_MS },
+    await enqueue(() =>
+      execFileAsync(
+        sofficePath,
+        ['--headless', '--convert-to', 'pdf', '--outdir', tmpDir, inputPath],
+        { timeout: CONVERSION_TIMEOUT_MS },
+      ),
     );
+
+    await access(outputPath).catch(() => {
+      throw new AppError('CONVERSION_FAILED', {
+        message: `LibreOffice produced no output for ${extension} file. The file may be corrupt or unsupported.`,
+      });
+    });
 
     return await readFile(outputPath);
   } catch (err: any) {

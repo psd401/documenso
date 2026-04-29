@@ -7,7 +7,8 @@ import { extractPdfPlaceholders } from '@documenso/lib/server-only/pdf/auto-plac
 import { normalizePdf } from '@documenso/lib/server-only/pdf/normalize-pdf';
 import type { ApiRequestMetadata } from '@documenso/lib/universal/extract-request-metadata';
 import { convertToPdf } from '@documenso/lib/server-only/utils/convert-to-pdf';
-import { putPdfFileServerSide } from '@documenso/lib/universal/upload/put-file.server';
+import { putFileServerSide } from '@documenso/lib/universal/upload/put-file.server';
+import { createDocumentData } from '@documenso/lib/server-only/document-data/create-document-data';
 
 import { insertFormValuesInPdf } from '../../../lib/server-only/pdf/insert-form-values-in-pdf';
 import { authenticatedProcedure } from '../trpc';
@@ -141,10 +142,15 @@ export const createEnvelopeRouteCaller = async ({
       // Todo: Embeds - Might need to add this for client-side embeds in the future.
       const { cleanedPdf, placeholders } = await extractPdfPlaceholders(normalized);
 
-      const { documentData } = await putPdfFileServerSide({
+      const { type: storageType, data: storageData } = await putFileServerSide({
         name: fileName,
         type: 'application/pdf',
         arrayBuffer: async () => Promise.resolve(cleanedPdf),
+      });
+
+      const documentData = await createDocumentData({
+        type: storageType,
+        data: storageData,
       });
 
       return {

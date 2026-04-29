@@ -18,10 +18,6 @@ import { uploadS3File } from './server-actions';
 const OFFICE_EXTENSIONS: Record<string, string> = {
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
   'application/msword': 'doc',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
-  'application/vnd.ms-excel': 'xls',
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
-  'application/vnd.ms-powerpoint': 'ppt',
 };
 
 const getOfficeExtension = (file: File): string | null => {
@@ -54,7 +50,7 @@ export const putPdfFileServerSide = async (file: File, initialData?: string) => 
   const officeExt = getOfficeExtension(file);
   if (officeExt) {
     const converted = await convertToPdf(Buffer.from(arrayBuffer), officeExt);
-    arrayBuffer = converted.buffer as ArrayBuffer;
+    arrayBuffer = converted.buffer.slice(converted.byteOffset, converted.byteOffset + converted.byteLength);
     fileName = fileName.replace(/\.[^.]+$/, '.pdf');
     if (!fileName.endsWith('.pdf')) {
       fileName = `${fileName}.pdf`;
@@ -69,7 +65,7 @@ export const putPdfFileServerSide = async (file: File, initialData?: string) => 
 
   if (pdf.isEncrypted) {
     const decrypted = await decryptPdf(Buffer.from(arrayBuffer));
-    arrayBuffer = decrypted.buffer as ArrayBuffer;
+    arrayBuffer = decrypted.buffer.slice(decrypted.byteOffset, decrypted.byteOffset + decrypted.byteLength);
 
     const decryptedPdf = await PDF.load(new Uint8Array(arrayBuffer)).catch((e) => {
       console.error(`PDF upload parse error after decryption: ${e.message}`);
@@ -128,7 +124,7 @@ export const putNormalizedPdfFileServerSide = async (
   const officeExt = getOfficeExtension(file);
   if (officeExt) {
     const converted = await convertToPdf(Buffer.from(arrayBuffer), officeExt);
-    arrayBuffer = converted.buffer as ArrayBuffer;
+    arrayBuffer = converted.buffer.slice(converted.byteOffset, converted.byteOffset + converted.byteLength);
     fileName = fileName.replace(/\.[^.]+$/, '.pdf');
     if (!fileName.endsWith('.pdf')) {
       fileName = `${fileName}.pdf`;
