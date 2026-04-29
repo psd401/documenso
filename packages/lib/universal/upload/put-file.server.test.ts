@@ -184,10 +184,8 @@ describe('putPdfFileServerSide', () => {
   });
 
   it('should still throw INVALID_DOCUMENT_FILE when PDF.load fails for non-PDF bytes', async () => {
-    // For DOCX detection: PDF.load fails → INVALID_DOCUMENT_FILE is thrown
-    // But we need the file to look like a PDF (not docx) so DOCX conversion isn't triggered.
-    // The mock rejects so the catch block in putPdfFileServerSide fires.
     const { PDF } = await import('@libpdf/core');
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
     vi.mocked(PDF.load).mockRejectedValue(new Error('not a pdf'));
 
     const { putPdfFileServerSide } = await import('./put-file.server');
@@ -196,6 +194,7 @@ describe('putPdfFileServerSide', () => {
     await expect(putPdfFileServerSide(file)).rejects.toMatchObject({
       code: 'INVALID_DOCUMENT_FILE',
     });
+    spy.mockRestore();
   });
 
   it('should ensure the file stored has a .pdf extension after DOCX conversion', async () => {
