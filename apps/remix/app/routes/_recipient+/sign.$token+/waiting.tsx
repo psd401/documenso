@@ -56,7 +56,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
       team = await getTeamById({
         userId: user.id,
         teamId: document.teamId,
-      });
+      }).catch(() => null);
     }
   }
 
@@ -78,14 +78,14 @@ export default function WaitingForTurnToSignPage({ loaderData }: Route.Component
           <Trans>Waiting for Your Turn</Trans>
         </h2>
 
-        <p className="mt-2 text-sm text-muted-foreground">
+        <p className="text-muted-foreground mt-2 text-sm">
           <Trans>
             It's currently not your turn to sign. You will receive an email with instructions once
             it's your turn to sign the document.
           </Trans>
         </p>
 
-        <p className="mt-4 text-sm text-muted-foreground">
+        <p className="text-muted-foreground mt-4 text-sm">
           <Trans>Please check your email for updates.</Trans>
         </p>
 
