@@ -3,8 +3,6 @@
 import Konva from 'konva';
 
 import { DEFAULT_SIGNATURE_TEXT_FONT_SIZE } from '../../constants/pdf';
-
-const AUTO_FIT_MIN_FONT_SIZE = 10;
 import { AppError } from '../../errors/app-error';
 import {
   createFieldHoverInteraction,
@@ -13,7 +11,14 @@ import {
 } from './field-generic-items';
 import { calculateFieldPosition } from './field-renderer';
 import type { FieldToRender, RenderFieldElementOptions } from './field-renderer';
-import { fitFontSize } from './fit-font-size';
+import { type TextMeasurer, fitFontSize } from './fit-font-size';
+
+const AUTO_FIT_MIN_FONT_SIZE = 10;
+
+const konvaTextMeasurer: TextMeasurer = (text, fontFamily, fontSize, width) => {
+  const probe = new Konva.Text({ text, fontFamily, fontSize, width, wrap: 'char' });
+  return probe.height();
+};
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let SkiaImage: any = undefined;
@@ -91,6 +96,7 @@ const createFieldSignature = (
         fieldHeight,
         configuredFontSize,
         AUTO_FIT_MIN_FONT_SIZE,
+        konvaTextMeasurer,
       );
     }
 
@@ -225,6 +231,7 @@ export const renderSignatureFieldElement = (
         rectHeight,
         maxFontSize,
         AUTO_FIT_MIN_FONT_SIZE,
+        konvaTextMeasurer,
       );
       fieldSignature.fontSize(autoFontSize);
     }
