@@ -59,14 +59,15 @@ license.documenso.com → 127.0.0.1 (via extra_hosts)
 
 These must be done **before cutover day**, not during:
 
-- [ ] **Dockerfile** — verify a working Dockerfile exists for the fork. The upstream repo's Dockerfile may need adaptation. Build and test locally: `docker build -t documenso-psd401:latest .`
-- [ ] **Org ID fix** — update `PSD401_ORG_ID` in `packages/lib/server-only/user/create-user.ts` from `'org_psd401'` to `'org_psd401district'`. Verify `PSD401_MEMBER_GROUP_ID` matches prod: `sudo docker exec psd401-stack-postgres-1 psql -U documenso -d documenso -c "SELECT id FROM \"OrganisationGroup\" WHERE \"organisationId\" = 'org_psd401district' AND type = 'INTERNAL_ORGANISATION' AND \"organisationRole\" = 'MEMBER';"`
-- [ ] **Image build** — choose build strategy (A/B/C below), build the image with the org ID fix, push/transfer to EC2
-- [ ] **Image pull test** — verify EC2 can pull the image: `sudo docker pull <image:tag>`
-- [ ] **Schema path** — find the absolute path to `schema.prisma` inside the container: `sudo docker run --rm <image:tag> find / -name schema.prisma 2>/dev/null`
-- [ ] **Dev sign-in button** — verify the fork's sign-in page does NOT show the dev admin button when `NEXT_PRIVATE_GOOGLE_CLIENT_ID` is set. Check `apps/remix/app/components/forms/signin.tsx` — the `isGoogleSSOEnabled` guard should hide it.
-- [ ] **Signing passphrase rotation** — generate a new passphrase, re-export cert.p12, test on-prem first
-- [ ] **On-prem validation current** — confirm 10.0.70.60 is running the latest fork code and all features work
+- [x] **Dockerfile** — `docker/Dockerfile` builds successfully. Image: `ghcr.io/psd401/documenso:latest` (2.6GB, commit 9cdc0b017)
+- [x] **Org ID fix** — `PSD401_ORG_ID` updated to `'org_psd401district'`, `PSD401_MEMBER_GROUP_ID` confirmed as `'org_group_psd401_member'`. Baked into image.
+- [x] **Image build** — built locally, pushed to GHCR at `ghcr.io/psd401/documenso:latest`
+- [ ] **Image pull test** — verify EC2 can pull: `sudo docker pull ghcr.io/psd401/documenso:latest` (may need GHCR auth on EC2)
+- [x] **Schema path** — confirmed: `/app/packages/prisma/schema.prisma` (from Dockerfile line 130)
+- [x] **Dev sign-in button** — verified: dev button hidden when `NEXT_PRIVATE_GOOGLE_CLIENT_ID` is set. Only Google SSO shows.
+- [ ] **Signing passphrase rotation** — still using upstream default. Can rotate post-cutover.
+- [x] **On-prem validation** — all features tested against prod data copy on 10.0.70.60
+- [x] **Local Docker test** — image boots, migrations apply, sign-in page shows correct branding, billing disabled, signup disabled, no errors
 
 ---
 
@@ -196,8 +197,8 @@ cd /home/ubuntu/psd401-stack
 sudo docker compose stop documenso
 
 # 2. Update docker-compose.yml — change image and feature flags
-#    Replace <FORK_IMAGE> with the actual image name from Phase 1
-sed -i 's|image: documenso/documenso:latest|image: <FORK_IMAGE>|' docker-compose.yml
+#    Replace ghcr.io/psd401/documenso:latest with the actual image name from Phase 1
+sed -i 's|image: documenso/documenso:latest|image: ghcr.io/psd401/documenso:latest|' docker-compose.yml
 sed -i 's|NEXT_PUBLIC_FEATURE_BILLING_ENABLED: "true"|NEXT_PUBLIC_FEATURE_BILLING_ENABLED: "false"|' docker-compose.yml
 sed -i 's|NEXT_PUBLIC_DISABLE_SIGNUP: "false"|NEXT_PUBLIC_DISABLE_SIGNUP: "true"|' docker-compose.yml
 
@@ -205,31 +206,35 @@ sed -i 's|NEXT_PUBLIC_DISABLE_SIGNUP: "false"|NEXT_PUBLIC_DISABLE_SIGNUP: "true"
 grep -E 'image:.*documenso|BILLING_ENABLED|DISABLE_SIGNUP' docker-compose.yml
 # Should show the fork image, "false" for billing, "true" for disable-signup
 
-# 4. Pull the new image
+# 4. Log Docker into GHCR (needed to pull from psd401 private registry)
+#    Generate a PAT at https://github.com/settings/tokens with read:packages scope
+echo "<GHCR_PAT>" | sudo docker login ghcr.io -u psd401 --password-stdin
+
+# 5. Pull the new image
 sudo docker compose pull documenso
 
-# 5. Verify the correct image was pulled
+# 6. Verify the correct image was pulled
 sudo docker compose images documenso
-# Image tag must match <FORK_IMAGE>, not documenso/documenso:latest
+# Image tag must match ghcr.io/psd401/documenso:latest, not documenso/documenso:latest
 
-# 6. Run Prisma migrations BEFORE starting the app
+# 7. Run Prisma migrations BEFORE starting the app
 #    Use a one-shot container so the app doesn't race with migrations
 sudo docker compose run --rm documenso npx prisma migrate deploy --schema /app/packages/prisma/schema.prisma
 # MUST output "All migrations have been successfully applied."
 # If it fails, go to Rollback Plan. Do NOT proceed.
 
-# 7. Verify migrations applied
+# 8. Verify migrations applied
 sudo docker exec psd401-stack-postgres-1 psql -U documenso -d documenso -c "SELECT migration_name, finished_at FROM \"_prisma_migrations\" ORDER BY finished_at DESC LIMIT 3;"
 # Should show both 20260401 and 20260408 migrations with finished_at timestamps
 
-# 8. Lock out external (non-psd401) user accounts
+# 9. Lock out external (non-psd401) user accounts
 sudo docker exec psd401-stack-postgres-1 psql -U documenso -d documenso -c "UPDATE \"User\" SET password = NULL WHERE email IN ('swanpen4@comcast.net', 'stefanie.santie@gmail.com', 'kortni.anderson97@gmail.com', 'melanie.niebuhr26@gmail.com', 'mariabrowning@yahoo.com', 'jlentrichia@gmail.com', 'mandadaw@hotmail.com');"
 # Should output: UPDATE 7
 
-# 9. Start the new container
+# 10. Start the new container
 sudo docker compose up -d documenso
 
-# 9. Wait for the app to be ready
+# 11. Wait for the app to be ready
 sleep 10
 sudo docker compose logs documenso --tail=5
 # Should show startup messages, no crash loops or errors
