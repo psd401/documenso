@@ -62,34 +62,11 @@ export const SignInForm = ({ className, isGoogleSSOEnabled, returnTo }: SignInFo
     }
   };
 
-  const onDevSignIn = async () => {
-    try {
-      setIsLoading(true);
-
-      await authClient.emailPassword.signIn({
-        email: 'admin@psd401.net',
-        password: 'admin123',
-        redirectPath,
-      });
-    } catch {
-      setIsLoading(false);
-
-      toast({
-        title: _(msg`Dev sign-in failed`),
-        description: _(msg`Check that the dev admin account exists.`),
-        variant: 'destructive',
-      });
-    }
-  };
-
   if (!isGoogleSSOEnabled) {
     return (
       <div className={cn('flex w-full flex-col gap-y-4', className)}>
-        <Button type="button" size="lg" loading={isLoading} onClick={onDevSignIn}>
-          <Trans>Dev Sign In (Admin)</Trans>
-        </Button>
-        <p className="text-muted-foreground text-center text-xs">
-          Google OAuth not configured. Using dev admin account.
+        <p className="text-muted-foreground text-center text-sm">
+          <Trans>Google sign-in is not configured. Please contact your administrator.</Trans>
         </p>
       </div>
     );

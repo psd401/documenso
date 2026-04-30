@@ -117,6 +117,8 @@ export const ConfigureDocumentUpload = ({ isSubmitting = false }: ConfigureDocum
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     accept: {
       'application/pdf': ['.pdf'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+      'application/msword': ['.doc'],
     },
     maxSize: APP_DOCUMENT_UPLOAD_SIZE_LIMIT * 1024 * 1024,
     multiple: false,
@@ -145,7 +147,7 @@ export const ConfigureDocumentUpload = ({ isSubmitting = false }: ConfigureDocum
                     <div
                       {...getRootProps()}
                       className={cn(
-                        'relative flex min-h-[160px] cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-border bg-background transition',
+                        'border-border bg-background relative flex min-h-[160px] cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed transition',
                         {
                           'border-primary/50 bg-primary/5': isDragActive,
                           'hover:bg-muted/30':
@@ -194,21 +196,21 @@ export const ConfigureDocumentUpload = ({ isSubmitting = false }: ConfigureDocum
                   </FormControl>
 
                   {isLoading && (
-                    <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-background/50">
-                      <Loader className="h-10 w-10 animate-spin text-muted-foreground" />
+                    <div className="bg-background/50 absolute inset-0 flex items-center justify-center rounded-lg">
+                      <Loader className="text-muted-foreground h-10 w-10 animate-spin" />
                     </div>
                   )}
                 </div>
               ) : (
                 <div className="mt-2 rounded-lg border p-4">
                   <div className="flex items-center gap-x-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-md bg-primary/10 text-primary">
+                    <div className="bg-primary/10 text-primary flex h-12 w-12 items-center justify-center rounded-md">
                       <FileText className="h-6 w-6" />
                     </div>
 
                     <div className="flex-1">
                       <div className="text-sm font-medium">{documentData.name}</div>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="text-muted-foreground text-xs">
                         {formatFileSize(documentData.size)}
                       </div>
                     </div>

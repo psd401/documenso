@@ -145,7 +145,11 @@ export const EnvelopeItemEditDialog = ({
   };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    accept: { 'application/pdf': ['.pdf'] },
+    accept: {
+      'application/pdf': ['.pdf'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+      'application/msword': ['.doc'],
+    },
     maxFiles: 1,
     maxSize: megabytesToBytes(APP_DOCUMENT_UPLOAD_SIZE_LIMIT),
     disabled: form.formState.isSubmitting,
@@ -274,15 +278,15 @@ export const EnvelopeItemEditDialog = ({
                   <div className="mt-1.5 space-y-2">
                     <div
                       data-testid="envelope-item-edit-selected-file"
-                      className="flex items-center justify-between rounded-md border border-border bg-muted/50 px-3 py-2"
+                      className="border-border bg-muted/50 flex items-center justify-between rounded-md border px-3 py-2"
                     >
                       <div className="flex min-w-0 items-center space-x-2">
-                        <FileIcon className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                        <FileIcon className="text-muted-foreground h-4 w-4 flex-shrink-0" />
                         <div className="min-w-0">
                           <p className="truncate text-sm font-medium">
                             {replacementFile.file.name}
                           </p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-muted-foreground text-xs">
                             {formatFileSize(replacementFile.file.size)}
                             {isDropping ? ' · …' : ' · '}
                             {!isDropping && replacementFile.pageCount !== null && (
@@ -326,14 +330,14 @@ export const EnvelopeItemEditDialog = ({
                     data-testid="envelope-item-edit-dropzone"
                     {...getRootProps()}
                     className={cn(
-                      'mt-1.5 flex cursor-pointer items-center justify-center rounded-md border border-dashed border-border px-4 py-4 transition-colors',
+                      'border-border mt-1.5 flex cursor-pointer items-center justify-center rounded-md border border-dashed px-4 py-4 transition-colors',
                       isDragActive
                         ? 'border-primary/50 bg-primary/5'
                         : 'hover:border-muted-foreground/50 hover:bg-muted/50',
                     )}
                   >
                     <input {...getInputProps()} />
-                    <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                    <div className="text-muted-foreground flex items-center space-x-2 text-sm">
                       <UploadIcon className="h-4 w-4" />
                       <span>
                         <Trans>Drop PDF here or click to select</Trans>
