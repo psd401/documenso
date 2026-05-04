@@ -43,6 +43,13 @@ export const DocumentSigningRadioField = ({
 
   const parsedFieldMeta = ZRadioFieldMeta.parse(field.fieldMeta);
   const isReadOnly = parsedFieldMeta.readOnly;
+
+  const useCustomPositioning =
+    parsedFieldMeta.direction === 'custom' &&
+    parsedFieldMeta.values?.every(
+      (item) => item.offsetX !== undefined && item.offsetY !== undefined,
+    );
+
   const values = parsedFieldMeta.values?.map((item) => ({
     ...item,
     value: item.value.length > 0 ? item.value : `empty-value-${item.id}`,
@@ -159,13 +166,29 @@ export const DocumentSigningRadioField = ({
           onValueChange={(value) => handleSelectItem(value)}
           className={cn(
             'z-10 my-0.5 gap-1',
-            parsedFieldMeta.direction === 'horizontal'
-              ? 'flex flex-row flex-wrap'
-              : 'flex flex-col gap-y-1',
+            useCustomPositioning
+              ? 'relative'
+              : cn(
+                  parsedFieldMeta.direction === 'horizontal'
+                    ? 'flex flex-row flex-wrap'
+                    : 'flex flex-col gap-y-1',
+                ),
           )}
         >
           {values?.map((item, index) => (
-            <div key={index} className="flex items-center">
+            <div
+              key={index}
+              className="flex items-center"
+              style={
+                useCustomPositioning && item.offsetX !== undefined && item.offsetY !== undefined
+                  ? {
+                      position: 'absolute',
+                      left: `${item.offsetX}%`,
+                      top: `${item.offsetY}%`,
+                    }
+                  : undefined
+              }
+            >
               <RadioGroupItem
                 className="h-3 w-3 shrink-0"
                 value={item.value}
@@ -190,13 +213,29 @@ export const DocumentSigningRadioField = ({
         <RadioGroup
           className={cn(
             'my-0.5 gap-1',
-            parsedFieldMeta.direction === 'horizontal'
-              ? 'flex flex-row flex-wrap'
-              : 'flex flex-col gap-y-1',
+            useCustomPositioning
+              ? 'relative'
+              : cn(
+                  parsedFieldMeta.direction === 'horizontal'
+                    ? 'flex flex-row flex-wrap'
+                    : 'flex flex-col gap-y-1',
+                ),
           )}
         >
           {values?.map((item, index) => (
-            <div key={index} className="flex items-center">
+            <div
+              key={index}
+              className="flex items-center"
+              style={
+                useCustomPositioning && item.offsetX !== undefined && item.offsetY !== undefined
+                  ? {
+                      position: 'absolute',
+                      left: `${item.offsetX}%`,
+                      top: `${item.offsetY}%`,
+                    }
+                  : undefined
+              }
+            >
               <RadioGroupItem
                 className="h-3 w-3"
                 value={item.value}
