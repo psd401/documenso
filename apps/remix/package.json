@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "./.bin/build.sh",
-    "build:app": "if [ -z \"$SKIP_TYPECHECK\" ]; then npm run typecheck; fi && cross-env NODE_ENV=production react-router build",
+    "build:app": "npm run typecheck && cross-env NODE_ENV=production react-router build",
     "build:server": "cross-env NODE_ENV=production rollup -c rollup.config.mjs",
     "dev": "npm run with:env -- react-router dev",
     "dev:billing": "bash .bin/stripe-dev.sh",
