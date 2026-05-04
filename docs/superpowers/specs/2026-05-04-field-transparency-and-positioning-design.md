@@ -2,7 +2,7 @@
 
 **Date:** 2026-05-04
 **Status:** Approved
-**Triggered by:** User feedback on IHCP (Individualized Health Care Plan) template — field outlines obscure document text, checkbox groups can't align to variable-width form labels.
+**Triggered by:** User feedback on IHCP (Individualized Health Care Plan) template. Field outlines obscure document text, checkbox groups can't align to variable-width form labels.
 
 ## Problem
 
@@ -33,11 +33,26 @@ Instead of:
 bg-white/90 ring-2
 ```
 
-The recipient color class (`ring-recipient-green`, etc.) still applies but the ring needs reduced visual weight. Use `ring-1` (thinner) and modify the `base` style in `generateStyles()` to use the `/40` opacity modifier on the ring (e.g., `ring-recipient-green/40`) for checkbox/radio fields. The `generateStyles` function already uses this pattern for hover states (`bg-recipient-green/30`).
+The recipient color ring class (`ring-recipient-green`, etc.) still applies via `color?.base`. The reduced visual weight is handled entirely in `FieldRootContainer` using a conditional on `field.type`:
+
+```typescript
+const isCheckboxOrRadio = field.type === FieldType.CHECKBOX || field.type === FieldType.RADIO;
+
+className={cn(
+  'field--FieldRootContainer ... transition-all',
+  isCheckboxOrRadio
+    ? 'bg-transparent ring-1 ring-opacity-40'
+    : 'bg-white/90 ring-2 ring-gray-200',
+  color?.base,
+  // ... rest unchanged
+)}
+```
+
+Do NOT modify `generateStyles()` in `recipient-colors.ts`. That function receives only `recipientColor`, not field type, so it cannot distinguish checkbox/radio from other fields. The field-type-specific styling belongs in `FieldRootContainer` where `field.type` is available.
 
 All other field types (SIGNATURE, TEXT, NAME, EMAIL, DATE, NUMBER, DROPDOWN, FREE_SIGNATURE, INITIALS) keep current rendering unchanged.
 
-**Also update:** `FieldContainerPortal` styles and `document-read-only-fields.tsx` if they apply the same background pattern for checkbox/radio.
+**Also update:** `document-read-only-fields.tsx` if it applies the same background pattern for checkbox/radio. `FieldContainerPortal` does not apply background styles (it only handles positioning), so no changes needed there.
 
 ### 2. Per-Item Positioning
 
@@ -53,11 +68,13 @@ values: z.array(
     id: z.number(),
     checked: z.boolean(),
     value: z.string(),
-    offsetX: z.number().optional(),  // percentage of page width, relative to field origin
-    offsetY: z.number().optional(),  // percentage of page height, relative to field origin
+    offsetX: z.number().min(-100).max(100).optional(),  // percentage of page width, relative to field origin
+    offsetY: z.number().min(-100).max(100).optional(),  // percentage of page height, relative to field origin
   }),
 ).optional(),
 ```
+
+The `.min(-100).max(100)` bounds prevent UI redressing attacks where a sender could position checkboxes off-screen to mislead signers. This follows the same pattern as `fontSize: z.number().min(8).max(96)` in the existing schema.
 
 Add `'custom'` to the `direction` enum:
 
@@ -80,6 +97,8 @@ Changes:
 - When a user manually edits any offset, direction automatically switches to `'custom'`
 - Offsets default to `undefined` (no offset = use flex layout fallback)
 
+**Editor form schema sync:** `ZCheckboxFieldFormSchema` and `ZRadioFieldFormSchema` use `.pick()` from the base meta schemas. They must be updated to include `'custom'` in their direction enum, even though the Select dropdown only shows "Vertical" and "Horizontal" as user-selectable options. When direction is `'custom'`, the Select should display "Custom" but be non-interactive (the value is set programmatically by editing offsets, not by selecting from the dropdown). This prevents the editor from clobbering a `'custom'` direction value back to `'vertical'` on save.
+
 #### Signing View Changes
 
 **Files:**
@@ -87,9 +106,10 @@ Changes:
 - `apps/remix/app/components/general/document-signing/document-signing-radio-field.tsx`
 
 Changes:
-- Check if any item in the field's values has `offsetX` or `offsetY` set
-- If offsets exist: render items with relative positioning using the offset values, converting from page-percentage to pixels using the same coordinate system as `useFieldPageCoords`
-- If no offsets (all undefined): fall back to the current flex layout (`flex-row`/`flex-col` with `gap-1`) — existing fields render identically with no migration needed
+- Check `parsedFieldMeta.direction === 'custom'` to determine positioning mode
+- If direction is `'custom'`: all items must have `offsetX` and `offsetY` set. Render items with relative positioning using the offset values, converting from page-percentage to pixels using the same coordinate system as `useFieldPageCoords`
+- If direction is `'vertical'` or `'horizontal'` (or any item lacks offsets): use the current flex layout (`flex-row`/`flex-col` with `gap-1`). Existing fields render identically with no migration needed
+- Guard against NaN/Infinity: if page dimensions from `useFieldPageCoords` are 0 or undefined during initial render, fall back to flex layout regardless of offset values
 
 #### Read-Only / PDF Flattening
 
@@ -97,38 +117,18 @@ If checkbox/radio field values are flattened into the final PDF (for completed d
 
 ### 3. Scaffolding for Future Field Grouping
 
-No user-facing changes. Structural prep only.
+No user-facing changes. Schema prep only.
 
 **File:** `packages/lib/types/field-meta.ts`
 
 Add to `ZBaseFieldMeta`:
 ```typescript
-groupId: z.string().optional(),
+groupId: z.string().max(64).regex(/^[a-zA-Z0-9_-]+$/).optional(),
 ```
 
-**New file:** `packages/lib/utils/field-group-validation.ts`
+The length and format constraints prevent storage bloat and ensure the value is safe for use as a lookup key when cross-field grouping is eventually built. The `groupId` on `ZBaseFieldMeta` is the future join key: fields sharing a `groupId` will form a validation group.
 
-Extract/generalize the checkbox validation logic:
-
-```typescript
-type FieldGroupValidationRule = '>=' | '=' | '<=';
-
-type FieldGroupValidation = {
-  groupId: string;
-  rule: FieldGroupValidationRule;
-  count: number;
-};
-
-function validateFieldGroup(
-  selectedCount: number,
-  rule: FieldGroupValidationRule,
-  requiredCount: number,
-): boolean;
-```
-
-The existing `validateCheckboxLength` in `packages/lib/advanced-fields-validation/validate-checkbox.ts` should call through to this generic function. The signing view's checkbox validation continues to work identically — it just uses the generalized function under the hood.
-
-The `FieldGroupValidation` type exists for future use when we build cross-field grouping UI. The `groupId` on `ZBaseFieldMeta` is the join key — fields sharing a `groupId` form a validation group.
+**Do not** create `field-group-validation.ts` yet. The only current call site is `validateCheckboxLength`, which works fine as-is. Extract the generic validation function when there are 2+ consumers (i.e., when cross-field grouping is actually built). Leave `validateCheckboxLength` unchanged for now.
 
 ## Scope Boundaries
 
@@ -136,7 +136,7 @@ The `FieldGroupValidation` type exists for future use when we build cross-field 
 - Transparency change for checkbox/radio in signing view
 - Per-item offset schema and editor UI
 - Offset-aware rendering in signing view
-- Scaffolding types and extracted validation
+- Scaffolding: `groupId` field on `ZBaseFieldMeta` (schema only, no validation utility)
 
 **Out of scope:**
 - Drag-and-drop positioning of individual items on the canvas
