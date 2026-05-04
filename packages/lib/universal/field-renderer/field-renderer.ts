@@ -112,7 +112,7 @@ type CalculateMultiItemPositionOptions = {
   /**
    * The direction of the items.
    */
-  direction: 'horizontal' | 'vertical';
+  direction: 'horizontal' | 'vertical' | 'custom';
 
   type: 'checkbox' | 'radio';
 };

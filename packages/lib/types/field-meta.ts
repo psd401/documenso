@@ -47,6 +47,11 @@ export const ZBaseFieldMeta = z.object({
   required: z.boolean().optional(),
   readOnly: z.boolean().optional(),
   fontSize: z.number().min(8).max(96).default(DEFAULT_FIELD_FONT_SIZE).optional(),
+  groupId: z
+    .string()
+    .max(64)
+    .regex(/^[a-zA-Z0-9_-]+$/)
+    .optional(),
 });
 
 export type TBaseFieldMeta = z.infer<typeof ZBaseFieldMeta>;
@@ -120,10 +125,12 @@ export const ZRadioFieldMeta = ZBaseFieldMeta.extend({
         id: z.number(),
         checked: z.boolean(),
         value: z.string(),
+        offsetX: z.number().min(-100).max(100).optional(),
+        offsetY: z.number().min(-100).max(100).optional(),
       }),
     )
     .optional(),
-  direction: z.enum(['vertical', 'horizontal']).optional().default('vertical'),
+  direction: z.enum(['vertical', 'horizontal', 'custom']).optional().default('vertical'),
 });
 
 export type TRadioFieldMeta = z.infer<typeof ZRadioFieldMeta>;
@@ -136,12 +143,14 @@ export const ZCheckboxFieldMeta = ZBaseFieldMeta.extend({
         id: z.number(),
         checked: z.boolean(),
         value: z.string(),
+        offsetX: z.number().min(-100).max(100).optional(),
+        offsetY: z.number().min(-100).max(100).optional(),
       }),
     )
     .optional(),
   validationRule: z.string().optional(),
   validationLength: z.number().optional(),
-  direction: z.enum(['vertical', 'horizontal']).optional().default('vertical'),
+  direction: z.enum(['vertical', 'horizontal', 'custom']).optional().default('vertical'),
 });
 
 export type TCheckboxFieldMeta = z.infer<typeof ZCheckboxFieldMeta>;
