@@ -139,7 +139,7 @@ export function FieldRootContainer({
         className={cn(
           'field--FieldRootContainer field-card-container dark-mode-disabled group relative z-20 flex h-full w-full items-center rounded-[2px] transition-all',
           field.type === FieldType.CHECKBOX || field.type === FieldType.RADIO
-            ? 'ring-opacity-40 bg-transparent ring-1'
+            ? 'bg-transparent ring-1'
             : 'bg-white/90 ring-2 ring-gray-200',
           color?.base,
           {
