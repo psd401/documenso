@@ -1,3 +1,5 @@
+// ABOUTME: Konva renderer for radio field elements on the PDF canvas.
+// ABOUTME: Supports vertical, horizontal, and custom drag-positioned layouts.
 import Konva from 'konva';
 import { match } from 'ts-pattern';
 
@@ -21,9 +23,16 @@ const calculateRadioSize = (fontSize: number) => {
   return fontSize;
 };
 
+export type OnRadioItemDragEnd = (params: {
+  itemIndex: number;
+  offsetX: number;
+  offsetY: number;
+}) => void;
+
 export const renderRadioFieldElement = (
   field: FieldToRender,
   options: RenderFieldElementOptions,
+  onItemDragEnd?: OnRadioItemDragEnd,
 ) => {
   const { pageWidth, pageHeight, pageLayer, mode, color } = options;
 
@@ -60,18 +69,12 @@ export const renderRadioFieldElement = (
     const rectWidth = fieldRect.width() * groupScaleX;
     const rectHeight = fieldRect.height() * groupScaleY;
 
-    const circles = fieldGroup.find('.radio-circle').sort((a, b) => a.id().localeCompare(b.id()));
-    const checkmarks = fieldGroup.find('.radio-dot').sort((a, b) => a.id().localeCompare(b.id()));
-    const text = fieldGroup.find('.radio-text').sort((a, b) => a.id().localeCompare(b.id()));
+    const itemGroups = fieldGroup
+      .find('.radio-item')
+      .sort((a, b) => a.id().localeCompare(b.id(), undefined, { numeric: true })) as Konva.Group[];
 
-    const groupedItems = circles.map((circle, i) => ({
-      circleElement: circle,
-      checkmarkElement: checkmarks[i],
-      textElement: text[i],
-    }));
-
-    groupedItems.forEach((item, i) => {
-      const { circleElement, checkmarkElement, textElement } = item;
+    itemGroups.forEach((itemGroup, i) => {
+      const radioValue = radioValues[i];
 
       const { itemInputX, itemInputY, textX, textY, textWidth, textHeight } =
         calculateMultiItemPosition({
@@ -84,23 +87,28 @@ export const renderRadioFieldElement = (
           fieldPadding: radioFieldPadding,
           type: 'radio',
           direction: radioMeta?.direction || 'vertical',
+          item: radioValue,
         });
 
-      circleElement.setAttrs({
+      const circleElement = itemGroup.findOne('.radio-circle');
+      const dotElement = itemGroup.findOne('.radio-dot');
+      const textElement = itemGroup.findOne('.radio-text');
+
+      circleElement?.setAttrs({
         x: itemInputX,
         y: itemInputY,
         scaleX: 1,
         scaleY: 1,
       });
 
-      checkmarkElement.setAttrs({
+      dotElement?.setAttrs({
         x: itemInputX,
         y: itemInputY,
         scaleX: 1,
         scaleY: 1,
       });
 
-      textElement.setAttrs({
+      textElement?.setAttrs({
         x: textX,
         y: textY,
         scaleX: 1,
@@ -123,7 +131,9 @@ export const renderRadioFieldElement = (
 
   const { fieldWidth, fieldHeight } = calculateFieldPosition(field, pageWidth, pageHeight);
 
-  radioValues.forEach(({ value, checked }, index) => {
+  radioValues.forEach((radioValue, index) => {
+    const { value, checked } = radioValue;
+
     const isRadioValueChecked = match(mode)
       .with('edit', () => checked)
       .with('sign', () => index.toString() === field.customText)
@@ -148,7 +158,14 @@ export const renderRadioFieldElement = (
         fieldPadding: radioFieldPadding,
         type: 'radio',
         direction: radioMeta?.direction || 'vertical',
+        item: radioValue,
       });
+
+    // Wrap each item's elements in a named group to support individual drag.
+    const itemGroup = new Konva.Group({
+      id: `radio-item-${index}`,
+      name: 'radio-item',
+    });
 
     // Circle which represents the radio button.
     const circle = new Konva.Circle({
@@ -190,9 +207,38 @@ export const renderRadioFieldElement = (
       verticalAlign: 'middle',
     });
 
-    fieldGroup.add(circle);
-    fieldGroup.add(dot);
-    fieldGroup.add(text);
+    itemGroup.add(circle);
+    itemGroup.add(dot);
+    itemGroup.add(text);
+
+    if (mode === 'edit' && radioMeta?.direction === 'custom' && onItemDragEnd) {
+      circle.draggable(true);
+
+      circle.on('dragend', () => {
+        const basePos = calculateMultiItemPosition({
+          fieldWidth,
+          fieldHeight,
+          itemCount: radioValues.length,
+          itemIndex: index,
+          itemSize: calculateRadioSize(fontSize),
+          spacingBetweenItemAndText: spacingBetweenRadioAndText,
+          fieldPadding: radioFieldPadding,
+          direction: 'vertical',
+          type: 'radio',
+        });
+
+        const newOffsetX = circle.x() - basePos.itemInputX + (radioValue.offsetX ?? 0);
+        const newOffsetY = circle.y() - basePos.itemInputY + (radioValue.offsetY ?? 0);
+
+        // Sync dot to follow circle position.
+        dot.x(circle.x());
+        dot.y(circle.y());
+
+        onItemDragEnd({ itemIndex: index, offsetX: newOffsetX, offsetY: newOffsetY });
+      });
+    }
+
+    fieldGroup.add(itemGroup);
   });
 
   if (color !== 'readOnly' && mode !== 'export') {

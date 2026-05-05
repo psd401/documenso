@@ -139,24 +139,10 @@ export const EditorFieldRadioForm = ({
                   <Trans>Direction</Trans>
                 </FormLabel>
                 <FormControl>
-                  <Select
-                    value={field.value}
-                    onValueChange={(val) => {
-                      field.onChange(val);
-                      if (val !== 'custom') {
-                        const currentValues = form.getValues('values') || [];
-                        const clearedValues = currentValues.map((v) => ({
-                          ...v,
-                          offsetX: undefined,
-                          offsetY: undefined,
-                        }));
-                        form.setValue('values', clearedValues);
-                      }
-                    }}
-                  >
+                  <Select value={field.value} onValueChange={field.onChange}>
                     <SelectTrigger
                       data-testid="field-form-direction"
-                      className="bg-background text-muted-foreground w-full"
+                      className="w-full bg-background text-muted-foreground"
                     >
                       <SelectValue placeholder={t`Select direction`} />
                     </SelectTrigger>
@@ -167,7 +153,7 @@ export const EditorFieldRadioForm = ({
                       <SelectItem value="horizontal">
                         <Trans>Horizontal</Trans>
                       </SelectItem>
-                      <SelectItem value="custom" disabled>
+                      <SelectItem value="custom">
                         <Trans>Custom</Trans>
                       </SelectItem>
                     </SelectContent>
@@ -183,7 +169,7 @@ export const EditorFieldRadioForm = ({
           <EditorGenericReadOnlyField formControl={form.control} />
 
           <section className="space-y-2">
-            <div className="-mx-4 mt-2 mb-4">
+            <div className="-mx-4 mb-4 mt-2">
               <Separator />
             </div>
 
@@ -208,7 +194,7 @@ export const EditorFieldRadioForm = ({
                         <FormControl>
                           <Checkbox
                             data-testid={`field-form-values-${index}-checked`}
-                            className="border-foreground/30 data-[state=checked]:bg-primary h-5 w-5"
+                            className="h-5 w-5 border-foreground/30 data-[state=checked]:bg-primary"
                             checked={field.value}
                             onCheckedChange={(value) => {
                               // Uncheck all other values.
@@ -235,66 +221,12 @@ export const EditorFieldRadioForm = ({
                     control={form.control}
                     name={`values.${index}.value`}
                     render={({ field }) => (
-                      <FormItem className="flex-1">
+                      <FormItem>
                         <FormControl>
                           <Input
                             data-testid={`field-form-values-${index}-value`}
                             className="w-full"
                             {...field}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name={`values.${index}.offsetX`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            data-testid={`field-form-values-${index}-offsetX`}
-                            className="w-16"
-                            placeholder="X"
-                            {...field}
-                            value={field.value ?? ''}
-                            onChange={(e) => {
-                              const val =
-                                e.target.value === '' ? undefined : Number(e.target.value);
-                              field.onChange(val);
-                              if (val !== undefined) {
-                                form.setValue('direction', 'custom');
-                              }
-                            }}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name={`values.${index}.offsetY`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            data-testid={`field-form-values-${index}-offsetY`}
-                            className="w-16"
-                            placeholder="Y"
-                            {...field}
-                            value={field.value ?? ''}
-                            onChange={(e) => {
-                              const val =
-                                e.target.value === '' ? undefined : Number(e.target.value);
-                              field.onChange(val);
-                              if (val !== undefined) {
-                                form.setValue('direction', 'custom');
-                              }
-                            }}
                           />
                         </FormControl>
                       </FormItem>
