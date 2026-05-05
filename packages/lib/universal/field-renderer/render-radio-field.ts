@@ -230,6 +230,10 @@ export const renderRadioFieldElement = (
       });
 
       itemGroup.on('dragstart', (e) => {
+        if (!e.evt?.shiftKey) {
+          itemGroup.stopDrag();
+          return;
+        }
         e.cancelBubble = true;
       });
 
@@ -237,17 +241,14 @@ export const renderRadioFieldElement = (
         const dx = itemGroup.x();
         const dy = itemGroup.y();
 
+        if (dx === 0 && dy === 0) {
+          return;
+        }
+
         const newOffsetX = (radioValue.offsetX ?? 0) + dx;
         const newOffsetY = (radioValue.offsetY ?? 0) + dy;
 
         itemGroup.position({ x: 0, y: 0 });
-
-        circle.x(circle.x() + dx);
-        circle.y(circle.y() + dy);
-        dot.x(circle.x());
-        dot.y(circle.y());
-        text.x(text.x() + dx);
-        text.y(text.y() + dy);
 
         onItemDragEnd({ itemIndex: index, offsetX: newOffsetX, offsetY: newOffsetY });
       });

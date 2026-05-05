@@ -236,6 +236,10 @@ export const renderCheckboxFieldElement = (
       });
 
       itemGroup.on('dragstart', (e) => {
+        if (!e.evt?.shiftKey) {
+          itemGroup.stopDrag();
+          return;
+        }
         e.cancelBubble = true;
       });
 
@@ -243,17 +247,14 @@ export const renderCheckboxFieldElement = (
         const dx = itemGroup.x();
         const dy = itemGroup.y();
 
+        if (dx === 0 && dy === 0) {
+          return;
+        }
+
         const newOffsetX = (checkboxValue.offsetX ?? 0) + dx;
         const newOffsetY = (checkboxValue.offsetY ?? 0) + dy;
 
         itemGroup.position({ x: 0, y: 0 });
-
-        square.x(square.x() + dx);
-        square.y(square.y() + dy);
-        checkmark.x(square.x());
-        checkmark.y(square.y());
-        text.x(text.x() + dx);
-        text.y(text.y() + dy);
 
         onItemDragEnd({ itemIndex: index, offsetX: newOffsetX, offsetY: newOffsetY });
       });
