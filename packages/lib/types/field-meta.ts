@@ -125,8 +125,8 @@ export const ZRadioFieldMeta = ZBaseFieldMeta.extend({
         id: z.number(),
         checked: z.boolean(),
         value: z.string(),
-        offsetX: z.number().min(-100).max(100).optional(),
-        offsetY: z.number().min(-100).max(100).optional(),
+        offsetX: z.number().min(-2000).max(2000).optional(),
+        offsetY: z.number().min(-2000).max(2000).optional(),
       }),
     )
     .optional(),
@@ -143,8 +143,8 @@ export const ZCheckboxFieldMeta = ZBaseFieldMeta.extend({
         id: z.number(),
         checked: z.boolean(),
         value: z.string(),
-        offsetX: z.number().min(-100).max(100).optional(),
-        offsetY: z.number().min(-100).max(100).optional(),
+        offsetX: z.number().min(-2000).max(2000).optional(),
+        offsetY: z.number().min(-2000).max(2000).optional(),
       }),
     )
     .optional(),
