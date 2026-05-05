@@ -62,7 +62,7 @@ export default function SupportPage() {
               </Link>
             </h2>
             <p className="mt-1 text-muted-foreground">
-              <Trans>Read our documentation to get started with Documenso.</Trans>
+              <Trans>Read our documentation to get started with PSD Document Signing.</Trans>
             </p>
           </div>
           <div className="rounded-lg border p-4">

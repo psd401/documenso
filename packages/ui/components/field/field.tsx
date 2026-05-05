@@ -137,7 +137,10 @@ export function FieldRootContainer({
         data-inserted={field.inserted ? 'true' : 'false'}
         data-readonly={readonly ? 'true' : 'false'}
         className={cn(
-          'field--FieldRootContainer field-card-container dark-mode-disabled group relative z-20 flex h-full w-full items-center rounded-[2px] bg-white/90 ring-2 ring-gray-200 transition-all',
+          'field--FieldRootContainer field-card-container dark-mode-disabled group relative z-20 flex h-full w-full items-center rounded-[2px] transition-all',
+          field.type === FieldType.CHECKBOX || field.type === FieldType.RADIO
+            ? 'bg-transparent ring-1'
+            : 'bg-white/90 ring-2 ring-gray-200',
           color?.base,
           {
             'px-2': field.type !== FieldType.SIGNATURE && field.type !== FieldType.FREE_SIGNATURE,

@@ -6,7 +6,7 @@ import { Trans } from '@lingui/react/macro';
 import { EnvelopeType } from '@prisma/client';
 import { Loader } from 'lucide-react';
 import { ErrorCode as DropzoneErrorCode, type FileRejection, useDropzone } from 'react-dropzone';
-import { Link, useNavigate, useParams } from 'react-router';
+import { useNavigate, useParams } from 'react-router';
 import { match } from 'ts-pattern';
 
 import { useLimits } from '@documenso/ee/server-only/limits/provider/client';
@@ -119,11 +119,8 @@ export const EnvelopeDropZoneWrapper = ({
       const error = AppError.parseError(err);
 
       const errorMessage = match(error.code)
-        .with('INVALID_DOCUMENT_FILE', () => t`You cannot upload encrypted PDFs.`)
-        .with(
-          AppErrorCode.LIMIT_EXCEEDED,
-          () => t`You have reached your document limit for this month. Please upgrade your plan.`,
-        )
+        .with('INVALID_DOCUMENT_FILE', () => t`The uploaded file is not a valid document.`)
+        .with(AppErrorCode.LIMIT_EXCEEDED, () => t`You have reached your document limit.`)
         .with(
           'ENVELOPE_ITEM_LIMIT_EXCEEDED',
           () => t`You have reached the limit of the number of files per envelope.`,
@@ -173,6 +170,8 @@ export const EnvelopeDropZoneWrapper = ({
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     accept: {
       'application/pdf': ['.pdf'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+      'application/msword': ['.doc'],
     },
     multiple: true,
     maxSize: megabytesToBytes(APP_DOCUMENT_UPLOAD_SIZE_LIMIT),
@@ -189,9 +188,9 @@ export const EnvelopeDropZoneWrapper = ({
       {children}
 
       {isDragActive && (
-        <div className="fixed left-0 top-0 z-[9999] h-full w-full bg-muted/60 backdrop-blur-[4px]">
+        <div className="bg-muted/60 fixed top-0 left-0 z-[9999] h-full w-full backdrop-blur-[4px]">
           <div className="pointer-events-none flex h-full w-full flex-col items-center justify-center">
-            <h2 className="text-2xl font-semibold text-foreground">
+            <h2 className="text-foreground text-2xl font-semibold">
               {type === EnvelopeType.DOCUMENT ? (
                 <Trans>Upload Document</Trans>
               ) : (
@@ -199,24 +198,15 @@ export const EnvelopeDropZoneWrapper = ({
               )}
             </h2>
 
-            <p className="text-md mt-4 text-muted-foreground">
-              <Trans>Drag and drop your PDF file here</Trans>
+            <p className="text-md text-muted-foreground mt-4">
+              <Trans>Drag and drop your document here</Trans>
             </p>
-
-            {isUploadDisabled && IS_BILLING_ENABLED() && (
-              <Link
-                to={`/o/${organisation.url}/settings/billing`}
-                className="mt-4 text-sm text-amber-500 hover:underline dark:text-amber-400"
-              >
-                <Trans>Upgrade your plan to upload more documents</Trans>
-              </Link>
-            )}
 
             {!isUploadDisabled &&
               team?.id === undefined &&
               remaining.documents > 0 &&
               Number.isFinite(remaining.documents) && (
-                <p className="mt-4 text-sm text-muted-foreground/80">
+                <p className="text-muted-foreground/80 mt-4 text-sm">
                   <Trans>
                     {remaining.documents} of {quota.documents} documents remaining this month.
                   </Trans>
@@ -227,10 +217,10 @@ export const EnvelopeDropZoneWrapper = ({
       )}
 
       {isLoading && (
-        <div className="absolute inset-0 z-50 bg-muted/30 backdrop-blur-[2px]">
+        <div className="bg-muted/30 absolute inset-0 z-50 backdrop-blur-[2px]">
           <div className="pointer-events-none flex h-1/2 w-full flex-col items-center justify-center">
-            <Loader className="h-12 w-12 animate-spin text-primary" />
-            <p className="mt-8 font-medium text-foreground">
+            <Loader className="text-primary h-12 w-12 animate-spin" />
+            <p className="text-foreground mt-8 font-medium">
               <Trans>Uploading</Trans>
             </p>
           </div>

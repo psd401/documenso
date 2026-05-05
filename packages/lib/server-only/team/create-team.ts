@@ -90,7 +90,7 @@ export const createTeam = async ({
   }
 
   // Validate they have enough team slots. 0 means they can create unlimited teams.
-  if (organisation.organisationClaim.teamCount !== 0 && IS_BILLING_ENABLED()) {
+  if (organisation.organisationClaim.teamCount !== 0) {
     const teamCount = await prisma.team.count({
       where: {
         organisationId,

@@ -51,6 +51,12 @@ export const FieldContent = ({ field, documentMeta }: FieldIconProps) => {
       console.error(err);
     }
 
+    const useCustomPositioning =
+      field.fieldMeta.direction === 'custom' &&
+      field.fieldMeta.values?.every(
+        (item) => item.offsetX !== undefined && item.offsetY !== undefined,
+      );
+
     // If no values exist yet, show a placeholder checkbox
     if (!field.fieldMeta.values || field.fieldMeta.values.length === 0) {
       return (
@@ -62,7 +68,7 @@ export const FieldContent = ({ field, documentMeta }: FieldIconProps) => {
         >
           <div className="flex items-center">
             <Checkbox className="h-3 w-3" disabled />
-            <Label className="ml-1.5 text-xs font-normal text-foreground opacity-50">
+            <Label className="text-foreground ml-1.5 text-xs font-normal opacity-50">
               <Trans>Checkbox option</Trans>
             </Label>
           </div>
@@ -73,12 +79,27 @@ export const FieldContent = ({ field, documentMeta }: FieldIconProps) => {
     return (
       <div
         className={cn(
-          'flex gap-1 py-0.5',
-          field.fieldMeta.direction === 'horizontal' ? 'flex-row flex-wrap' : 'flex-col gap-y-1',
+          'gap-1 py-0.5',
+          useCustomPositioning
+            ? 'relative'
+            : cn(
+                'flex',
+                field.fieldMeta.direction === 'horizontal'
+                  ? 'flex-row flex-wrap'
+                  : 'flex-col gap-y-1',
+              ),
         )}
       >
         {field.fieldMeta.values.map((item, index) => (
-          <div key={index} className="flex items-center">
+          <div
+            key={index}
+            className="flex items-center"
+            style={
+              useCustomPositioning && item.offsetX !== undefined && item.offsetY !== undefined
+                ? { position: 'absolute', left: `${item.offsetX}%`, top: `${item.offsetY}%` }
+                : undefined
+            }
+          >
             <Checkbox
               className="h-3 w-3"
               id={`checkbox-${index}`}
@@ -90,7 +111,7 @@ export const FieldContent = ({ field, documentMeta }: FieldIconProps) => {
             {item.value && (
               <Label
                 htmlFor={`checkbox-${index}`}
-                className="ml-1.5 text-xs font-normal text-foreground"
+                className="text-foreground ml-1.5 text-xs font-normal"
               >
                 {item.value}
               </Label>
@@ -108,11 +129,25 @@ export const FieldContent = ({ field, documentMeta }: FieldIconProps) => {
     field.fieldMeta.values &&
     field.fieldMeta.values.length > 0
   ) {
+    const useCustomPositioning =
+      field.fieldMeta.direction === 'custom' &&
+      field.fieldMeta.values.every(
+        (item) => item.offsetX !== undefined && item.offsetY !== undefined,
+      );
+
     return (
-      <div className="flex flex-col gap-y-2 py-0.5">
-        <RadioGroup className="gap-y-1">
+      <div className={cn('py-0.5', useCustomPositioning ? 'relative' : 'flex flex-col gap-y-2')}>
+        <RadioGroup className={cn(useCustomPositioning ? 'relative h-full w-full' : 'gap-y-1')}>
           {field.fieldMeta.values.map((item, index) => (
-            <div key={index} className="flex items-center">
+            <div
+              key={index}
+              className="flex items-center"
+              style={
+                useCustomPositioning && item.offsetX !== undefined && item.offsetY !== undefined
+                  ? { position: 'absolute', left: `${item.offsetX}%`, top: `${item.offsetY}%` }
+                  : undefined
+              }
+            >
               <RadioGroupItem
                 className="pointer-events-none h-3 w-3"
                 value={item.value}
@@ -122,7 +157,7 @@ export const FieldContent = ({ field, documentMeta }: FieldIconProps) => {
               {item.value && (
                 <Label
                   htmlFor={`option-${index}`}
-                  className="ml-1.5 text-xs font-normal text-foreground"
+                  className="text-foreground ml-1.5 text-xs font-normal"
                 >
                   {item.value}
                 </Label>
@@ -140,7 +175,7 @@ export const FieldContent = ({ field, documentMeta }: FieldIconProps) => {
     !field.inserted
   ) {
     return (
-      <div className="flex flex-row items-center py-0.5 text-[clamp(0.07rem,25cqw,0.825rem)] text-sm text-field-card-foreground">
+      <div className="text-field-card-foreground flex flex-row items-center py-0.5 text-sm text-[clamp(0.07rem,25cqw,0.825rem)]">
         <p>
           <Trans>Select</Trans>
         </p>
@@ -196,7 +231,7 @@ export const FieldContent = ({ field, documentMeta }: FieldIconProps) => {
     <div className="flex h-full w-full items-center overflow-hidden">
       <p
         className={cn(
-          'w-full whitespace-pre-wrap text-left text-[clamp(0.07rem,25cqw,0.825rem)] text-foreground duration-200',
+          'text-foreground w-full text-left text-[clamp(0.07rem,25cqw,0.825rem)] whitespace-pre-wrap duration-200',
           {
             '!text-center': textAlign === 'center' || !textToDisplay,
             '!text-right': textAlign === 'right',

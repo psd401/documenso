@@ -36,7 +36,7 @@ export const OrganisationInviteEmailTemplate = ({
   const { _ } = useLingui();
   const branding = useBranding();
 
-  const previewText = msg`Accept invitation to join an organisation on Documenso`;
+  const previewText = msg`Accept invitation to join an organisation on PSD Document Signing`;
 
   return (
     <Html>
@@ -66,7 +66,7 @@ export const OrganisationInviteEmailTemplate = ({
 
             <Section className="p-2 text-slate-500">
               <Text className="text-center text-lg font-medium text-black">
-                <Trans>Join {organisationName} on Documenso</Trans>
+                <Trans>Join {organisationName} on PSD Document Signing</Trans>
               </Text>
 
               <Text className="my-1 text-center text-base">

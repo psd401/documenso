@@ -15,6 +15,7 @@ import {
   useCurrentEnvelopeRender,
 } from '@documenso/lib/client-only/providers/envelope-render-provider';
 import { FIELD_META_DEFAULT_VALUES } from '@documenso/lib/types/field-meta';
+import type { TCheckboxFieldMeta, TRadioFieldMeta } from '@documenso/lib/types/field-meta';
 import {
   MIN_FIELD_HEIGHT_PX,
   MIN_FIELD_WIDTH_PX,
@@ -115,6 +116,40 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
     const isFieldEditable =
       recipient !== undefined && canRecipientFieldsBeModified(recipient, envelope.fields);
 
+    const onCheckboxItemDragEnd = ({
+      itemIndex,
+      offsetX,
+      offsetY,
+    }: {
+      itemIndex: number;
+      offsetX: number;
+      offsetY: number;
+    }) => {
+      const meta = field.fieldMeta as TCheckboxFieldMeta | null;
+      const values = meta?.values ? [...meta.values] : [];
+      values[itemIndex] = { ...values[itemIndex], offsetX, offsetY };
+      editorFields.updateFieldByFormId(field.formId, {
+        fieldMeta: { ...meta, direction: 'custom', values } as TCheckboxFieldMeta,
+      });
+    };
+
+    const onRadioItemDragEnd = ({
+      itemIndex,
+      offsetX,
+      offsetY,
+    }: {
+      itemIndex: number;
+      offsetX: number;
+      offsetY: number;
+    }) => {
+      const meta = field.fieldMeta as TRadioFieldMeta | null;
+      const values = meta?.values ? [...meta.values] : [];
+      values[itemIndex] = { ...values[itemIndex], offsetX, offsetY };
+      editorFields.updateFieldByFormId(field.formId, {
+        fieldMeta: { ...meta, direction: 'custom', values } as TRadioFieldMeta,
+      });
+    };
+
     const { fieldGroup } = renderField({
       scale,
       pageLayer: pageLayer.current,
@@ -131,6 +166,8 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
       color: getRecipientColorKey(field.recipientId),
       editable: isFieldEditable,
       mode: 'edit',
+      onCheckboxItemDragEnd,
+      onRadioItemDragEnd,
     });
 
     if (!isFieldEditable) {

@@ -80,7 +80,7 @@ export const DocumentCertificateQRView = ({
 
               <DialogDescription>
                 <Trans>
-                  This document is available in your Documenso account. You can view more details,
+                  This document is available in your PSD Document Signing account. You can view more details,
                   recipients, and audit logs there.
                 </Trans>
               </DialogDescription>

@@ -69,16 +69,6 @@ export const TemplateDocumentSelfSigned = ({
             <Trans>Create account</Trans>
           </Button>
 
-          <Button
-            className="rounded-lg border border-solid border-slate-200 px-4 py-2 text-center text-sm font-medium text-black no-underline"
-            href="https://documenso.com/pricing"
-          >
-            <Img
-              src={getAssetUrl('/static/review.png')}
-              className="mb-0.5 mr-2 inline h-5 w-5 align-middle"
-            />
-            <Trans>View plans</Trans>
-          </Button>
         </Section>
       </Section>
     </>

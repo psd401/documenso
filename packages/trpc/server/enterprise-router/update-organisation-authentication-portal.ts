@@ -25,12 +25,6 @@ export const updateOrganisationAuthenticationPortalRoute = authenticatedProcedur
       },
     });
 
-    if (!IS_BILLING_ENABLED()) {
-      throw new AppError(AppErrorCode.INVALID_REQUEST, {
-        message: 'Billing is not enabled',
-      });
-    }
-
     const organisation = await prisma.organisation.findFirst({
       where: buildOrganisationWhereQuery({
         organisationId,

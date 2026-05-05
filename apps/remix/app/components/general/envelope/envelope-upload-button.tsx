@@ -70,8 +70,6 @@ export const EnvelopeUploadButton = ({ className, type, folderId }: EnvelopeUplo
     if (!user.emailVerified) {
       return msg`Verify your email to upload documents.`;
     }
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [remaining.documents, user.emailVerified, team]);
 
   const onFileDrop = async (files: File[]) => {
@@ -126,11 +124,8 @@ export const EnvelopeUploadButton = ({ className, type, folderId }: EnvelopeUplo
       console.error(err);
 
       const errorMessage = match(error.code)
-        .with('INVALID_DOCUMENT_FILE', () => t`You cannot upload encrypted PDFs.`)
-        .with(
-          AppErrorCode.LIMIT_EXCEEDED,
-          () => t`You have reached your document limit for this month. Please upgrade your plan.`,
-        )
+        .with('INVALID_DOCUMENT_FILE', () => t`The uploaded file is not a valid document.`)
+        .with(AppErrorCode.LIMIT_EXCEEDED, () => t`You have reached your document limit.`)
         .with(
           'ENVELOPE_ITEM_LIMIT_EXCEEDED',
           () => t`You have reached the limit of the number of files per envelope.`,
