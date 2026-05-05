@@ -209,14 +209,16 @@ export const renderRadioFieldElement = (
     if (mode === 'edit' && radioMeta?.direction === 'custom' && onItemDragEnd) {
       const radioSize = calculateRadioSize(fontSize);
       const radioRadius = radioSize / 2;
-      const baseX = itemInputX;
-      const baseY = itemInputY;
+      const currentOX = radioValue.offsetX ?? 0;
+      const currentOY = radioValue.offsetY ?? 0;
+      const baseX = itemInputX - currentOX;
+      const baseY = itemInputY - currentOY;
 
       setupItemDrag({
         itemGroup,
         index,
-        currentOffsetX: radioValue.offsetX ?? 0,
-        currentOffsetY: radioValue.offsetY ?? 0,
+        currentOffsetX: currentOX,
+        currentOffsetY: currentOY,
         clampOffset: (rawOffsetX, rawOffsetY) => ({
           offsetX: Math.max(
             -(baseX - radioRadius),

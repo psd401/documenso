@@ -216,14 +216,16 @@ export const renderCheckboxFieldElement = (
     itemGroup.add(text);
 
     if (mode === 'edit' && checkboxMeta?.direction === 'custom' && onItemDragEnd) {
-      const baseX = itemInputX;
-      const baseY = itemInputY;
+      const currentOX = checkboxValue.offsetX ?? 0;
+      const currentOY = checkboxValue.offsetY ?? 0;
+      const baseX = itemInputX - currentOX;
+      const baseY = itemInputY - currentOY;
 
       setupItemDrag({
         itemGroup,
         index,
-        currentOffsetX: checkboxValue.offsetX ?? 0,
-        currentOffsetY: checkboxValue.offsetY ?? 0,
+        currentOffsetX: currentOX,
+        currentOffsetY: currentOY,
         clampOffset: (rawOffsetX, rawOffsetY) => ({
           offsetX: Math.max(-baseX, Math.min(fieldWidth - baseX - itemSize, rawOffsetX)),
           offsetY: Math.max(-baseY, Math.min(fieldHeight - baseY - itemSize, rawOffsetY)),
