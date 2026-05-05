@@ -212,7 +212,22 @@ export const renderRadioFieldElement = (
     itemGroup.add(text);
 
     if (mode === 'edit' && radioMeta?.direction === 'custom' && onItemDragEnd) {
+      const radioSize = calculateRadioSize(fontSize);
+      const radioRadius = radioSize / 2;
+
       itemGroup.draggable(true);
+
+      itemGroup.dragBoundFunc((pos) => {
+        const minX = -(itemInputX - radioRadius);
+        const minY = -(itemInputY - radioRadius);
+        const maxX = fieldWidth - itemInputX - radioRadius;
+        const maxY = fieldHeight - itemInputY - radioRadius;
+
+        return {
+          x: Math.max(minX, Math.min(maxX, pos.x)),
+          y: Math.max(minY, Math.min(maxY, pos.y)),
+        };
+      });
 
       itemGroup.on('dragstart', (e) => {
         e.cancelBubble = true;

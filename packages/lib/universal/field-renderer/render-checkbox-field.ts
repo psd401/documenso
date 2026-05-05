@@ -223,6 +223,18 @@ export const renderCheckboxFieldElement = (
     if (mode === 'edit' && checkboxMeta?.direction === 'custom' && onItemDragEnd) {
       itemGroup.draggable(true);
 
+      itemGroup.dragBoundFunc((pos) => {
+        const minX = -itemInputX;
+        const minY = -itemInputY;
+        const maxX = fieldWidth - itemInputX - itemSize;
+        const maxY = fieldHeight - itemInputY - itemSize;
+
+        return {
+          x: Math.max(minX, Math.min(maxX, pos.x)),
+          y: Math.max(minY, Math.min(maxY, pos.y)),
+        };
+      });
+
       itemGroup.on('dragstart', (e) => {
         e.cancelBubble = true;
       });
