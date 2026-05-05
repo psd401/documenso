@@ -6,6 +6,7 @@ import { match } from 'ts-pattern';
 import { DEFAULT_STANDARD_FONT_SIZE } from '../../constants/pdf';
 import type { TCheckboxFieldMeta } from '../../types/field-meta';
 import { parseCheckboxCustomText } from '../../utils/fields';
+import { type OnItemDragEnd, setupItemDrag } from './field-drag-utils';
 import {
   createFieldHoverInteraction,
   konvaTextFill,
@@ -24,16 +25,10 @@ const calculateCheckboxSize = (fontSize: number) => {
   return fontSize;
 };
 
-export type OnCheckboxItemDragEnd = (params: {
-  itemIndex: number;
-  offsetX: number;
-  offsetY: number;
-}) => void;
-
 export const renderCheckboxFieldElement = (
   field: FieldToRender,
   options: RenderFieldElementOptions,
-  onItemDragEnd?: OnCheckboxItemDragEnd,
+  onItemDragEnd?: OnItemDragEnd,
 ) => {
   const { pageWidth, pageHeight, pageLayer, mode, color } = options;
 
@@ -221,42 +216,19 @@ export const renderCheckboxFieldElement = (
     itemGroup.add(text);
 
     if (mode === 'edit' && checkboxMeta?.direction === 'custom' && onItemDragEnd) {
-      itemGroup.draggable(true);
+      const baseX = itemInputX;
+      const baseY = itemInputY;
 
-      itemGroup.dragBoundFunc((pos) => {
-        const minX = -itemInputX;
-        const minY = -itemInputY;
-        const maxX = fieldWidth - itemInputX - itemSize;
-        const maxY = fieldHeight - itemInputY - itemSize;
-
-        return {
-          x: Math.max(minX, Math.min(maxX, pos.x)),
-          y: Math.max(minY, Math.min(maxY, pos.y)),
-        };
-      });
-
-      itemGroup.on('dragstart', (e) => {
-        if (!e.evt?.shiftKey) {
-          itemGroup.stopDrag();
-          return;
-        }
-        e.cancelBubble = true;
-      });
-
-      itemGroup.on('dragend', () => {
-        const dx = itemGroup.x();
-        const dy = itemGroup.y();
-
-        if (dx === 0 && dy === 0) {
-          return;
-        }
-
-        const newOffsetX = (checkboxValue.offsetX ?? 0) + dx;
-        const newOffsetY = (checkboxValue.offsetY ?? 0) + dy;
-
-        itemGroup.position({ x: 0, y: 0 });
-
-        onItemDragEnd({ itemIndex: index, offsetX: newOffsetX, offsetY: newOffsetY });
+      setupItemDrag({
+        itemGroup,
+        index,
+        currentOffsetX: checkboxValue.offsetX ?? 0,
+        currentOffsetY: checkboxValue.offsetY ?? 0,
+        clampOffset: (rawOffsetX, rawOffsetY) => ({
+          offsetX: Math.max(-baseX, Math.min(fieldWidth - baseX - itemSize, rawOffsetX)),
+          offsetY: Math.max(-baseY, Math.min(fieldHeight - baseY - itemSize, rawOffsetY)),
+        }),
+        onItemDragEnd,
       });
     }
 

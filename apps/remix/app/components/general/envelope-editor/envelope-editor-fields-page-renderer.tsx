@@ -116,7 +116,7 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
     const isFieldEditable =
       recipient !== undefined && canRecipientFieldsBeModified(recipient, envelope.fields);
 
-    const onCheckboxItemDragEnd = ({
+    const onItemDragEnd = ({
       itemIndex,
       offsetX,
       offsetY,
@@ -125,28 +125,11 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
       offsetX: number;
       offsetY: number;
     }) => {
-      const meta = field.fieldMeta as TCheckboxFieldMeta | null;
+      const meta = field.fieldMeta as TCheckboxFieldMeta | TRadioFieldMeta | null;
       const values = meta?.values ? [...meta.values] : [];
       values[itemIndex] = { ...values[itemIndex], offsetX, offsetY };
       editorFields.updateFieldByFormId(field.formId, {
-        fieldMeta: { ...meta, direction: 'custom', values } as TCheckboxFieldMeta,
-      });
-    };
-
-    const onRadioItemDragEnd = ({
-      itemIndex,
-      offsetX,
-      offsetY,
-    }: {
-      itemIndex: number;
-      offsetX: number;
-      offsetY: number;
-    }) => {
-      const meta = field.fieldMeta as TRadioFieldMeta | null;
-      const values = meta?.values ? [...meta.values] : [];
-      values[itemIndex] = { ...values[itemIndex], offsetX, offsetY };
-      editorFields.updateFieldByFormId(field.formId, {
-        fieldMeta: { ...meta, direction: 'custom', values } as TRadioFieldMeta,
+        fieldMeta: { ...meta, direction: 'custom', values } as TCheckboxFieldMeta | TRadioFieldMeta,
       });
     };
 
@@ -166,8 +149,8 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
       color: getRecipientColorKey(field.recipientId),
       editable: isFieldEditable,
       mode: 'edit',
-      onCheckboxItemDragEnd,
-      onRadioItemDragEnd,
+      onCheckboxItemDragEnd: onItemDragEnd,
+      onRadioItemDragEnd: onItemDragEnd,
     });
 
     if (!isFieldEditable) {

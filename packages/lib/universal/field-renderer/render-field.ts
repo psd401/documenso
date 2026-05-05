@@ -6,10 +6,11 @@ import { match } from 'ts-pattern';
 import type { TRecipientColor } from '@documenso/ui/lib/recipient-colors';
 
 import type { TFieldMetaSchema } from '../../types/field-meta';
-import { type OnCheckboxItemDragEnd, renderCheckboxFieldElement } from './render-checkbox-field';
+import { type OnItemDragEnd } from './field-drag-utils';
+import { renderCheckboxFieldElement } from './render-checkbox-field';
 import { renderDropdownFieldElement } from './render-dropdown-field';
 import { renderGenericTextFieldElement } from './render-generic-text-field';
-import { type OnRadioItemDragEnd, renderRadioFieldElement } from './render-radio-field';
+import { renderRadioFieldElement } from './render-radio-field';
 import { renderSignatureFieldElement } from './render-signature-field';
 
 export const MIN_FIELD_HEIGHT_PX = 12;
@@ -54,8 +55,8 @@ type RenderFieldOptions = {
   scale: number;
   editable?: boolean;
 
-  onCheckboxItemDragEnd?: OnCheckboxItemDragEnd;
-  onRadioItemDragEnd?: OnRadioItemDragEnd;
+  onCheckboxItemDragEnd?: OnItemDragEnd;
+  onRadioItemDragEnd?: OnItemDragEnd;
 };
 
 export const renderField = ({

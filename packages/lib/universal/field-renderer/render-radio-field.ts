@@ -5,6 +5,7 @@ import { match } from 'ts-pattern';
 
 import { DEFAULT_STANDARD_FONT_SIZE } from '../../constants/pdf';
 import type { TRadioFieldMeta } from '../../types/field-meta';
+import { type OnItemDragEnd, setupItemDrag } from './field-drag-utils';
 import {
   createFieldHoverInteraction,
   konvaTextFill,
@@ -23,16 +24,10 @@ const calculateRadioSize = (fontSize: number) => {
   return fontSize;
 };
 
-export type OnRadioItemDragEnd = (params: {
-  itemIndex: number;
-  offsetX: number;
-  offsetY: number;
-}) => void;
-
 export const renderRadioFieldElement = (
   field: FieldToRender,
   options: RenderFieldElementOptions,
-  onItemDragEnd?: OnRadioItemDragEnd,
+  onItemDragEnd?: OnItemDragEnd,
 ) => {
   const { pageWidth, pageHeight, pageLayer, mode, color } = options;
 
@@ -214,43 +209,25 @@ export const renderRadioFieldElement = (
     if (mode === 'edit' && radioMeta?.direction === 'custom' && onItemDragEnd) {
       const radioSize = calculateRadioSize(fontSize);
       const radioRadius = radioSize / 2;
+      const baseX = itemInputX;
+      const baseY = itemInputY;
 
-      itemGroup.draggable(true);
-
-      itemGroup.dragBoundFunc((pos) => {
-        const minX = -(itemInputX - radioRadius);
-        const minY = -(itemInputY - radioRadius);
-        const maxX = fieldWidth - itemInputX - radioRadius;
-        const maxY = fieldHeight - itemInputY - radioRadius;
-
-        return {
-          x: Math.max(minX, Math.min(maxX, pos.x)),
-          y: Math.max(minY, Math.min(maxY, pos.y)),
-        };
-      });
-
-      itemGroup.on('dragstart', (e) => {
-        if (!e.evt?.shiftKey) {
-          itemGroup.stopDrag();
-          return;
-        }
-        e.cancelBubble = true;
-      });
-
-      itemGroup.on('dragend', () => {
-        const dx = itemGroup.x();
-        const dy = itemGroup.y();
-
-        if (dx === 0 && dy === 0) {
-          return;
-        }
-
-        const newOffsetX = (radioValue.offsetX ?? 0) + dx;
-        const newOffsetY = (radioValue.offsetY ?? 0) + dy;
-
-        itemGroup.position({ x: 0, y: 0 });
-
-        onItemDragEnd({ itemIndex: index, offsetX: newOffsetX, offsetY: newOffsetY });
+      setupItemDrag({
+        itemGroup,
+        index,
+        currentOffsetX: radioValue.offsetX ?? 0,
+        currentOffsetY: radioValue.offsetY ?? 0,
+        clampOffset: (rawOffsetX, rawOffsetY) => ({
+          offsetX: Math.max(
+            -(baseX - radioRadius),
+            Math.min(fieldWidth - baseX - radioRadius, rawOffsetX),
+          ),
+          offsetY: Math.max(
+            -(baseY - radioRadius),
+            Math.min(fieldHeight - baseY - radioRadius, rawOffsetY),
+          ),
+        }),
+        onItemDragEnd,
       });
     }
 
