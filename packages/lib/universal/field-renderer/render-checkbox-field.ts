@@ -221,26 +221,27 @@ export const renderCheckboxFieldElement = (
     itemGroup.add(text);
 
     if (mode === 'edit' && checkboxMeta?.direction === 'custom' && onItemDragEnd) {
-      square.draggable(true);
+      itemGroup.draggable(true);
 
-      square.on('dragend', () => {
-        const basePos = calculateMultiItemPosition({
-          fieldWidth,
-          fieldHeight,
-          itemCount: checkboxValues.length,
-          itemIndex: index,
-          itemSize,
-          spacingBetweenItemAndText: spacingBetweenCheckboxAndText,
-          fieldPadding: checkboxFieldPadding,
-          direction: 'vertical',
-          type: 'checkbox',
-        });
+      itemGroup.on('dragstart', (e) => {
+        e.cancelBubble = true;
+      });
 
-        const newOffsetX = square.x() - basePos.itemInputX + (checkboxValue.offsetX ?? 0);
-        const newOffsetY = square.y() - basePos.itemInputY + (checkboxValue.offsetY ?? 0);
+      itemGroup.on('dragend', () => {
+        const dx = itemGroup.x();
+        const dy = itemGroup.y();
 
+        const newOffsetX = (checkboxValue.offsetX ?? 0) + dx;
+        const newOffsetY = (checkboxValue.offsetY ?? 0) + dy;
+
+        itemGroup.position({ x: 0, y: 0 });
+
+        square.x(square.x() + dx);
+        square.y(square.y() + dy);
         checkmark.x(square.x());
         checkmark.y(square.y());
+        text.x(text.x() + dx);
+        text.y(text.y() + dy);
 
         onItemDragEnd({ itemIndex: index, offsetX: newOffsetX, offsetY: newOffsetY });
       });

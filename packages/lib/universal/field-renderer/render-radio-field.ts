@@ -212,27 +212,27 @@ export const renderRadioFieldElement = (
     itemGroup.add(text);
 
     if (mode === 'edit' && radioMeta?.direction === 'custom' && onItemDragEnd) {
-      circle.draggable(true);
+      itemGroup.draggable(true);
 
-      circle.on('dragend', () => {
-        const basePos = calculateMultiItemPosition({
-          fieldWidth,
-          fieldHeight,
-          itemCount: radioValues.length,
-          itemIndex: index,
-          itemSize: calculateRadioSize(fontSize),
-          spacingBetweenItemAndText: spacingBetweenRadioAndText,
-          fieldPadding: radioFieldPadding,
-          direction: 'vertical',
-          type: 'radio',
-        });
+      itemGroup.on('dragstart', (e) => {
+        e.cancelBubble = true;
+      });
 
-        const newOffsetX = circle.x() - basePos.itemInputX + (radioValue.offsetX ?? 0);
-        const newOffsetY = circle.y() - basePos.itemInputY + (radioValue.offsetY ?? 0);
+      itemGroup.on('dragend', () => {
+        const dx = itemGroup.x();
+        const dy = itemGroup.y();
 
-        // Sync dot to follow circle position.
+        const newOffsetX = (radioValue.offsetX ?? 0) + dx;
+        const newOffsetY = (radioValue.offsetY ?? 0) + dy;
+
+        itemGroup.position({ x: 0, y: 0 });
+
+        circle.x(circle.x() + dx);
+        circle.y(circle.y() + dy);
         dot.x(circle.x());
         dot.y(circle.y());
+        text.x(text.x() + dx);
+        text.y(text.y() + dy);
 
         onItemDragEnd({ itemIndex: index, offsetX: newOffsetX, offsetY: newOffsetY });
       });
