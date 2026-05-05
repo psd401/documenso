@@ -257,6 +257,16 @@ export const renderRadioFieldElement = (
     fieldGroup.add(itemGroup);
   });
 
+  if (radioMeta?.direction === 'custom' && radioValues.length > 0) {
+    const clientRect = fieldGroup.getClientRect({ relativeTo: fieldGroup });
+    fieldRect.setAttrs({
+      x: clientRect.x,
+      y: clientRect.y,
+      width: clientRect.width,
+      height: clientRect.height,
+    });
+  }
+
   if (color !== 'readOnly' && mode !== 'export') {
     createFieldHoverInteraction({ fieldGroup, fieldRect, options });
   }

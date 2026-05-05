@@ -14,14 +14,11 @@ import {
   type PageRenderData,
   useCurrentEnvelopeRender,
 } from '@documenso/lib/client-only/providers/envelope-render-provider';
-import { DEFAULT_STANDARD_FONT_SIZE } from '@documenso/lib/constants/pdf';
 import { FIELD_META_DEFAULT_VALUES } from '@documenso/lib/types/field-meta';
 import type { TCheckboxFieldMeta, TRadioFieldMeta } from '@documenso/lib/types/field-meta';
 import {
   MIN_FIELD_HEIGHT_PX,
   MIN_FIELD_WIDTH_PX,
-  calculateFieldPosition,
-  calculateMultiItemPosition,
   convertPixelToPercentage,
 } from '@documenso/lib/universal/field-renderer/field-renderer';
 import { renderField } from '@documenso/lib/universal/field-renderer/render-field';
@@ -119,81 +116,6 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
     const isFieldEditable =
       recipient !== undefined && canRecipientFieldsBeModified(recipient, envelope.fields);
 
-    const expandFieldToFitItems = (
-      updatedValues: Array<{ offsetX?: number; offsetY?: number }>,
-      itemSize: number,
-      fieldPadding: number,
-      spacingBetweenItemAndText: number,
-      type: 'checkbox' | 'radio',
-    ) => {
-      const pageWidth = unscaledViewport.width;
-      const pageHeight = unscaledViewport.height;
-      const { fieldWidth, fieldHeight, fieldX, fieldY } = calculateFieldPosition(
-        field,
-        pageWidth,
-        pageHeight,
-      );
-
-      let minX = Infinity;
-      let minY = Infinity;
-      let maxX = -Infinity;
-      let maxY = -Infinity;
-
-      for (let i = 0; i < updatedValues.length; i++) {
-        const pos = calculateMultiItemPosition({
-          fieldWidth,
-          fieldHeight,
-          itemCount: updatedValues.length,
-          itemIndex: i,
-          itemSize,
-          spacingBetweenItemAndText,
-          fieldPadding,
-          direction: 'custom',
-          type,
-          item: updatedValues[i],
-        });
-
-        const left = type === 'radio' ? pos.itemInputX - itemSize / 2 : pos.itemInputX;
-        const top = type === 'radio' ? pos.itemInputY - itemSize / 2 : pos.itemInputY;
-
-        minX = Math.min(minX, left);
-        minY = Math.min(minY, top);
-        maxX = Math.max(maxX, left + itemSize + spacingBetweenItemAndText + pos.textWidth);
-        maxY = Math.max(maxY, top + pos.textHeight);
-      }
-
-      const pad = fieldPadding;
-      const newFieldX = fieldX + minX - pad;
-      const newFieldY = fieldY + minY - pad;
-      const newFieldW = maxX - minX + pad * 2;
-      const newFieldH = maxY - minY + pad * 2;
-
-      if (
-        newFieldX !== fieldX ||
-        newFieldY !== fieldY ||
-        newFieldW !== fieldWidth ||
-        newFieldH !== fieldHeight
-      ) {
-        const pct = convertPixelToPercentage({
-          positionX: newFieldX,
-          positionY: newFieldY,
-          width: newFieldW,
-          height: newFieldH,
-          pageWidth,
-          pageHeight,
-        });
-
-        return {
-          positionX: pct.fieldX,
-          positionY: pct.fieldY,
-          width: pct.fieldWidth,
-          height: pct.fieldHeight,
-        };
-      }
-
-      return undefined;
-    };
-
     const onCheckboxItemDragEnd = ({
       itemIndex,
       offsetX,
@@ -205,19 +127,10 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
     }) => {
       const meta = field.fieldMeta as TCheckboxFieldMeta | null;
       const values = meta?.values ? [...meta.values] : [];
-      const fontSize = meta?.fontSize || DEFAULT_STANDARD_FONT_SIZE;
       values[itemIndex] = { ...values[itemIndex], offsetX, offsetY };
-
-      const fieldUpdates: Partial<TLocalField> = {
+      editorFields.updateFieldByFormId(field.formId, {
         fieldMeta: { ...meta, direction: 'custom', values } as TCheckboxFieldMeta,
-      };
-
-      const boundsUpdate = expandFieldToFitItems(values, fontSize, 8, 8, 'checkbox');
-      if (boundsUpdate) {
-        Object.assign(fieldUpdates, boundsUpdate);
-      }
-
-      editorFields.updateFieldByFormId(field.formId, fieldUpdates);
+      });
     };
 
     const onRadioItemDragEnd = ({
@@ -231,19 +144,10 @@ export const EnvelopeEditorFieldsPageRenderer = ({ pageData }: { pageData: PageR
     }) => {
       const meta = field.fieldMeta as TRadioFieldMeta | null;
       const values = meta?.values ? [...meta.values] : [];
-      const fontSize = meta?.fontSize || DEFAULT_STANDARD_FONT_SIZE;
       values[itemIndex] = { ...values[itemIndex], offsetX, offsetY };
-
-      const fieldUpdates: Partial<TLocalField> = {
+      editorFields.updateFieldByFormId(field.formId, {
         fieldMeta: { ...meta, direction: 'custom', values } as TRadioFieldMeta,
-      };
-
-      const boundsUpdate = expandFieldToFitItems(values, fontSize, 8, 8, 'radio');
-      if (boundsUpdate) {
-        Object.assign(fieldUpdates, boundsUpdate);
-      }
-
-      editorFields.updateFieldByFormId(field.formId, fieldUpdates);
+      });
     };
 
     const { fieldGroup } = renderField({
