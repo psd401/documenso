@@ -1,6 +1,5 @@
-// ABOUTME: Normalizes a PDF buffer by flattening layers, form fields, and annotations.
+// ABOUTME: Normalizes a PDF buffer by flattening layers and annotations.
 // ABOUTME: Handles encrypted PDFs by decrypting them first via qpdf before normalization.
-
 import { PDF } from '@libpdf/core';
 
 import { AppError } from '../../errors/app-error';
@@ -31,10 +30,7 @@ export const normalizePdf = async (pdf: Buffer, options: { flattenForm?: boolean
 
     decryptedDoc.flattenLayers();
 
-    const form = decryptedDoc.getForm();
-
-    if (shouldFlattenForm && form) {
-      form.flatten();
+    if (shouldFlattenForm) {
       decryptedDoc.flattenAnnotations();
     }
 
@@ -45,10 +41,7 @@ export const normalizePdf = async (pdf: Buffer, options: { flattenForm?: boolean
 
   pdfDoc.flattenLayers();
 
-  const form = pdfDoc.getForm();
-
-  if (shouldFlattenForm && form) {
-    form.flatten();
+  if (shouldFlattenForm) {
     pdfDoc.flattenAnnotations();
   }
 
