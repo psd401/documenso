@@ -227,11 +227,11 @@ export const validateOauth = async (options: HandleOAuthCallbackUrlOptions) => {
   // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
   const claims = decodeIdToken(tokens.idToken()) as Record<string, unknown>;
 
-  const email = claims.email;
+  const rawEmail = claims.email;
   const name = claims.name;
   const sub = claims.sub;
 
-  if (typeof email !== 'string') {
+  if (typeof rawEmail !== 'string') {
     throw new AppError(AuthenticationErrorCode.InvalidRequest, {
       message: 'Missing email',
     });
@@ -248,6 +248,8 @@ export const validateOauth = async (options: HandleOAuthCallbackUrlOptions) => {
       message: 'Missing sub claim',
     });
   }
+
+  const email = rawEmail.toLowerCase();
 
   if (claims.email_verified !== true && !clientOptions.bypassEmailVerification) {
     throw new AppError(AuthenticationErrorCode.UnverifiedEmail, {
