@@ -9,6 +9,7 @@ import { generateDatabaseId } from '../../universal/id';
 
 const PSD401_ORG_ID = 'org_psd401district';
 const PSD401_MEMBER_GROUP_ID = 'org_group_psd401_member';
+const PSD401_DEFAULT_TEAM_GROUP_ID = 'org_group_default_member';
 
 export interface CreateUserOptions {
   name: string;
@@ -73,10 +74,16 @@ const addUserToPsd401Org = async (userId: number) => {
       userId,
       organisationId: PSD401_ORG_ID,
       organisationGroupMembers: {
-        create: {
-          id: generateDatabaseId('group_member'),
-          groupId: PSD401_MEMBER_GROUP_ID,
-        },
+        create: [
+          {
+            id: generateDatabaseId('group_member'),
+            groupId: PSD401_MEMBER_GROUP_ID,
+          },
+          {
+            id: generateDatabaseId('group_member'),
+            groupId: PSD401_DEFAULT_TEAM_GROUP_ID,
+          },
+        ],
       },
     },
   });
