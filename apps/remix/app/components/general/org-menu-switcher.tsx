@@ -196,15 +196,6 @@ export const OrgMenuSwitcher = () => {
                   )}
                 </div>
               ))}
-
-              {isUserAdmin && (
-                <Button variant="ghost" className="w-full justify-start" asChild>
-                  <Link to="/settings/organisations?action=add-organisation">
-                    <Plus className="mr-2 h-4 w-4" />
-                    <Trans>Create Organisation</Trans>
-                  </Link>
-                </Button>
-              )}
             </div>
           </div>
 
