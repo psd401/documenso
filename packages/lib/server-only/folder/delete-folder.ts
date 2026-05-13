@@ -1,7 +1,7 @@
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { prisma } from '@documenso/prisma';
 
-import { TEAM_DOCUMENT_VISIBILITY_MAP } from '../../constants/teams';
+import { buildFolderAccessFilter, getUserTeamGroupIds } from '../../utils/folder-access';
 import { buildTeamWhereQuery, canAccessTeamDocument } from '../../utils/teams';
 import { getTeamById } from '../team/get-team';
 
@@ -13,6 +13,7 @@ export interface DeleteFolderOptions {
 
 export const deleteFolder = async ({ userId, teamId, folderId }: DeleteFolderOptions) => {
   const team = await getTeamById({ userId, teamId });
+  const userGroupIds = await getUserTeamGroupIds(userId, teamId);
 
   const folder = await prisma.folder.findFirst({
     where: {
@@ -21,9 +22,7 @@ export const deleteFolder = async ({ userId, teamId, folderId }: DeleteFolderOpt
         teamId,
         userId,
       }),
-      visibility: {
-        in: TEAM_DOCUMENT_VISIBILITY_MAP[team.currentTeamRole],
-      },
+      ...buildFolderAccessFilter(userId, team.currentTeamRole, userGroupIds),
     },
   });
 

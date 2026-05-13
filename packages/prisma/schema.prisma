@@ -369,8 +369,10 @@ model Folder {
   createdAt  DateTime           @default(now())
   updatedAt  DateTime           @default(now()) @updatedAt
   subfolders Folder[]           @relation("FolderToFolder")
-  visibility DocumentVisibility @default(EVERYONE)
-  type       FolderType
+  visibility     DocumentVisibility @default(EVERYONE)
+  type           FolderType
+  allowedUserIds  Int[]              @default([])
+  allowedGroupIds String[]           @default([])
 
   @@index([userId])
   @@index([teamId])
