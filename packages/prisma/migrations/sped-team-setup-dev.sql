@@ -30,26 +30,26 @@ BEGIN
 
   -- 3. Create OrganisationGroups (CUSTOM type) for each location + admin group
   INSERT INTO "OrganisationGroup" (id, name, type, "organisationRole", "organisationId") VALUES
-    ('org_group_sped_admin',              'SPED Administration',         'CUSTOM', 'MEMBER', 'org_psd401district'),
-    ('org_group_sped_artondale',          'SPED Artondale',              'CUSTOM', 'MEMBER', 'org_psd401district'),
-    ('org_group_sped_discovery',          'SPED Discovery',              'CUSTOM', 'MEMBER', 'org_psd401district'),
-    ('org_group_sped_evergreen',          'SPED Evergreen',              'CUSTOM', 'MEMBER', 'org_psd401district'),
-    ('org_group_sped_harbor_heights',     'SPED Harbor Heights',         'CUSTOM', 'MEMBER', 'org_psd401district'),
-    ('org_group_sped_minter_creek',       'SPED Minter Creek',           'CUSTOM', 'MEMBER', 'org_psd401district'),
-    ('org_group_sped_pioneer',            'SPED Pioneer',                'CUSTOM', 'MEMBER', 'org_psd401district'),
-    ('org_group_sped_purdy',              'SPED Purdy',                  'CUSTOM', 'MEMBER', 'org_psd401district'),
-    ('org_group_sped_swift_water',        'SPED Swift Water',            'CUSTOM', 'MEMBER', 'org_psd401district'),
-    ('org_group_sped_vaughn',             'SPED Vaughn',                 'CUSTOM', 'MEMBER', 'org_psd401district'),
-    ('org_group_sped_voyager',            'SPED Voyager',                'CUSTOM', 'MEMBER', 'org_psd401district'),
-    ('org_group_sped_goodman',            'SPED Goodman MS',             'CUSTOM', 'MEMBER', 'org_psd401district'),
-    ('org_group_sped_harbor_ridge',       'SPED Harbor Ridge MS',        'CUSTOM', 'MEMBER', 'org_psd401district'),
-    ('org_group_sped_key_peninsula',      'SPED Key Peninsula MS',       'CUSTOM', 'MEMBER', 'org_psd401district'),
-    ('org_group_sped_kopachuck',          'SPED Kopachuck MS',           'CUSTOM', 'MEMBER', 'org_psd401district'),
-    ('org_group_sped_gig_harbor_hs',      'SPED Gig Harbor HS',          'CUSTOM', 'MEMBER', 'org_psd401district'),
-    ('org_group_sped_henderson_bay_hs',   'SPED Henderson Bay HS',       'CUSTOM', 'MEMBER', 'org_psd401district'),
-    ('org_group_sped_peninsula_hs',       'SPED Peninsula HS',           'CUSTOM', 'MEMBER', 'org_psd401district'),
-    ('org_group_sped_ctp',                'SPED CTP',                    'CUSTOM', 'MEMBER', 'org_psd401district'),
-    ('org_group_sped_district_wide',      'SPED District Wide Support',  'CUSTOM', 'MEMBER', 'org_psd401district');
+    ('org_group_sped_admin',              'Administration',              'CUSTOM', 'MEMBER', 'org_psd401district'),
+    ('org_group_sped_artondale',          'Artondale Elementary',        'CUSTOM', 'MEMBER', 'org_psd401district'),
+    ('org_group_sped_discovery',          'Discovery Elementary',        'CUSTOM', 'MEMBER', 'org_psd401district'),
+    ('org_group_sped_evergreen',          'Evergreen Elementary',        'CUSTOM', 'MEMBER', 'org_psd401district'),
+    ('org_group_sped_harbor_heights',     'Harbor Heights Elementary',   'CUSTOM', 'MEMBER', 'org_psd401district'),
+    ('org_group_sped_minter_creek',       'Minter Creek Elementary',     'CUSTOM', 'MEMBER', 'org_psd401district'),
+    ('org_group_sped_pioneer',            'Pioneer Elementary',          'CUSTOM', 'MEMBER', 'org_psd401district'),
+    ('org_group_sped_purdy',              'Purdy Elementary',            'CUSTOM', 'MEMBER', 'org_psd401district'),
+    ('org_group_sped_swift_water',        'Swift Water Elementary',      'CUSTOM', 'MEMBER', 'org_psd401district'),
+    ('org_group_sped_vaughn',             'Vaughn Elementary',           'CUSTOM', 'MEMBER', 'org_psd401district'),
+    ('org_group_sped_voyager',            'Voyager Elementary',          'CUSTOM', 'MEMBER', 'org_psd401district'),
+    ('org_group_sped_goodman',            'Goodman Middle School',       'CUSTOM', 'MEMBER', 'org_psd401district'),
+    ('org_group_sped_harbor_ridge',       'Harbor Ridge Middle School',  'CUSTOM', 'MEMBER', 'org_psd401district'),
+    ('org_group_sped_key_peninsula',      'Key Peninsula Middle School', 'CUSTOM', 'MEMBER', 'org_psd401district'),
+    ('org_group_sped_kopachuck',          'Kopachuck Middle School',     'CUSTOM', 'MEMBER', 'org_psd401district'),
+    ('org_group_sped_gig_harbor_hs',      'Gig Harbor High School',      'CUSTOM', 'MEMBER', 'org_psd401district'),
+    ('org_group_sped_henderson_bay_hs',   'Henderson Bay High School',   'CUSTOM', 'MEMBER', 'org_psd401district'),
+    ('org_group_sped_peninsula_hs',       'Peninsula High School',       'CUSTOM', 'MEMBER', 'org_psd401district'),
+    ('org_group_sped_ctp',                'Community Transition Program','CUSTOM', 'MEMBER', 'org_psd401district'),
+    ('org_group_sped_district_wide',      'District Wide Support',       'CUSTOM', 'MEMBER', 'org_psd401district');
 
   -- 4. Create TeamGroups linking org groups to the SPED team
   -- Admin group gets ADMIN role, all location groups get MEMBER role
