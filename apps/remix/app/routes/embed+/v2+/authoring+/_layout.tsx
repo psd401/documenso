@@ -116,6 +116,7 @@ export default function AuthoringLayout() {
     organisationId: '',
     teamEmail: null,
     currentTeamRole: TeamMemberRole.MEMBER,
+    isPersonal: false,
     preferences: {
       aiFeaturesEnabled: preferences.aiFeaturesEnabled,
     },
@@ -187,8 +188,8 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
               </li>
               <li>
                 <Trans>
-                  Ensure that you have set the host prop on the embedding
-                  component to the correct domain (https://documenso.psd401.net)
+                  Ensure that you have set the host prop on the embedding component to the correct
+                  domain (https://documenso.psd401.net)
                 </Trans>
               </li>
             </ul>
