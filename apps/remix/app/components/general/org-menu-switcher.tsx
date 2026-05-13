@@ -297,14 +297,19 @@ export const OrgMenuSwitcher = () => {
                   </div>
                 )}
 
-                {displayedOrg && isUserAdmin && (
-                  <Button variant="ghost" className="w-full justify-start" asChild>
-                    <Link to={`/o/${displayedOrg.url}/settings/teams?action=add-team`}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      <Trans>Create Team</Trans>
-                    </Link>
-                  </Button>
-                )}
+                {displayedOrg &&
+                  currentOrganisation &&
+                  canExecuteOrganisationAction(
+                    'MANAGE_ORGANISATION',
+                    currentOrganisation.currentOrganisationRole,
+                  ) && (
+                    <Button variant="ghost" className="w-full justify-start" asChild>
+                      <Link to={`/o/${displayedOrg.url}/settings/teams?action=add-team`}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        <Trans>Create Team</Trans>
+                      </Link>
+                    </Button>
+                  )}
               </AnimateGenericFadeInOut>
             </div>
           </div>
