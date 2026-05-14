@@ -249,11 +249,13 @@ export const OrgMenuSwitcher = () => {
                         </div>
                       ))}
 
-                    {hoveredOrg.teams.some((team) => team.isPersonal) && (
+                    {hoveredOrg.teams.some(
+                      (team) => team.isPersonal && team.url.endsWith(`-${user.id}`),
+                    ) && (
                       <>
                         <div className="my-1 border-t" />
                         {hoveredOrg.teams
-                          .filter((team) => team.isPersonal)
+                          .filter((team) => team.isPersonal && team.url.endsWith(`-${user.id}`))
                           .slice(0, 1)
                           .map((team) => (
                             <div className="group relative" key={team.id}>
