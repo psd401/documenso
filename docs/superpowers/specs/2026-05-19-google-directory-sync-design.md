@@ -13,7 +13,7 @@ PSD401 needs department, title, and group membership data from Google Workspace 
 - GCP service account with domain-wide delegation enabled
 - Scopes granted in Google Admin console: `https://www.googleapis.com/auth/admin.directory.user.readonly`, `https://www.googleapis.com/auth/admin.directory.group.readonly`
 - Service account impersonates a dedicated delegated admin account with only Directory read permissions (not a general admin or super admin), per [Google's DWD best practices](https://support.google.com/a/answer/14437356)
-- Service account key stored in AWS Secrets Manager (production) or env var (dev). Key rotated on a 90-day schedule.
+- Service account key stored as env var. Rotate manually on a periodic schedule, or eliminate keys entirely with GCP Workload Identity Federation (uses AWS IAM role to authenticate to GCP, no key to manage).
 - Google Workspace audit logging enabled for the impersonated admin account to detect anomalous lookup volumes
 - PSD401 Google Workspace has department, title, and orgUnitPath populated for users
 
