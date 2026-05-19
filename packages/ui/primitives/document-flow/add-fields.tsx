@@ -17,6 +17,7 @@ import {
   Type,
   User,
 } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { useHotkeys } from 'react-hotkeys-hook';
 
@@ -49,6 +50,7 @@ import { RecipientSelector } from '../recipient-selector';
 import { useStep } from '../stepper';
 import { useToast } from '../use-toast';
 import { type TAddFieldsFormSchema, ZAddFieldsFormSchema } from './add-fields.types';
+import { BulkFieldSettings, type BulkFieldUpdate } from './bulk-field-settings';
 import {
   DocumentFlowFormContainerActions,
   DocumentFlowFormContainerContent,
@@ -56,7 +58,7 @@ import {
   DocumentFlowFormContainerHeader,
   DocumentFlowFormContainerStep,
 } from './document-flow-root';
-import { FieldItem } from './field-item';
+import { FieldItem, type FieldSelectModifiers } from './field-item';
 import { FieldAdvancedSettings } from './field-item-advanced-settings';
 import { MissingSignatureFieldDialog } from './missing-signature-field-dialog';
 import { type DocumentFlowStep, FRIENDLY_FIELD_TYPE } from './types';
@@ -116,6 +118,37 @@ export const AddFieldsFormPartial = ({
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const [currentField, setCurrentField] = useState<FieldFormType>();
   const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
+  const [selectedFieldIds, setSelectedFieldIds] = useState<string[]>([]);
+  const [marquee, setMarquee] = useState<{
+    pageNumber: number;
+    startX: number;
+    startY: number;
+    currentX: number;
+    currentY: number;
+  } | null>(null);
+
+  const isMultiSelectActive = selectedFieldIds.length > 1;
+
+  const clearSelection = useCallback(() => {
+    setSelectedFieldIds([]);
+  }, []);
+
+  const handleFieldSelect = useCallback((fieldFormId: string, modifiers: FieldSelectModifiers) => {
+    const additive = modifiers.shiftKey || modifiers.metaKey || modifiers.ctrlKey;
+
+    setSelectedFieldIds((prev) => {
+      if (additive) {
+        if (prev.includes(fieldFormId)) {
+          return prev.filter((id) => id !== fieldFormId);
+        }
+
+        return [...prev, fieldFormId];
+      }
+
+      // Plain click — single-select.
+      return [fieldFormId];
+    });
+  }, []);
 
   const form = useForm<TAddFieldsFormSchema>({
     defaultValues: {
@@ -140,6 +173,24 @@ export const AddFieldsFormPartial = ({
   useHotkeys(['ctrl+c', 'meta+c'], (evt) => onFieldCopy(evt));
   useHotkeys(['ctrl+v', 'meta+v'], (evt) => onFieldPaste(evt));
   useHotkeys(['ctrl+d', 'meta+d'], (evt) => onFieldCopy(evt, { duplicate: true }));
+  useHotkeys(
+    ['escape'],
+    () => {
+      clearSelection();
+    },
+    { enableOnFormTags: false },
+  );
+  useHotkeys(
+    ['delete', 'backspace'],
+    (evt) => {
+      if (selectedFieldIds.length > 1) {
+        evt.preventDefault();
+        bulkDelete();
+      }
+    },
+    { enableOnFormTags: false },
+    [selectedFieldIds],
+  );
 
   const onFormSubmit = form.handleSubmit(onSubmit);
 
@@ -172,6 +223,116 @@ export const AddFieldsFormPartial = ({
     name: 'fields',
   });
 
+  const selectedFields = useMemo(
+    () => localFields.filter((field) => selectedFieldIds.includes(field.formId)),
+    [localFields, selectedFieldIds],
+  );
+
+  const applyBulkUpdate = useCallback(
+    (update: BulkFieldUpdate) => {
+      const initialValues = form.getValues();
+
+      const updatedFields = initialValues.fields.map((field) => {
+        if (!selectedFieldIds.includes(field.formId)) {
+          return field;
+        }
+
+        const existingMeta = field.fieldMeta;
+
+        // Build a meta object scoped to the field's type by merging only properties the
+        // field's meta actually accepts.
+        const nextMeta: Record<string, unknown> = {
+          ...(existingMeta && typeof existingMeta === 'object' ? existingMeta : {}),
+        };
+
+        // Without a type tag the meta cannot be parsed, so seed it from the field type.
+        if (!nextMeta.type) {
+          nextMeta.type = field.type.toLowerCase();
+        }
+
+        const fontSizeTypes: FieldType[] = [
+          FieldType.INITIALS,
+          FieldType.NAME,
+          FieldType.EMAIL,
+          FieldType.DATE,
+          FieldType.TEXT,
+          FieldType.NUMBER,
+        ];
+        const textAlignTypes: FieldType[] = fontSizeTypes;
+        const requiredReadonlyTypes: FieldType[] = [
+          FieldType.TEXT,
+          FieldType.NUMBER,
+          FieldType.RADIO,
+          FieldType.CHECKBOX,
+          FieldType.DROPDOWN,
+        ];
+
+        if (update.fontSize !== undefined && fontSizeTypes.includes(field.type)) {
+          nextMeta.fontSize = update.fontSize;
+        }
+
+        if (update.textAlign !== undefined && textAlignTypes.includes(field.type)) {
+          nextMeta.textAlign = update.textAlign;
+        }
+
+        if (update.required !== undefined && requiredReadonlyTypes.includes(field.type)) {
+          nextMeta.required = update.required;
+        }
+
+        if (update.readOnly !== undefined && requiredReadonlyTypes.includes(field.type)) {
+          nextMeta.readOnly = update.readOnly;
+        }
+
+        const parsed = ZFieldMetaSchema.safeParse(nextMeta);
+
+        return {
+          ...field,
+          fieldMeta: parsed.success ? parsed.data : (existingMeta as FieldMeta | undefined),
+        };
+      });
+
+      form.setValue('fields', updatedFields);
+      void handleAutoSave();
+    },
+    [form, selectedFieldIds],
+  );
+
+  const bulkDelete = useCallback(() => {
+    const indices = localFields
+      .map((field, index) => (selectedFieldIds.includes(field.formId) ? index : -1))
+      .filter((index) => index !== -1);
+
+    // Remove from highest index down so earlier indices remain valid.
+    indices
+      .slice()
+      .sort((a, b) => b - a)
+      .forEach((index) => remove(index));
+
+    clearSelection();
+    void handleAutoSave();
+  }, [localFields, selectedFieldIds, remove, clearSelection]);
+
+  const bulkDuplicate = useCallback(() => {
+    const toDuplicate = localFields.filter((field) => selectedFieldIds.includes(field.formId));
+    const newIds: string[] = [];
+
+    toDuplicate.forEach((field) => {
+      const newId = nanoid(12);
+      newIds.push(newId);
+
+      append({
+        ...structuredClone(field),
+        nativeId: undefined,
+        formId: newId,
+        pageX: field.pageX + 3,
+        pageY: field.pageY + 3,
+      });
+    });
+
+    setSelectedFieldIds(newIds);
+    void handleAutoSave();
+  }, [localFields, selectedFieldIds, append]);
+
   const [selectedField, setSelectedField] = useState<FieldType | null>(null);
   const [selectedSigner, setSelectedSigner] = useState<TRecipientLite | null>(null);
   const [lastActiveField, setLastActiveField] = useState<TAddFieldsFormSchema['fields'][0] | null>(
@@ -198,19 +359,16 @@ export const AddFieldsFormPartial = ({
 
   const emptyCheckboxFields = useMemo(
     () => filterFieldsWithEmptyValues(localFields, FieldType.CHECKBOX),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [localFields],
   );
 
   const emptyRadioFields = useMemo(
     () => filterFieldsWithEmptyValues(localFields, FieldType.RADIO),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [localFields],
   );
 
   const emptySelectFields = useMemo(
     () => filterFieldsWithEmptyValues(localFields, FieldType.DROPDOWN),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [localFields],
   );
 
@@ -500,6 +658,153 @@ export const AddFieldsFormPartial = ({
     };
   }, [onMouseClick, onMouseMove, selectedField]);
 
+  // Marquee (drag-select) on the PDF page surface — selects every field whose bounding rect
+  // intersects the drawn box. Skipped while the user is placing a new field.
+  useEffect(() => {
+    if (selectedField) {
+      return;
+    }
+
+    const MIN_DRAG_PX = 4;
+
+    let startTarget: HTMLElement | null = null;
+    let startClientX = 0;
+    let startClientY = 0;
+    let startPageX = 0;
+    let startPageY = 0;
+    let pageEl: HTMLElement | null = null;
+    let pageNumber: number | null = null;
+    let pageRect: DOMRect | null = null;
+    let active = false;
+    let additive = false;
+
+    const onDown = (event: MouseEvent) => {
+      if (event.button !== 0) {
+        return;
+      }
+
+      if (!(event.target instanceof HTMLElement)) {
+        return;
+      }
+
+      // Ignore mousedowns that originate inside a field item (they portal to body so they're
+      // siblings of the page, not children).
+      if (event.target.closest('[data-field-id], [data-field-type]')) {
+        return;
+      }
+
+      const $page = event.target.closest<HTMLElement>(PDF_VIEWER_PAGE_SELECTOR);
+
+      if (!$page) {
+        return;
+      }
+
+      startTarget = event.target;
+      startClientX = event.clientX;
+      startClientY = event.clientY;
+      pageEl = $page;
+      pageRect = $page.getBoundingClientRect();
+      pageNumber = parseInt($page.getAttribute('data-page-number') ?? '1', 10);
+
+      startPageX = ((event.clientX - pageRect.left) / pageRect.width) * 100;
+      startPageY = ((event.clientY - pageRect.top) / pageRect.height) * 100;
+
+      additive = event.shiftKey || event.metaKey || event.ctrlKey;
+      active = false;
+    };
+
+    const onMove = (event: MouseEvent) => {
+      if (!startTarget || !pageRect || !pageEl || pageNumber === null) {
+        return;
+      }
+
+      const dx = event.clientX - startClientX;
+      const dy = event.clientY - startClientY;
+
+      if (!active && Math.abs(dx) < MIN_DRAG_PX && Math.abs(dy) < MIN_DRAG_PX) {
+        return;
+      }
+
+      active = true;
+
+      const currentPageX = ((event.clientX - pageRect.left) / pageRect.width) * 100;
+      const currentPageY = ((event.clientY - pageRect.top) / pageRect.height) * 100;
+
+      setMarquee({
+        pageNumber,
+        startX: startPageX,
+        startY: startPageY,
+        currentX: currentPageX,
+        currentY: currentPageY,
+      });
+    };
+
+    const onUp = (event: MouseEvent) => {
+      if (!startTarget) {
+        return;
+      }
+
+      if (!active) {
+        // Plain click on the page (not a drag) — clear selection unless modifier held.
+        if (!additive) {
+          clearSelection();
+        }
+
+        startTarget = null;
+        return;
+      }
+
+      const finalPageX =
+        pageRect && pageRect.width
+          ? ((event.clientX - pageRect.left) / pageRect.width) * 100
+          : startPageX;
+      const finalPageY =
+        pageRect && pageRect.height
+          ? ((event.clientY - pageRect.top) / pageRect.height) * 100
+          : startPageY;
+
+      const left = Math.min(startPageX, finalPageX);
+      const right = Math.max(startPageX, finalPageX);
+      const top = Math.min(startPageY, finalPageY);
+      const bottom = Math.max(startPageY, finalPageY);
+
+      const hitIds = localFields
+        .filter((field) => field.pageNumber === pageNumber)
+        .filter((field) => {
+          const fLeft = field.pageX;
+          const fTop = field.pageY;
+          const fRight = field.pageX + field.pageWidth;
+          const fBottom = field.pageY + field.pageHeight;
+
+          return !(fRight < left || fLeft > right || fBottom < top || fTop > bottom);
+        })
+        .map((field) => field.formId);
+
+      setSelectedFieldIds((prev) => {
+        if (additive) {
+          const merged = new Set([...prev, ...hitIds]);
+          return Array.from(merged);
+        }
+
+        return hitIds;
+      });
+
+      setMarquee(null);
+      startTarget = null;
+      active = false;
+    };
+
+    window.addEventListener('mousedown', onDown);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+
+    return () => {
+      window.removeEventListener('mousedown', onDown);
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, [clearSelection, localFields, selectedField]);
+
   useEffect(() => {
     const observer = new MutationObserver((_mutations) => {
       const $page = document.querySelector(PDF_VIEWER_PAGE_SELECTOR);
@@ -624,10 +929,10 @@ export const AddFieldsFormPartial = ({
               {selectedField && (
                 <div
                   className={cn(
-                    'dark:text-muted-background pointer-events-none fixed z-50 flex cursor-pointer flex-col items-center justify-center rounded-[2px] bg-white text-muted-foreground ring-2 transition duration-200 [container-type:size]',
+                    'dark:text-muted-background text-muted-foreground [container-type:size] pointer-events-none fixed z-50 flex cursor-pointer flex-col items-center justify-center rounded-[2px] bg-white ring-2 transition duration-200',
                     selectedSignerStyles?.base,
                     {
-                      '-rotate-6 scale-90 opacity-50 dark:bg-black/20': !isFieldWithinBounds,
+                      'scale-90 -rotate-6 opacity-50 dark:bg-black/20': !isFieldWithinBounds,
                       'dark:text-black/60': isFieldWithinBounds,
                     },
                   )}
@@ -643,6 +948,8 @@ export const AddFieldsFormPartial = ({
                   </span>
                 </div>
               )}
+
+              {marquee && <MarqueeOverlay marquee={marquee} />}
 
               {isDocumentPdfLoaded &&
                 localFields.map((field, index) => {
@@ -693,8 +1000,11 @@ export const AddFieldsFormPartial = ({
                       }}
                       hasErrors={!!hasFieldError}
                       active={activeFieldId === field.formId}
+                      selected={selectedFieldIds.includes(field.formId)}
+                      multiSelectActive={isMultiSelectActive}
                       onFieldActivate={() => setActiveFieldId(field.formId)}
                       onFieldDeactivate={() => setActiveFieldId(null)}
+                      onSelect={(modifiers) => handleFieldSelect(field.formId, modifiers)}
                     />
                   );
                 })}
@@ -704,13 +1014,26 @@ export const AddFieldsFormPartial = ({
                   selectedRecipient={selectedSigner}
                   onSelectedRecipientChange={setSelectedSigner}
                   recipients={recipients}
-                  className="mb-12 mt-2"
+                  className="mt-2 mb-12"
+                />
+              )}
+
+              {isMultiSelectActive && (
+                <BulkFieldSettings
+                  selectedFields={selectedFields}
+                  onClose={clearSelection}
+                  onApply={applyBulkUpdate}
+                  onBulkDelete={bulkDelete}
+                  onBulkDuplicate={bulkDuplicate}
                 />
               )}
 
               <Form {...form}>
                 <div className="-mx-2 flex-1 overflow-y-auto px-2">
-                  <fieldset disabled={isFieldsDisabled} className="my-2 grid grid-cols-3 gap-4">
+                  <fieldset
+                    disabled={isFieldsDisabled || isMultiSelectActive}
+                    className="my-2 grid grid-cols-3 gap-4"
+                  >
                     <button
                       type="button"
                       className="group h-full w-full"
@@ -726,7 +1049,7 @@ export const AddFieldsFormPartial = ({
                         <CardContent className="flex flex-col items-center justify-center px-6 py-4">
                           <p
                             className={cn(
-                              'flex items-center justify-center gap-x-1.5 font-signature text-lg font-normal text-muted-foreground group-data-[selected]:text-foreground',
+                              'font-signature text-muted-foreground group-data-[selected]:text-foreground flex items-center justify-center gap-x-1.5 text-lg font-normal',
                             )}
                           >
                             <Trans>Signature</Trans>
@@ -750,7 +1073,7 @@ export const AddFieldsFormPartial = ({
                         <CardContent className="flex flex-col items-center justify-center px-6 py-4">
                           <p
                             className={cn(
-                              'flex items-center justify-center gap-x-1.5 text-sm font-normal text-muted-foreground group-data-[selected]:text-foreground',
+                              'text-muted-foreground group-data-[selected]:text-foreground flex items-center justify-center gap-x-1.5 text-sm font-normal',
                             )}
                           >
                             <Contact className="h-4 w-4" />
@@ -775,7 +1098,7 @@ export const AddFieldsFormPartial = ({
                         <CardContent className="flex flex-col items-center justify-center px-6 py-4">
                           <p
                             className={cn(
-                              'flex items-center justify-center gap-x-1.5 text-sm font-normal text-muted-foreground group-data-[selected]:text-foreground',
+                              'text-muted-foreground group-data-[selected]:text-foreground flex items-center justify-center gap-x-1.5 text-sm font-normal',
                             )}
                           >
                             <Mail className="h-4 w-4" />
@@ -800,7 +1123,7 @@ export const AddFieldsFormPartial = ({
                         <CardContent className="p-4">
                           <p
                             className={cn(
-                              'flex items-center justify-center gap-x-1.5 text-sm font-normal text-muted-foreground group-data-[selected]:text-foreground',
+                              'text-muted-foreground group-data-[selected]:text-foreground flex items-center justify-center gap-x-1.5 text-sm font-normal',
                             )}
                           >
                             <User className="h-4 w-4" />
@@ -825,7 +1148,7 @@ export const AddFieldsFormPartial = ({
                         <CardContent className="p-4">
                           <p
                             className={cn(
-                              'flex items-center justify-center gap-x-1.5 text-sm font-normal text-muted-foreground group-data-[selected]:text-foreground',
+                              'text-muted-foreground group-data-[selected]:text-foreground flex items-center justify-center gap-x-1.5 text-sm font-normal',
                             )}
                           >
                             <CalendarDays className="h-4 w-4" />
@@ -850,7 +1173,7 @@ export const AddFieldsFormPartial = ({
                         <CardContent className="p-4">
                           <p
                             className={cn(
-                              'flex items-center justify-center gap-x-1.5 text-sm font-normal text-muted-foreground group-data-[selected]:text-foreground',
+                              'text-muted-foreground group-data-[selected]:text-foreground flex items-center justify-center gap-x-1.5 text-sm font-normal',
                             )}
                           >
                             <Type className="h-4 w-4" />
@@ -875,7 +1198,7 @@ export const AddFieldsFormPartial = ({
                         <CardContent className="p-4">
                           <p
                             className={cn(
-                              'flex items-center justify-center gap-x-1.5 text-sm font-normal text-muted-foreground group-data-[selected]:text-foreground',
+                              'text-muted-foreground group-data-[selected]:text-foreground flex items-center justify-center gap-x-1.5 text-sm font-normal',
                             )}
                           >
                             <Hash className="h-4 w-4" />
@@ -900,7 +1223,7 @@ export const AddFieldsFormPartial = ({
                         <CardContent className="p-4">
                           <p
                             className={cn(
-                              'flex items-center justify-center gap-x-1.5 text-sm font-normal text-muted-foreground group-data-[selected]:text-foreground',
+                              'text-muted-foreground group-data-[selected]:text-foreground flex items-center justify-center gap-x-1.5 text-sm font-normal',
                             )}
                           >
                             <Disc className="h-4 w-4" />
@@ -925,7 +1248,7 @@ export const AddFieldsFormPartial = ({
                         <CardContent className="p-4">
                           <p
                             className={cn(
-                              'flex items-center justify-center gap-x-1.5 text-sm font-normal text-muted-foreground group-data-[selected]:text-foreground',
+                              'text-muted-foreground group-data-[selected]:text-foreground flex items-center justify-center gap-x-1.5 text-sm font-normal',
                             )}
                           >
                             <CheckSquare className="h-4 w-4" />
@@ -950,7 +1273,7 @@ export const AddFieldsFormPartial = ({
                         <CardContent className="p-4">
                           <p
                             className={cn(
-                              'flex items-center justify-center gap-x-1.5 text-sm font-normal text-muted-foreground group-data-[selected]:text-foreground',
+                              'text-muted-foreground group-data-[selected]:text-foreground flex items-center justify-center gap-x-1.5 text-sm font-normal',
                             )}
                           >
                             <ChevronDown className="h-4 w-4" />
@@ -1023,5 +1346,72 @@ export const AddFieldsFormPartial = ({
         </FieldToolTip>
       )}
     </>
+  );
+};
+
+type MarqueeOverlayProps = {
+  marquee: {
+    pageNumber: number;
+    startX: number;
+    startY: number;
+    currentX: number;
+    currentY: number;
+  };
+};
+
+/**
+ * Renders the marquee rectangle as a fixed-position overlay during drag-select.
+ * Coordinates in the marquee state are in page-percent units; we resolve them to viewport
+ * pixels by reading the current page element's bounding rect.
+ */
+const MarqueeOverlay = ({ marquee }: MarqueeOverlayProps) => {
+  const [rect, setRect] = useState<{
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+  } | null>(null);
+
+  useEffect(() => {
+    const $page = document.querySelector<HTMLElement>(
+      `${PDF_VIEWER_PAGE_SELECTOR}[data-page-number="${marquee.pageNumber}"]`,
+    );
+
+    if (!$page) {
+      setRect(null);
+      return;
+    }
+
+    const pageRect = $page.getBoundingClientRect();
+
+    const minX = Math.min(marquee.startX, marquee.currentX);
+    const maxX = Math.max(marquee.startX, marquee.currentX);
+    const minY = Math.min(marquee.startY, marquee.currentY);
+    const maxY = Math.max(marquee.startY, marquee.currentY);
+
+    setRect({
+      top: pageRect.top + (minY / 100) * pageRect.height,
+      left: pageRect.left + (minX / 100) * pageRect.width,
+      width: ((maxX - minX) / 100) * pageRect.width,
+      height: ((maxY - minY) / 100) * pageRect.height,
+    });
+  }, [marquee.currentX, marquee.currentY, marquee.pageNumber, marquee.startX, marquee.startY]);
+
+  if (!rect || typeof window === 'undefined') {
+    return null;
+  }
+
+  return createPortal(
+    <div
+      className="pointer-events-none fixed z-[55] rounded-sm border border-blue-500 bg-blue-500/10"
+      style={{
+        top: rect.top,
+        left: rect.left,
+        width: rect.width,
+        height: rect.height,
+      }}
+      data-testid="field-marquee"
+    />,
+    document.body,
   );
 };

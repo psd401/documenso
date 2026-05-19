@@ -22,6 +22,12 @@ import type { TDocumentFlowFormSchema } from './types';
 
 type Field = TDocumentFlowFormSchema['fields'][0];
 
+export type FieldSelectModifiers = {
+  shiftKey?: boolean;
+  metaKey?: boolean;
+  ctrlKey?: boolean;
+};
+
 export type FieldItemProps = {
   field: Field;
   fieldClassName?: string;
@@ -44,8 +50,11 @@ export type FieldItemProps = {
   recipientIndex?: number;
   hasErrors?: boolean;
   active?: boolean;
+  selected?: boolean;
+  multiSelectActive?: boolean;
   onFieldActivate?: () => void;
   onFieldDeactivate?: () => void;
+  onSelect?: (_modifiers: FieldSelectModifiers) => void;
 };
 
 /**
@@ -81,8 +90,11 @@ const FieldItemInner = ({
   recipientIndex = 0,
   hasErrors,
   active,
+  selected,
+  multiSelectActive,
   onFieldActivate,
   onFieldDeactivate,
+  onSelect,
 }: FieldItemProps) => {
   const { _ } = useLingui();
   const [searchParams] = useSearchParams();
@@ -175,8 +187,13 @@ const FieldItemInner = ({
 
       if (isOutsideOfField) {
         setSettingsActive(false);
-        onFieldDeactivate?.();
-        onBlur?.();
+
+        // Don't deactivate on outside click when the field is part of a multi-selection —
+        // the parent owns selection lifecycle in that case (marquee, escape, etc).
+        if (!selected) {
+          onFieldDeactivate?.();
+          onBlur?.();
+        }
       }
     };
 
@@ -185,7 +202,7 @@ const FieldItemInner = ({
     return () => {
       document.body.removeEventListener('click', onClickOutsideOfField);
     };
-  }, [onBlur]);
+  }, [onBlur, selected]);
 
   const hasFieldMetaValues = (
     fieldType: string,
@@ -241,8 +258,8 @@ const FieldItemInner = ({
       className={cn('dark-mode-disabled group', {
         'pointer-events-none': passive,
         'pointer-events-none cursor-not-allowed opacity-75': disabled,
-        'z-50': active && !disabled,
-        'z-20': !active && !disabled,
+        'z-50': (active || selected) && !disabled,
+        'z-20': !active && !selected && !disabled,
         'z-10': disabled,
       })}
       minHeight={fixedSize ? '' : minHeight || 'auto'}
@@ -279,10 +296,10 @@ const FieldItemInner = ({
         field.fieldMeta?.label && (
           <div
             className={cn(
-              'absolute -top-16 left-0 right-0 rounded-md p-2 text-center text-xs text-gray-700',
+              'absolute -top-16 right-0 left-0 rounded-md p-2 text-center text-xs text-gray-700',
               {
-                'border border-primary bg-foreground/5': !fieldHasCheckedValues,
-                'border border-primary bg-documenso-200': fieldHasCheckedValues,
+                'border-primary bg-foreground/5 border': !fieldHasCheckedValues,
+                'border-primary bg-documenso-200 border': fieldHasCheckedValues,
               },
             )}
           >
@@ -300,12 +317,33 @@ const FieldItemInner = ({
             'rounded-[2px] border bg-red-400/20 shadow-[0_0_0_5px_theme(colors.red.500/10%),0_0_0_2px_theme(colors.red.500/40%),0_0_0_0.5px_theme(colors.red.500)] ring-red-400':
               hasErrors,
           },
+          {
+            'shadow-[0_0_0_5px_theme(colors.blue.500/15%),0_0_0_2px_theme(colors.blue.500/60%),0_0_0_0.5px_theme(colors.blue.500)] ring-blue-500':
+              selected && !hasErrors,
+          },
           !fixedSize && '[container-type:size]',
         )}
         data-error={hasErrors ? 'true' : undefined}
+        data-selected={selected ? 'true' : undefined}
         onClick={(e) => {
           e.stopPropagation();
-          setSettingsActive((prev) => !prev);
+          const modifiers: FieldSelectModifiers = {
+            shiftKey: e.shiftKey,
+            metaKey: e.metaKey,
+            ctrlKey: e.ctrlKey,
+          };
+
+          if (onSelect) {
+            onSelect(modifiers);
+          }
+
+          // Single-field toolbar only when no multi-select is happening.
+          if (!multiSelectActive && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
+            setSettingsActive((prev) => !prev);
+          } else {
+            setSettingsActive(false);
+          }
+
           onFieldActivate?.();
           onFocus?.();
         }}
@@ -317,7 +355,7 @@ const FieldItemInner = ({
         <FieldContent field={field} />
 
         {/* On hover, display recipient initials on side of field.  */}
-        <div className="absolute -right-5 top-0 z-20 hidden h-full w-5 items-center justify-center group-hover:flex">
+        <div className="absolute top-0 -right-5 z-20 hidden h-full w-5 items-center justify-center group-hover:flex">
           <div
             className={cn(
               'flex h-5 w-5 flex-col items-center justify-center rounded-r-md text-[0.5rem] font-bold text-white opacity-0 transition duration-200 group-hover/field-item:opacity-100',
@@ -333,52 +371,52 @@ const FieldItemInner = ({
         </div>
 
         {isDevMode && (
-          <div className="absolute bottom-full left-1/2 z-50 mb-1 -translate-x-1/2 rounded-md border border-border bg-background/95 px-2 py-1 shadow-sm backdrop-blur-sm">
+          <div className="border-border bg-background/95 absolute bottom-full left-1/2 z-50 mb-1 -translate-x-1/2 rounded-md border px-2 py-1 shadow-sm backdrop-blur-sm">
             <div className="flex flex-col gap-0.5 text-[9px]">
               {field.nativeId && (
                 <span>
                   <span className="text-muted-foreground">
                     <Trans>Field ID:</Trans>
                   </span>{' '}
-                  <span className="font-mono text-foreground">{field.nativeId}</span>
+                  <span className="text-foreground font-mono">{field.nativeId}</span>
                 </span>
               )}
               <span>
                 <span className="text-muted-foreground">
                   <Trans>Recipient ID:</Trans>
                 </span>{' '}
-                <span className="font-mono text-foreground">{field.recipientId}</span>
+                <span className="text-foreground font-mono">{field.recipientId}</span>
               </span>
               <span>
                 <span className="text-muted-foreground">
                   <Trans>Pos X:</Trans>
                 </span>{' '}
-                <span className="font-mono text-foreground">{field.pageX.toFixed(2)}</span>
+                <span className="text-foreground font-mono">{field.pageX.toFixed(2)}</span>
               </span>
               <span>
                 <span className="text-muted-foreground">
                   <Trans>Pos Y:</Trans>
                 </span>{' '}
-                <span className="font-mono text-foreground">{field.pageY.toFixed(2)}</span>
+                <span className="text-foreground font-mono">{field.pageY.toFixed(2)}</span>
               </span>
               <span>
                 <span className="text-muted-foreground">
                   <Trans>Width:</Trans>
                 </span>{' '}
-                <span className="font-mono text-foreground">{field.pageWidth.toFixed(2)}</span>
+                <span className="text-foreground font-mono">{field.pageWidth.toFixed(2)}</span>
               </span>
               <span>
                 <span className="text-muted-foreground">
                   <Trans>Height:</Trans>
                 </span>{' '}
-                <span className="font-mono text-foreground">{field.pageHeight.toFixed(2)}</span>
+                <span className="text-foreground font-mono">{field.pageHeight.toFixed(2)}</span>
               </span>
             </div>
           </div>
         )}
       </div>
 
-      {!disabled && settingsActive && (
+      {!disabled && settingsActive && !multiSelectActive && (
         <div className="absolute z-[60] mt-1 flex w-full items-center justify-center">
           <div className="group flex items-center justify-evenly gap-x-1 rounded-md border bg-gray-900 p-0.5">
             {advancedField && (
