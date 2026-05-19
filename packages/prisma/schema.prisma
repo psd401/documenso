@@ -52,6 +52,12 @@ model User {
   avatarImageId    String?
   disabled         Boolean          @default(false)
 
+  department            String?
+  title                 String?
+  orgUnitPath           String?
+  googleGroups          Json?
+  directoryLastSyncedAt DateTime?
+
   accounts            Account[]
   sessions            Session[]
   passwordResetTokens PasswordResetToken[]
