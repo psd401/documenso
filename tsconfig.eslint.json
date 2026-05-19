@@ -2,8 +2,6 @@
   "extends": "./packages/tsconfig/base.json",
   "include": [
     "packages/**/*",
-    "apps/**/*",
-    ".claude/worktrees/*/packages/**/*",
-    ".claude/worktrees/*/apps/**/*"
+    "apps/**/*"
   ]
 }
