@@ -12,7 +12,9 @@ PSD401 needs department, title, and group membership data from Google Workspace 
 
 - GCP service account with domain-wide delegation enabled
 - Scopes granted in Google Admin console: `https://www.googleapis.com/auth/admin.directory.user.readonly`, `https://www.googleapis.com/auth/admin.directory.group.readonly`
-- Service account impersonates a limited admin account (not super admin), per [Google's DWD best practices](https://support.google.com/a/answer/14437356)
+- Service account impersonates a dedicated delegated admin account with only Directory read permissions (not a general admin or super admin), per [Google's DWD best practices](https://support.google.com/a/answer/14437356)
+- Service account key stored in AWS Secrets Manager (production) or env var (dev). Key rotated on a 90-day schedule.
+- Google Workspace audit logging enabled for the impersonated admin account to detect anomalous lookup volumes
 - PSD401 Google Workspace has department, title, and orgUnitPath populated for users
 
 ## Schema Changes
@@ -51,18 +53,23 @@ Authenticates using the service account JSON key and impersonates the admin emai
 Exports:
 
 - `getDirectoryUser(email: string)` — calls `admin.users.get({ userKey: email })`, returns `{ department: string | null, title: string | null, orgUnitPath: string | null }` or null on failure.
-- `getDirectoryGroups(email: string)` — calls `admin.groups.list({ userKey: email })`, returns `string[]` of group email addresses or empty array on failure.
+- `getDirectoryGroups(email: string)` — calls `admin.groups.list({ userKey: email })` and follows `nextPageToken` until all pages are fetched. Returns `string[]` of group email addresses on success (including empty array for users with no groups), or `null` on failure.
 
-Both functions catch errors internally and return null/empty rather than throwing. The caller logs and proceeds.
+Both functions catch errors internally and return `null` on failure rather than throwing. Error logging uses `err.message` only, never raw error objects (the `googleapis` SDK attaches auth context including credential material to error objects). The caller logs and proceeds.
 
 ### New function: `packages/lib/server-only/user/sync-google-directory.ts`
 
 `syncGoogleDirectory(userId: number, email: string): Promise<void>`
 
-1. Queries `directoryLastSyncedAt` for the user. If synced within the last hour, returns early.
-2. Calls `getDirectoryUser(email)` and `getDirectoryGroups(email)`.
-3. If either call succeeds, updates the User record with the fetched fields and sets `directoryLastSyncedAt` to now.
-4. If both calls fail, logs a warning and returns without updating. Login proceeds normally.
+1. Checks `GOOGLE_DIRECTORY_SYNC_ENABLED === 'true'`. If not, returns immediately.
+2. Queries `directoryLastSyncedAt` for the user. If synced within the last hour, returns early.
+3. Calls `getDirectoryUser(email)` and `getDirectoryGroups(email)` in parallel.
+4. Builds the update payload using only fields from successful calls:
+   - If `getDirectoryUser` returned non-null, include `department`, `title`, `orgUnitPath` in the update.
+   - If `getDirectoryGroups` returned non-null, include `googleGroups` in the update.
+   - Fields from failed calls are omitted from the update, preserving previously stored values.
+5. If at least one call succeeded, writes the update payload and sets `directoryLastSyncedAt` to now.
+6. If both calls returned null (both failed), logs a warning and returns without updating. `directoryLastSyncedAt` is not advanced, so the next login retries immediately.
 
 ### Hook location: `packages/auth/server/lib/utils/handle-oauth-callback-url.ts`
 
@@ -72,20 +79,58 @@ The OAuth callback has three paths:
 - **Path B** (existing email user links OAuth, line ~63): OAuth account created, existing user logs in
 - **Path C** (new user, line ~139): user + account created, `onCreateUserHook` called
 
-`syncGoogleDirectory(userId, email)` is called in all three paths, before `onAuthorize()`. This runs on every Google SSO login regardless of whether the user is new.
+`syncGoogleDirectory(userId, email)` is called in all three paths, but only when `clientOptions.id === 'google'`. The provider check is at the call site, before invoking the function. Microsoft and OIDC logins skip the sync entirely.
 
-The call is awaited but wrapped in a try/catch at the call site. A failed directory sync logs a warning and proceeds to `onAuthorize()` without interrupting authentication.
+The call is awaited but wrapped in a try/catch at the call site. A failed directory sync logs `err.message` (not the raw error object) and proceeds to `onAuthorize()` without interrupting authentication.
 
 ### Feature gate
 
-The sync function checks `GOOGLE_DIRECTORY_SYNC_ENABLED === 'true'` before doing anything. When disabled (the default), the function returns immediately. Safe to deploy without configuring the service account.
+Two layers of gating:
+
+1. **Provider check** (at the call site in `handleOAuthCallbackUrl`): `clientOptions.id === 'google'` — prevents the function from being called for Microsoft/OIDC logins.
+2. **Env var check** (inside `syncGoogleDirectory`): `GOOGLE_DIRECTORY_SYNC_ENABLED === 'true'` — global kill switch. When disabled (the default), the function returns immediately. Safe to deploy without configuring the service account.
 
 ## Testing
 
-- **Unit tests** for `syncGoogleDirectory`: mock the Google API client. Verify correct fields written to User. Verify skip when `directoryLastSyncedAt` is within one hour. Verify no throw on API failure.
-- **Unit tests** for `directory-client.ts`: mock `googleapis`. Verify auth setup. Verify null/empty returns on errors.
-- **Integration tests**: `describe.skipIf` when service account env vars aren't set (same pattern as LibreOffice/qpdf binary tests).
-- **Manual verification**: deploy to dev (10.0.70.60), sign in with a PSD401 Google account, query the DB to confirm populated fields.
+### `syncGoogleDirectory` unit tests (mock directory-client functions)
+
+- Feature gate disabled (`GOOGLE_DIRECTORY_SYNC_ENABLED` not `'true'`): returns immediately, no Prisma query, no API calls.
+- Synced within last hour: returns early without calling directory APIs.
+- Synced 61 minutes ago: proceeds with sync.
+- `directoryLastSyncedAt` is null (first sync): proceeds with sync.
+- Both API calls succeed: all five fields written to User, `directoryLastSyncedAt` set.
+- `getDirectoryUser` succeeds, `getDirectoryGroups` returns null (fails): only `department`/`title`/`orgUnitPath` written; `googleGroups` unchanged; `directoryLastSyncedAt` set.
+- `getDirectoryUser` returns null (fails), `getDirectoryGroups` succeeds: only `googleGroups` written; `department`/`title`/`orgUnitPath` unchanged; `directoryLastSyncedAt` set.
+- Both calls return null: logs warning, no User update, `directoryLastSyncedAt` not advanced.
+- Prisma query throws (DB unreachable): catches error, logs `err.message`, returns without blocking auth.
+
+### `directory-client.ts` unit tests (mock `googleapis`)
+
+- `getDirectoryUser`: correct auth setup (service account key, impersonated admin email, scopes).
+- `getDirectoryUser`: returns `{ department, title, orgUnitPath }` on success.
+- `getDirectoryUser`: returns `null` on API error (403, 404, network failure).
+- `getDirectoryUser`: returns `null` on impersonation failure (invalid admin email).
+- `getDirectoryUser`: logs `err.message` only, never raw error objects.
+- `getDirectoryGroups`: follows pagination (`nextPageToken`) across multiple pages.
+- `getDirectoryGroups`: returns `[]` for user with no groups (success, not failure).
+- `getDirectoryGroups`: returns `null` on API error.
+- `getDirectoryGroups`: handles malformed API response (non-string group entries) gracefully.
+
+### `handleOAuthCallbackUrl` integration tests
+
+- Google OAuth login (Path A, existing account): `syncGoogleDirectory` called with correct userId and email.
+- Google OAuth login (Path B, account link): `syncGoogleDirectory` called.
+- Google OAuth login (Path C, new user): `syncGoogleDirectory` called after `onCreateUserHook`.
+- Microsoft OAuth login: `syncGoogleDirectory` not called (provider check).
+- OIDC login: `syncGoogleDirectory` not called (provider check).
+
+### Integration tests
+
+- `describe.skipIf` when service account env vars aren't set (same pattern as LibreOffice/qpdf binary tests).
+
+### Manual verification
+
+- Deploy to dev (10.0.70.60), sign in with a PSD401 Google account, query the DB to confirm populated fields.
 
 ## Not in Scope (Phase 1)
 
