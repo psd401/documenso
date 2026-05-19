@@ -61,8 +61,8 @@ export async function getDirectoryUser(email: string): Promise<DirectoryUserResu
       orgUnitPath: typeof data.orgUnitPath === 'string' ? data.orgUnitPath : null,
     };
   } catch (err) {
-    console.error(
-      `getDirectoryUser failed for ${email}: ${err instanceof Error ? err.message : String(err)}`,
+    console.warn(
+      `[directory-sync] Failed to fetch user ${email}: ${err instanceof Error ? err.message : 'Unknown error'}`,
     );
     return null;
   }
@@ -96,8 +96,8 @@ export async function getDirectoryGroups(email: string): Promise<string[] | null
 
     return emails;
   } catch (err) {
-    console.error(
-      `getDirectoryGroups failed for ${email}: ${err instanceof Error ? err.message : String(err)}`,
+    console.warn(
+      `[directory-sync] Failed to fetch groups for ${email}: ${err instanceof Error ? err.message : 'Unknown error'}`,
     );
     return null;
   }
