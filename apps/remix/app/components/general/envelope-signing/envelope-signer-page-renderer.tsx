@@ -363,6 +363,15 @@ export const EnvelopeSignerPageRenderer = ({ pageData }: { pageData: PageRenderD
           });
         })
         /**
+         * CALCULATION FIELD.
+         *
+         * Calculation fields are read-only and derived automatically from the
+         * fields they reference, so there is nothing to do on click.
+         */
+        .with({ type: FieldType.CALCULATION }, () => {
+          // No-op: value is computed, not entered by the signer.
+        })
+        /**
          * SIGNATURE FIELD.
          */
         .with({ type: FieldType.SIGNATURE }, (field) => {

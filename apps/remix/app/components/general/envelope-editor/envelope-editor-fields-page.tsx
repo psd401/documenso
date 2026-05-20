@@ -16,6 +16,7 @@ import { PDF_VIEWER_ERROR_MESSAGES } from '@documenso/lib/constants/pdf-viewer-i
 import type { NormalizedFieldWithContext } from '@documenso/lib/server-only/ai/envelope/detect-fields/types';
 import {
   FIELD_META_DEFAULT_VALUES,
+  type TCalculationFieldMeta,
   type TCheckboxFieldMeta,
   type TDateFieldMeta,
   type TDropdownFieldMeta,
@@ -39,6 +40,7 @@ import { Separator } from '@documenso/ui/primitives/separator';
 import { AiFeaturesEnableDialog } from '~/components/dialogs/ai-features-enable-dialog';
 import { AiFieldDetectionDialog } from '~/components/dialogs/ai-field-detection-dialog';
 import { EnvelopeItemEditDialog } from '~/components/dialogs/envelope-item-edit-dialog';
+import { EditorFieldCalculationForm } from '~/components/forms/editor/editor-field-calculation-form';
 import { EditorFieldCheckboxForm } from '~/components/forms/editor/editor-field-checkbox-form';
 import { EditorFieldDateForm } from '~/components/forms/editor/editor-field-date-form';
 import { EditorFieldDropdownForm } from '~/components/forms/editor/editor-field-dropdown-form';
@@ -69,6 +71,7 @@ const FieldSettingsTypeTranslations: Record<FieldType, MessageDescriptor> = {
   [FieldType.RADIO]: msg`Radio Settings`,
   [FieldType.CHECKBOX]: msg`Checkbox Settings`,
   [FieldType.DROPDOWN]: msg`Dropdown Settings`,
+  [FieldType.CALCULATION]: msg`Formula Settings`,
 };
 
 export const EnvelopeEditorFieldsPage = () => {
@@ -446,6 +449,14 @@ export const EnvelopeEditorFieldsPage = () => {
                       <EditorFieldTextForm
                         value={selectedField?.fieldMeta as TTextFieldMeta | undefined}
                         onValueChange={(value) => updateSelectedFieldMeta(value)}
+                      />
+                    ))
+                    .with(FieldType.CALCULATION, () => (
+                      <EditorFieldCalculationForm
+                        value={selectedField?.fieldMeta as TCalculationFieldMeta | undefined}
+                        onValueChange={(value) => updateSelectedFieldMeta(value)}
+                        documentFields={editorFields.localFields}
+                        currentFieldFormId={selectedField?.formId}
                       />
                     ))
                     .otherwise(() => null)}

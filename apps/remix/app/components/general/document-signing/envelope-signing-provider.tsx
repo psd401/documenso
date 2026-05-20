@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
 import {
   EnvelopeType,
@@ -21,6 +21,7 @@ import {
   isFieldUnsignedAndRequired,
   isRequiredField,
 } from '@documenso/lib/utils/advanced-fields-helpers';
+import { computeCalculationFieldValues } from '@documenso/lib/utils/calculation-fields';
 import { extractFieldInsertionValues } from '@documenso/lib/utils/envelope-signing';
 import { trpc } from '@documenso/trpc/react';
 import type { TSignEnvelopeFieldValue } from '@documenso/trpc/server/envelope-router/sign-envelope-field.types';
@@ -420,6 +421,50 @@ export const EnvelopeSigningProvider = ({
 
     return updatedField;
   };
+
+  /**
+   * Live-preview calculation (formula) fields as their referenced fields change.
+   *
+   * This only updates local state so the signer immediately sees the computed
+   * result; the authoritative value is recomputed and persisted on the server
+   * when the document is completed.
+   */
+  useEffect(() => {
+    const allFields = envelopeData.envelope.recipients.flatMap((r) => r.fields);
+
+    const updates = computeCalculationFieldValues(allFields);
+
+    if (updates.length === 0) {
+      return;
+    }
+
+    const updateById = new Map(updates.map((update) => [update.id, update]));
+
+    const applyUpdate = <T extends { id: number; customText: string; inserted: boolean }>(
+      field: T,
+    ): T => {
+      const update = updateById.get(field.id);
+
+      return update
+        ? { ...field, customText: update.customText, inserted: update.inserted }
+        : field;
+    };
+
+    setEnvelopeData((prev) => ({
+      ...prev,
+      envelope: {
+        ...prev.envelope,
+        recipients: prev.envelope.recipients.map((r) => ({
+          ...r,
+          fields: r.fields.map(applyUpdate),
+        })),
+      },
+      recipient: {
+        ...prev.recipient,
+        fields: prev.recipient.fields.map(applyUpdate),
+      },
+    }));
+  }, [envelopeData]);
 
   return (
     <EnvelopeSigningContext.Provider

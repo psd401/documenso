@@ -12,6 +12,7 @@ import { match } from 'ts-pattern';
 import { useAutoSave } from '@documenso/lib/client-only/hooks/use-autosave';
 import {
   type TBaseFieldMeta as BaseFieldMeta,
+  type TCalculationFieldMeta as CalculationFieldMeta,
   type TCheckboxFieldMeta as CheckboxFieldMeta,
   type TDateFieldMeta as DateFieldMeta,
   type TDropdownFieldMeta as DropdownFieldMeta,
@@ -34,6 +35,7 @@ import {
   DocumentFlowFormContainerHeader,
 } from './document-flow-root';
 import { FieldItem } from './field-item';
+import { CalculationFieldAdvancedSettings } from './field-items-advanced-settings/calculation-field';
 import { CheckboxFieldAdvancedSettings } from './field-items-advanced-settings/checkbox-field';
 import { DateFieldAdvancedSettings } from './field-items-advanced-settings/date-field';
 import { DropdownFieldAdvancedSettings } from './field-items-advanced-settings/dropdown-field';
@@ -74,6 +76,7 @@ export type FieldAdvancedSettingsProps = {
 
 export type FieldMetaKeys =
   | keyof BaseFieldMeta
+  | keyof CalculationFieldMeta
   | keyof TextFieldMeta
   | keyof NumberFieldMeta
   | keyof RadioFieldMeta
@@ -161,6 +164,17 @@ const getDefaultState = (fieldType: FieldType): FieldMeta => {
         defaultValue: '',
         required: false,
         readOnly: false,
+      };
+    case FieldType.CALCULATION:
+      return {
+        type: 'calculation',
+        label: '',
+        formula: '',
+        precision: 2,
+        fontSize: 14,
+        textAlign: 'left',
+        readOnly: true,
+        required: false,
       };
     default:
       throw new Error(`Unsupported field type: ${fieldType}`);
@@ -267,7 +281,9 @@ export const FieldAdvancedSettings = forwardRef<HTMLDivElement, FieldAdvancedSet
     ) => {
       setFieldState((prevState: FieldMeta) => {
         if (
-          ['characterLimit', 'minValue', 'maxValue', 'validationLength', 'fontSize'].includes(key)
+          ['characterLimit', 'minValue', 'maxValue', 'validationLength', 'fontSize', 'precision'].includes(
+            key,
+          )
         ) {
           const parsedValue = Number(value);
 
@@ -369,6 +385,15 @@ export const FieldAdvancedSettings = forwardRef<HTMLDivElement, FieldAdvancedSet
           fieldState={fieldState}
           handleFieldChange={handleFieldChange}
           handleErrors={setErrors}
+        />
+      ))
+      .with(FieldType.CALCULATION, () => (
+        <CalculationFieldAdvancedSettings
+          fieldState={fieldState}
+          handleFieldChange={handleFieldChange}
+          handleErrors={setErrors}
+          fields={fields}
+          currentFieldFormId={field.formId}
         />
       ))
       .otherwise(() => null);

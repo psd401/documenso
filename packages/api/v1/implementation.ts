@@ -33,6 +33,7 @@ import { getTemplateById } from '@documenso/lib/server-only/template/get-templat
 import { ZRecipientAuthOptionsSchema } from '@documenso/lib/types/document-auth';
 import { extractDerivedDocumentEmailSettings } from '@documenso/lib/types/document-email';
 import {
+  ZCalculationFieldMeta,
   ZCheckboxFieldMeta,
   ZDropdownFieldMeta,
   ZFieldMetaSchema,
@@ -1404,9 +1405,14 @@ export const ApiContractV1Implementation = tsr.router(ApiContractV1, {
               throw new Error('Recipient has already signed the document');
             }
 
-            const advancedField = ['NUMBER', 'RADIO', 'CHECKBOX', 'DROPDOWN', 'TEXT'].includes(
-              type,
-            );
+            const advancedField = [
+              'NUMBER',
+              'RADIO',
+              'CHECKBOX',
+              'DROPDOWN',
+              'TEXT',
+              'CALCULATION',
+            ].includes(type);
 
             if (advancedField && !fieldMeta) {
               throw new Error(
@@ -1424,6 +1430,7 @@ export const ApiContractV1Implementation = tsr.router(ApiContractV1, {
               .with('DROPDOWN', () => ZDropdownFieldMeta.safeParse(fieldMeta))
               .with('NUMBER', () => ZNumberFieldMeta.safeParse(fieldMeta))
               .with('TEXT', () => ZTextFieldMeta.safeParse(fieldMeta))
+              .with('CALCULATION', () => ZCalculationFieldMeta.safeParse(fieldMeta))
               .with('SIGNATURE', 'INITIALS', 'DATE', 'EMAIL', 'NAME', () => ({
                 success: true,
                 data: undefined,

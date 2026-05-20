@@ -8,6 +8,7 @@ import {
   Disc,
   Hash,
   Mail,
+  Sigma,
   Type,
   User,
 } from 'lucide-react';
@@ -78,6 +79,11 @@ export const FieldSelector = ({
       type: FieldType.DROPDOWN,
       label: 'Dropdown',
       icon: ChevronDown,
+    },
+    {
+      type: FieldType.CALCULATION,
+      label: 'Formula',
+      icon: Sigma,
     },
   ];
 

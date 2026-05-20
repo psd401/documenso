@@ -10,6 +10,8 @@ export const ADVANCED_FIELD_TYPES_WITH_OPTIONAL_SETTING: FieldType[] = [
   FieldType.DROPDOWN,
   FieldType.RADIO,
   FieldType.CHECKBOX,
+  // Calculation fields are derived automatically and never block completion.
+  FieldType.CALCULATION,
 ];
 
 /**

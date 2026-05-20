@@ -25,7 +25,8 @@ export type GenericTextFieldTypeMetas =
   | TEmailFieldMeta
   | TDateFieldMeta
   | TTextFieldMeta
-  | TNumberFieldMeta;
+  | TNumberFieldMeta
+  | TCalculationFieldMeta;
 
 const ZFieldMetaLineHeight = z.coerce
   .number()
@@ -160,6 +161,21 @@ export const ZSignatureFieldMeta = ZBaseFieldMeta.extend({
 
 export type TSignatureFieldMeta = z.infer<typeof ZSignatureFieldMeta>;
 
+/**
+ * A calculation (formula) field. Its value is derived from other numeric fields
+ * in the document referenced by their label using `{Label}` syntax, e.g.
+ * `{Miles} * {Rate}`. The result is read-only for signers.
+ */
+export const ZCalculationFieldMeta = ZBaseFieldMeta.extend({
+  type: z.literal('calculation'),
+  formula: z.string().optional(),
+  /** Number of decimal places to display. When omitted the value is shown as-is. */
+  precision: z.coerce.number().min(0).max(10).nullish(),
+  textAlign: ZFieldTextAlignSchema.optional(),
+});
+
+export type TCalculationFieldMeta = z.infer<typeof ZCalculationFieldMeta>;
+
 export const ZFieldMetaNotOptionalSchema = z.discriminatedUnion('type', [
   ZSignatureFieldMeta,
   ZInitialsFieldMeta,
@@ -171,6 +187,7 @@ export const ZFieldMetaNotOptionalSchema = z.discriminatedUnion('type', [
   ZRadioFieldMeta,
   ZCheckboxFieldMeta,
   ZDropdownFieldMeta,
+  ZCalculationFieldMeta,
 ]);
 
 export type TFieldMetaNotOptionalSchema = z.infer<typeof ZFieldMetaNotOptionalSchema>;
@@ -275,6 +292,10 @@ export const ZFieldAndMetaSchema = z.discriminatedUnion('type', [
     type: z.literal(FieldType.DROPDOWN),
     fieldMeta: ZDropdownFieldMeta.optional(),
   }),
+  z.object({
+    type: z.literal(FieldType.CALCULATION),
+    fieldMeta: ZCalculationFieldMeta.optional(),
+  }),
 ]);
 
 export type TFieldAndMeta = z.infer<typeof ZFieldAndMetaSchema>;
@@ -358,6 +379,18 @@ export const FIELD_SIGNATURE_META_DEFAULT_VALUES: TSignatureFieldMeta = {
   fontSize: DEFAULT_SIGNATURE_TEXT_FONT_SIZE,
 };
 
+export const FIELD_CALCULATION_META_DEFAULT_VALUES: TCalculationFieldMeta = {
+  type: 'calculation',
+  fontSize: DEFAULT_FIELD_FONT_SIZE,
+  textAlign: 'left',
+  label: '',
+  formula: '',
+  precision: 2,
+  // Calculation fields are always derived; signers can never edit them.
+  readOnly: true,
+  required: false,
+};
+
 export const FIELD_META_DEFAULT_VALUES: Record<FieldType, TFieldMetaSchema> = {
   [FieldType.SIGNATURE]: FIELD_SIGNATURE_META_DEFAULT_VALUES,
   [FieldType.FREE_SIGNATURE]: undefined,
@@ -370,6 +403,7 @@ export const FIELD_META_DEFAULT_VALUES: Record<FieldType, TFieldMetaSchema> = {
   [FieldType.RADIO]: FIELD_RADIO_META_DEFAULT_VALUES,
   [FieldType.CHECKBOX]: FIELD_CHECKBOX_META_DEFAULT_VALUES,
   [FieldType.DROPDOWN]: FIELD_DROPDOWN_META_DEFAULT_VALUES,
+  [FieldType.CALCULATION]: FIELD_CALCULATION_META_DEFAULT_VALUES,
 } as const;
 
 export const ZEnvelopeFieldAndMetaSchema = z.discriminatedUnion('type', [
@@ -416,6 +450,10 @@ export const ZEnvelopeFieldAndMetaSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal(FieldType.DROPDOWN),
     fieldMeta: ZDropdownFieldMeta.optional().default(FIELD_DROPDOWN_META_DEFAULT_VALUES),
+  }),
+  z.object({
+    type: z.literal(FieldType.CALCULATION),
+    fieldMeta: ZCalculationFieldMeta.optional().default(FIELD_CALCULATION_META_DEFAULT_VALUES),
   }),
 ]);
 

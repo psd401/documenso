@@ -18,6 +18,7 @@ import {
 } from '@documenso/lib/types/document-audit-logs';
 import type { RequestMetadata } from '@documenso/lib/universal/extract-request-metadata';
 import { fieldsContainUnsignedRequiredField } from '@documenso/lib/utils/advanced-fields-helpers';
+import { computeCalculationFieldValues } from '@documenso/lib/utils/calculation-fields';
 import { createDocumentAuditLogData } from '@documenso/lib/utils/document-audit-logs';
 import { prisma } from '@documenso/prisma';
 
@@ -280,6 +281,52 @@ export const completeDocumentWithToken = async ({
       }
 
       return field;
+    });
+  }
+
+  // Auto-compute calculation (formula) fields for this recipient at completion
+  // time. The server is authoritative here: the value is derived from the
+  // referenced fields and stored, so signers can never tamper with the result.
+  const recipientCalculationFields = fields.filter(
+    (field) => field.type === FieldType.CALCULATION,
+  );
+
+  if (envelope.internalVersion === 2 && recipientCalculationFields.length > 0) {
+    // Use every field on the envelope for the variable map so a formula can
+    // reference fields owned by earlier recipients.
+    const allEnvelopeFields = await prisma.field.findMany({
+      where: {
+        envelopeId: envelope.id,
+      },
+    });
+
+    const recipientCalculationFieldIds = new Set(
+      recipientCalculationFields.map((field) => field.id),
+    );
+
+    const calculationUpdates = computeCalculationFieldValues(allEnvelopeFields).filter((update) =>
+      recipientCalculationFieldIds.has(update.id),
+    );
+
+    for (const update of calculationUpdates) {
+      await prisma.field.update({
+        where: {
+          id: update.id,
+        },
+        data: {
+          customText: update.customText,
+          inserted: update.inserted,
+        },
+      });
+    }
+
+    // Reflect the computed values in the local fields array.
+    fields = fields.map((field) => {
+      const update = calculationUpdates.find((item) => item.id === field.id);
+
+      return update
+        ? { ...field, customText: update.customText, inserted: update.inserted }
+        : field;
     });
   }
 

@@ -198,6 +198,12 @@ export const EnvelopeEditorPreviewPage = () => {
               customText: '',
             };
           })
+          .with({ type: FieldType.CALCULATION }, () => {
+            // Calculation fields are derived; the preview shows the field label.
+            return {
+              customText: '',
+            };
+          })
           .exhaustive(),
       };
     });
