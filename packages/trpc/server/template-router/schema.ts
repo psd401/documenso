@@ -271,6 +271,26 @@ export const ZCreateTemplateMutationSchema = zodFormData({
   file: zfdFile(),
 });
 
+export const ZGetStarterTemplatesResponseSchema = z.object({
+  templates: z
+    .object({
+      id: z.string(),
+      title: z.string(),
+      description: z.string(),
+    })
+    .array(),
+});
+
+export const ZCreateTemplateFromStarterRequestSchema = z.object({
+  starterId: z.string(),
+  folderId: z.string().optional(),
+});
+
+export const ZCreateTemplateFromStarterResponseSchema = z.object({
+  envelopeId: z.string(),
+  id: z.number(),
+});
+
 export const ZUpdateTemplateRequestSchema = z.object({
   templateId: z.number(),
   data: z

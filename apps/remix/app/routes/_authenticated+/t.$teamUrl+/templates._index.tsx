@@ -19,6 +19,7 @@ import { Tabs, TabsList, TabsTrigger } from '@documenso/ui/primitives/tabs';
 
 import { EnvelopesBulkDeleteDialog } from '~/components/dialogs/envelopes-bulk-delete-dialog';
 import { EnvelopesBulkMoveDialog } from '~/components/dialogs/envelopes-bulk-move-dialog';
+import { TemplateCreateFromStarterDialog } from '~/components/dialogs/template-create-from-starter-dialog';
 import { EnvelopeDropZoneWrapper } from '~/components/general/envelope/envelope-drop-zone-wrapper';
 import { FolderGrid } from '~/components/general/folder/folder-grid';
 import { EnvelopesTableBulkActionBar } from '~/components/tables/envelopes-table-bulk-action-bar';
@@ -103,17 +104,21 @@ export default function TemplatesPage() {
         {!isOrgView && <FolderGrid type={FolderType.TEMPLATE} parentId={folderId ?? null} />}
 
         <div className="mt-8">
-          <div className="flex flex-row items-center">
-            <Avatar className="mr-3 h-12 w-12 border-2 border-solid border-white dark:border-border">
-              {team.avatarImageId && <AvatarImage src={formatAvatarUrl(team.avatarImageId)} />}
-              <AvatarFallback className="text-xs text-muted-foreground">
-                {team.name.slice(0, 1)}
-              </AvatarFallback>
-            </Avatar>
+          <div className="flex flex-row items-center justify-between">
+            <div className="flex flex-row items-center">
+              <Avatar className="mr-3 h-12 w-12 border-2 border-solid border-white dark:border-border">
+                {team.avatarImageId && <AvatarImage src={formatAvatarUrl(team.avatarImageId)} />}
+                <AvatarFallback className="text-xs text-muted-foreground">
+                  {team.name.slice(0, 1)}
+                </AvatarFallback>
+              </Avatar>
 
-            <h1 className="truncate text-2xl font-semibold md:text-3xl">
-              <Trans>Templates</Trans>
-            </h1>
+              <h1 className="truncate text-2xl font-semibold md:text-3xl">
+                <Trans>Templates</Trans>
+              </h1>
+            </div>
+
+            {!isOrgView && <TemplateCreateFromStarterDialog />}
           </div>
 
           {showOrgTab && (
