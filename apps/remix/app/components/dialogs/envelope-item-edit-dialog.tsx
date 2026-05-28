@@ -9,7 +9,10 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 import { useCurrentEnvelopeEditor } from '@documenso/lib/client-only/providers/envelope-editor-provider';
-import { APP_DOCUMENT_UPLOAD_SIZE_LIMIT } from '@documenso/lib/constants/app';
+import {
+  APP_DOCUMENT_UPLOAD_SIZE_LIMIT,
+  DOCUMENT_UPLOAD_ACCEPTED_TYPES,
+} from '@documenso/lib/constants/app';
 import { megabytesToBytes } from '@documenso/lib/universal/unit-convertions';
 import { trpc } from '@documenso/trpc/react';
 import { ZDocumentTitleSchema } from '@documenso/trpc/server/document-router/schema';
@@ -145,7 +148,7 @@ export const EnvelopeItemEditDialog = ({
   };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    accept: { 'application/pdf': ['.pdf'] },
+    accept: DOCUMENT_UPLOAD_ACCEPTED_TYPES,
     maxFiles: 1,
     maxSize: megabytesToBytes(APP_DOCUMENT_UPLOAD_SIZE_LIMIT),
     disabled: form.formState.isSubmitting,

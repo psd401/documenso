@@ -9,7 +9,11 @@ import { useDropzone } from 'react-dropzone';
 import { Link } from 'react-router';
 
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
-import { APP_DOCUMENT_UPLOAD_SIZE_LIMIT, IS_BILLING_ENABLED } from '@documenso/lib/constants/app';
+import {
+  APP_DOCUMENT_UPLOAD_SIZE_LIMIT,
+  DOCUMENT_UPLOAD_ACCEPTED_TYPES,
+  IS_BILLING_ENABLED,
+} from '@documenso/lib/constants/app';
 import { megabytesToBytes } from '@documenso/lib/universal/unit-convertions';
 
 import {
@@ -55,9 +59,7 @@ export const DocumentDropzone = ({
   const organisation = useCurrentOrganisation();
 
   const { getRootProps, getInputProps } = useDropzone({
-    accept: {
-      'application/pdf': ['.pdf'],
-    },
+    accept: DOCUMENT_UPLOAD_ACCEPTED_TYPES,
     multiple: allowMultiple,
     disabled,
     onDrop: (acceptedFiles) => {

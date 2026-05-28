@@ -4,6 +4,7 @@ import {
   convertPlaceholdersToFieldInputs,
   extractPdfPlaceholders,
 } from '@documenso/lib/server-only/pdf/auto-place-fields';
+import { convertToPdf } from '@documenso/lib/server-only/pdf/convert-to-pdf';
 import { detectAcroFormFields } from '@documenso/lib/server-only/pdf/detect-acroform-fields';
 import { findRecipientByPlaceholder } from '@documenso/lib/server-only/pdf/helpers';
 import { insertFormValuesInPdf } from '@documenso/lib/server-only/pdf/insert-form-values-in-pdf';
@@ -50,7 +51,8 @@ export const UNSAFE_createEnvelopeItems = async ({
   // For each file: normalize, extract & clean placeholders, then upload.
   const envelopeItemsToCreate = await Promise.all(
     files.map(async ({ file, orderOverride, clientId }, index) => {
-      let buffer = Buffer.from(await file.arrayBuffer());
+      // Non-PDF uploads (scans, photos) are converted to PDF on the fly.
+      let buffer = await convertToPdf(Buffer.from(await file.arrayBuffer()));
 
       // Detect interactive form (AcroForm) fields before the form is flattened
       // by normalizePdf, since flattening permanently removes them.

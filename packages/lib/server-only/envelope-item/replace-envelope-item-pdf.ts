@@ -1,5 +1,6 @@
 import type { Envelope, Field, Recipient } from '@prisma/client';
 
+import { convertToPdf } from '@documenso/lib/server-only/pdf/convert-to-pdf';
 import { normalizePdf } from '@documenso/lib/server-only/pdf/normalize-pdf';
 import { DOCUMENT_AUDIT_LOG_TYPE } from '@documenso/lib/types/document-audit-logs';
 import type { ApiRequestMetadata } from '@documenso/lib/universal/extract-request-metadata';
@@ -75,7 +76,8 @@ export const UNSAFE_replaceEnvelopeItemPdf = async ({
   user,
   apiRequestMetadata,
 }: UnsafeReplaceEnvelopeItemPdfOptions): Promise<UnsafeReplaceEnvelopeItemPdfResult> => {
-  let buffer = Buffer.from(await data.file.arrayBuffer());
+  // Non-PDF uploads (scans, photos) are converted to PDF on the fly.
+  let buffer = await convertToPdf(Buffer.from(await data.file.arrayBuffer()));
 
   if (envelope.formValues) {
     buffer = await insertFormValuesInPdf({ pdf: buffer, formValues: envelope.formValues });

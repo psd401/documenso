@@ -7,6 +7,7 @@ import { env } from '@documenso/lib/utils/env';
 
 import { AppError } from '../../errors/app-error';
 import { createDocumentData } from '../../server-only/document-data/create-document-data';
+import { convertToPdf } from '../../server-only/pdf/convert-to-pdf';
 import { normalizePdf } from '../../server-only/pdf/normalize-pdf';
 import { uploadS3File } from './server-actions';
 
@@ -56,7 +57,9 @@ export const putNormalizedPdfFileServerSide = async (
   file: File,
   options: { flattenForm?: boolean } = {},
 ) => {
-  const buffer = Buffer.from(await file.arrayBuffer());
+  // Non-PDF uploads (scans, photos) are converted to PDF on the fly. This is a
+  // no-op for files that are already PDFs.
+  const buffer = await convertToPdf(Buffer.from(await file.arrayBuffer()));
 
   const normalized = await normalizePdf(buffer, options);
 

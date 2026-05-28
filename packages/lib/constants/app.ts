@@ -3,6 +3,23 @@ import { env } from '@documenso/lib/utils/env';
 export const APP_DOCUMENT_UPLOAD_SIZE_LIMIT =
   Number(env('NEXT_PUBLIC_DOCUMENT_SIZE_UPLOAD_LIMIT')) || 50;
 
+/**
+ * File types accepted by the document upload dropzones, in the shape expected
+ * by `react-dropzone`'s `accept` option.
+ *
+ * PDFs are stored as-is. The listed image formats are converted to a PDF
+ * server-side on upload (see `convertToPdf`).
+ */
+export const DOCUMENT_UPLOAD_ACCEPTED_TYPES: Record<string, string[]> = {
+  'application/pdf': ['.pdf'],
+  'image/png': ['.png'],
+  'image/jpeg': ['.jpg', '.jpeg'],
+  'image/webp': ['.webp'],
+  'image/gif': ['.gif'],
+  'image/tiff': ['.tif', '.tiff'],
+  'image/avif': ['.avif'],
+};
+
 export const NEXT_PUBLIC_WEBAPP_URL = () =>
   env('NEXT_PUBLIC_WEBAPP_URL') ?? 'http://localhost:3000';
 

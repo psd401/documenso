@@ -13,7 +13,11 @@ import { useLimits } from '@documenso/ee/server-only/limits/provider/client';
 import { useAnalytics } from '@documenso/lib/client-only/hooks/use-analytics';
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { useSession } from '@documenso/lib/client-only/providers/session';
-import { APP_DOCUMENT_UPLOAD_SIZE_LIMIT, IS_BILLING_ENABLED } from '@documenso/lib/constants/app';
+import {
+  APP_DOCUMENT_UPLOAD_SIZE_LIMIT,
+  DOCUMENT_UPLOAD_ACCEPTED_TYPES,
+  IS_BILLING_ENABLED,
+} from '@documenso/lib/constants/app';
 import { DEFAULT_DOCUMENT_TIME_ZONE, TIME_ZONES } from '@documenso/lib/constants/time-zones';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { megabytesToBytes } from '@documenso/lib/universal/unit-convertions';
@@ -119,7 +123,10 @@ export const EnvelopeDropZoneWrapper = ({
       const error = AppError.parseError(err);
 
       const errorMessage = match(error.code)
-        .with('INVALID_DOCUMENT_FILE', () => t`You cannot upload encrypted PDFs.`)
+        .with(
+          'INVALID_DOCUMENT_FILE',
+          () => t`This file could not be uploaded. PDFs must not be encrypted.`,
+        )
         .with(
           AppErrorCode.LIMIT_EXCEEDED,
           () => t`You have reached your document limit for this month. Please upgrade your plan.`,
@@ -171,9 +178,7 @@ export const EnvelopeDropZoneWrapper = ({
     });
   };
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    accept: {
-      'application/pdf': ['.pdf'],
-    },
+    accept: DOCUMENT_UPLOAD_ACCEPTED_TYPES,
     multiple: true,
     maxSize: megabytesToBytes(APP_DOCUMENT_UPLOAD_SIZE_LIMIT),
     maxFiles: maximumEnvelopeItemCount,

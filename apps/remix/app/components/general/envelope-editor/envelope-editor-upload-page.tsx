@@ -11,7 +11,10 @@ import { useLimits } from '@documenso/ee/server-only/limits/provider/client';
 import { useEnvelopeAutosave } from '@documenso/lib/client-only/hooks/use-envelope-autosave';
 import { useCurrentEnvelopeEditor } from '@documenso/lib/client-only/providers/envelope-editor-provider';
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
-import { APP_DOCUMENT_UPLOAD_SIZE_LIMIT } from '@documenso/lib/constants/app';
+import {
+  APP_DOCUMENT_UPLOAD_SIZE_LIMIT,
+  DOCUMENT_UPLOAD_ACCEPTED_TYPES,
+} from '@documenso/lib/constants/app';
 import type { TEditorEnvelope } from '@documenso/lib/types/envelope-editor';
 import { nanoid } from '@documenso/lib/universal/id';
 import { megabytesToBytes } from '@documenso/lib/universal/unit-convertions';
@@ -82,7 +85,7 @@ export const EnvelopeEditorUploadPage = () => {
   const replacingItemIdRef = useRef<string | null>(null);
 
   const { open: openReplaceFilePicker, getInputProps: getReplaceInputProps } = useDropzone({
-    accept: { 'application/pdf': ['.pdf'] },
+    accept: DOCUMENT_UPLOAD_ACCEPTED_TYPES,
     maxFiles: 1,
     maxSize: megabytesToBytes(APP_DOCUMENT_UPLOAD_SIZE_LIMIT),
     multiple: false,

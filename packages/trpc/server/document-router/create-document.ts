@@ -3,6 +3,7 @@ import { EnvelopeType } from '@prisma/client';
 import { getServerLimits } from '@documenso/ee/server-only/limits/server';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { createEnvelope } from '@documenso/lib/server-only/envelope/create-envelope';
+import { convertToPdf } from '@documenso/lib/server-only/pdf/convert-to-pdf';
 import { insertFormValuesInPdf } from '@documenso/lib/server-only/pdf/insert-form-values-in-pdf';
 import { putNormalizedPdfFileServerSide } from '@documenso/lib/universal/upload/put-file.server';
 import { mapSecondaryIdToDocumentId } from '@documenso/lib/utils/envelope';
@@ -36,7 +37,8 @@ export const createDocumentRoute = authenticatedProcedure
       attachments,
     } = payload;
 
-    let pdf = Buffer.from(await file.arrayBuffer());
+    // Non-PDF uploads (scans, photos) are converted to PDF on the fly.
+    let pdf = await convertToPdf(Buffer.from(await file.arrayBuffer()));
 
     if (formValues) {
       // eslint-disable-next-line require-atomic-updates

@@ -4,6 +4,7 @@ import { getServerLimits } from '@documenso/ee/server-only/limits/server';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { createEnvelope } from '@documenso/lib/server-only/envelope/create-envelope';
 import { extractPdfPlaceholders } from '@documenso/lib/server-only/pdf/auto-place-fields';
+import { convertToPdf } from '@documenso/lib/server-only/pdf/convert-to-pdf';
 import { detectAcroFormFields } from '@documenso/lib/server-only/pdf/detect-acroform-fields';
 import { normalizePdf } from '@documenso/lib/server-only/pdf/normalize-pdf';
 import type { ApiRequestMetadata } from '@documenso/lib/universal/extract-request-metadata';
@@ -98,17 +99,12 @@ export const createEnvelopeRouteCaller = async ({
     });
   }
 
-  if (files.some((file) => !file.type.startsWith('application/pdf'))) {
-    throw new AppError('INVALID_DOCUMENT_FILE', {
-      message: 'You cannot upload non-PDF files',
-      statusCode: 400,
-    });
-  }
-
-  // For each file: normalize, extract & clean placeholders, then upload.
+  // For each file: convert to PDF if needed, normalize, extract & clean
+  // placeholders, then upload.
   const envelopeItems = await Promise.all(
     files.map(async (file) => {
-      let pdf = Buffer.from(await file.arrayBuffer());
+      // Non-PDF uploads (scans, photos) are converted to PDF on the fly.
+      let pdf = await convertToPdf(Buffer.from(await file.arrayBuffer()));
 
       // Detect interactive form (AcroForm) fields before the form is flattened
       // by normalizePdf, since flattening permanently removes them.
