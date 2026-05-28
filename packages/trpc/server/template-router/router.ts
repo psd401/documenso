@@ -16,12 +16,14 @@ import {
 } from '@documenso/lib/server-only/template/create-document-from-direct-template';
 import { createDocumentFromTemplate } from '@documenso/lib/server-only/template/create-document-from-template';
 import { createTemplateDirectLink } from '@documenso/lib/server-only/template/create-template-direct-link';
+import { createTemplateFromStarter } from '@documenso/lib/server-only/template/create-template-from-starter';
 import { deleteTemplate } from '@documenso/lib/server-only/template/delete-template';
 import { deleteTemplateDirectLink } from '@documenso/lib/server-only/template/delete-template-direct-link';
 import { findOrganisationTemplates } from '@documenso/lib/server-only/template/find-organisation-templates';
 import { findTemplates } from '@documenso/lib/server-only/template/find-templates';
 import { getOrganisationTemplateById } from '@documenso/lib/server-only/template/get-organisation-template-by-id';
 import { getTemplateById } from '@documenso/lib/server-only/template/get-template-by-id';
+import { getStarterTemplateSummaries } from '@documenso/lib/server-only/template/starter-templates';
 import { toggleTemplateDirectLink } from '@documenso/lib/server-only/template/toggle-template-direct-link';
 import { putNormalizedPdfFileServerSide } from '@documenso/lib/universal/upload/put-file.server';
 import { getPresignPostUrl } from '@documenso/lib/universal/upload/server-actions';
@@ -40,6 +42,8 @@ import {
   ZCreateDocumentFromTemplateResponseSchema,
   ZCreateTemplateDirectLinkRequestSchema,
   ZCreateTemplateDirectLinkResponseSchema,
+  ZCreateTemplateFromStarterRequestSchema,
+  ZCreateTemplateFromStarterResponseSchema,
   ZCreateTemplateMutationSchema,
   ZCreateTemplateResponseSchema,
   ZCreateTemplateV2RequestSchema,
@@ -53,6 +57,7 @@ import {
   ZFindTemplatesResponseSchema,
   ZGetOrganisationTemplateByIdRequestSchema,
   ZGetOrganisationTemplateByIdResponseSchema,
+  ZGetStarterTemplatesResponseSchema,
   ZGetTemplateByIdRequestSchema,
   ZGetTemplateByIdResponseSchema,
   ZToggleTemplateDirectLinkRequestSchema,
@@ -307,6 +312,42 @@ export const templateRouter = router({
         },
         meta,
         attachments,
+        requestMetadata: ctx.metadata,
+      });
+
+      return {
+        envelopeId: envelope.id,
+        id: mapSecondaryIdToTemplateId(envelope.secondaryId),
+      };
+    }),
+
+  /**
+   * Lists the built-in starter templates that can be created with one click.
+   */
+  getStarterTemplates: authenticatedProcedure
+    .output(ZGetStarterTemplatesResponseSchema)
+    .query(() => {
+      return {
+        templates: getStarterTemplateSummaries(),
+      };
+    }),
+
+  /**
+   * Creates a new template from a built-in starter definition, complete with
+   * its document, recipients and fields, configured for sequential signing.
+   */
+  createTemplateFromStarter: authenticatedProcedure
+    .input(ZCreateTemplateFromStarterRequestSchema)
+    .output(ZCreateTemplateFromStarterResponseSchema)
+    .mutation(async ({ input, ctx }) => {
+      const { teamId } = ctx;
+      const { starterId, folderId } = input;
+
+      const envelope = await createTemplateFromStarter({
+        userId: ctx.user.id,
+        teamId,
+        starterId,
+        folderId,
         requestMetadata: ctx.metadata,
       });
 
