@@ -30,6 +30,7 @@ export const ZRecipientSchema = RecipientSchema.pick({
   authOptions: true,
   signingOrder: true,
   rejectionReason: true,
+  signatureRequired: true,
 }).extend({
   fields: ZFieldSchema.array(),
 
@@ -59,6 +60,7 @@ export const ZRecipientLiteSchema = RecipientSchema.pick({
   authOptions: true,
   signingOrder: true,
   rejectionReason: true,
+  signatureRequired: true,
 }).extend({
   // Backwards compatibility.
   documentId: z.number().nullish(),
@@ -86,6 +88,7 @@ export const ZRecipientManySchema = RecipientSchema.pick({
   authOptions: true,
   signingOrder: true,
   rejectionReason: true,
+  signatureRequired: true,
 }).extend({
   user: UserSchema.pick({
     id: true,

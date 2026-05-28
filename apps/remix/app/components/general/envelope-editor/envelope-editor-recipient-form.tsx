@@ -241,6 +241,7 @@ export const EnvelopeEditorRecipientForm = () => {
       email: '',
       role: RecipientRole.SIGNER,
       actionAuth: [],
+      signatureRequired: true,
       signingOrder: signers.length > 0 ? (signers[signers.length - 1]?.signingOrder ?? 0) + 1 : 1,
     });
   };
@@ -263,6 +264,7 @@ export const EnvelopeEditorRecipientForm = () => {
           email: recipient.email,
           role: recipient.role,
           actionAuth: [],
+          signatureRequired: true,
           signingOrder: index + 1,
         })),
         {
@@ -293,6 +295,7 @@ export const EnvelopeEditorRecipientForm = () => {
         email: recipient.email,
         role: recipient.role,
         actionAuth: [],
+        signatureRequired: true,
         signingOrder: nextSigningOrder,
       });
 
@@ -362,6 +365,7 @@ export const EnvelopeEditorRecipientForm = () => {
           email: user?.email ?? '',
           role: RecipientRole.SIGNER,
           actionAuth: [],
+          signatureRequired: true,
           signingOrder:
             signers.length > 0 ? (signers[signers.length - 1]?.signingOrder ?? 0) + 1 : 1,
         },
@@ -580,6 +584,7 @@ export const EnvelopeEditorRecipientForm = () => {
           signer.name !== recipient.name ||
           signer.role !== recipient.role ||
           signer.signingOrder !== recipient.signingOrder ||
+          signer.signatureRequired !== recipient.signatureRequired ||
           !isDeepEqual(signerActionAuth, recipientActionAuth)
         );
       });
@@ -1081,6 +1086,49 @@ export const EnvelopeEditorRecipientForm = () => {
                                     )}
                                   />
                                 )}
+
+                              {(watchedSigners[index]?.role === RecipientRole.SIGNER ||
+                                watchedSigners[index]?.role === RecipientRole.APPROVER) && (
+                                <FormField
+                                  control={form.control}
+                                  name={`signers.${index}.signatureRequired`}
+                                  render={({ field }) => (
+                                    <FormItem
+                                      className={cn(
+                                        'mt-2 flex w-full flex-row items-center space-x-2 space-y-0',
+                                        {
+                                          'pl-6': isSigningOrderSequential,
+                                        },
+                                      )}
+                                    >
+                                      <FormControl>
+                                        <Checkbox
+                                          id={`signature-required-${index}`}
+                                          checked={field.value !== false}
+                                          onCheckedChange={(checked) =>
+                                            field.onChange(checked === true)
+                                          }
+                                          disabled={
+                                            snapshot.isDragging ||
+                                            isSubmitting ||
+                                            !canRecipientBeModified(signer.id)
+                                          }
+                                        />
+                                      </FormControl>
+
+                                      <FormLabel
+                                        htmlFor={`signature-required-${index}`}
+                                        className="text-xs font-normal text-muted-foreground"
+                                      >
+                                        <Trans>
+                                          Require a signature from this recipient. Uncheck to let
+                                          them complete the document without signing.
+                                        </Trans>
+                                      </FormLabel>
+                                    </FormItem>
+                                  )}
+                                />
+                              )}
                             </motion.fieldset>
                           </div>
                         )}

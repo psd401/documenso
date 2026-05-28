@@ -63,6 +63,7 @@ export const ZEnvelopeForSigningResponse = z.object({
       signedAt: true,
       authOptions: true,
       signingOrder: true,
+      signatureRequired: true,
       rejectionReason: true,
     })
       .extend({
@@ -112,6 +113,7 @@ export const ZEnvelopeForSigningResponse = z.object({
     authOptions: true,
     token: true,
     signingOrder: true,
+    signatureRequired: true,
     rejectionReason: true,
   }).extend({
     directToken: z.string().nullish(),

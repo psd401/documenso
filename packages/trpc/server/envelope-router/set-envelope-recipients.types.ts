@@ -10,6 +10,7 @@ export const ZSetEnvelopeRecipientSchema = z.object({
   name: z.string().max(255),
   role: z.nativeEnum(RecipientRole),
   signingOrder: z.number().optional(),
+  signatureRequired: z.boolean().optional().default(true),
   actionAuth: z.array(ZRecipientActionAuthTypesSchema).optional().default([]),
 });
 

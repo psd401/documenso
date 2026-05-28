@@ -21,6 +21,7 @@ const LocalRecipientSchema = z.object({
   name: z.string(),
   role: z.nativeEnum(RecipientRole),
   signingOrder: z.number().optional(),
+  signatureRequired: z.boolean().default(true),
   actionAuth: z.array(ZRecipientActionAuthTypesSchema).optional().default([]),
 });
 
@@ -63,6 +64,7 @@ export const useEditorRecipients = ({
       email: recipient.email,
       role: recipient.role,
       signingOrder: recipient.signingOrder ?? index + 1,
+      signatureRequired: recipient.signatureRequired ?? true,
       actionAuth: ZRecipientAuthOptionsSchema.parse(recipient.authOptions)?.actionAuth ?? undefined,
     }));
 
@@ -76,6 +78,7 @@ export const useEditorRecipients = ({
               email: '',
               role: RecipientRole.SIGNER,
               signingOrder: 1,
+              signatureRequired: true,
               actionAuth: [],
             },
           ];

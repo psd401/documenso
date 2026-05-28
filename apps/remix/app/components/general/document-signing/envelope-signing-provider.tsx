@@ -223,7 +223,11 @@ export const EnvelopeSigningProvider = ({
    */
   const recipientFieldsRemaining = useMemo(() => {
     const requiredFields = envelopeData.recipient.fields
-      .filter((field) => isFieldUnsignedAndRequired(field))
+      .filter((field) =>
+        isFieldUnsignedAndRequired(field, {
+          signatureRequired: envelopeData.recipient.signatureRequired,
+        }),
+      )
       .map((field) => {
         const envelopeItem = envelope.envelopeItems.find(
           (item) => item.id === field.envelopeItemId,
@@ -251,8 +255,10 @@ export const EnvelopeSigningProvider = ({
    * All the required fields for the actual recipient.
    */
   const requiredRecipientFields = useMemo(() => {
-    return envelopeData.recipient.fields.filter((field) => isRequiredField(field));
-  }, [envelopeData.recipient.fields]);
+    return envelopeData.recipient.fields.filter((field) =>
+      isRequiredField(field, { signatureRequired: envelopeData.recipient.signatureRequired }),
+    );
+  }, [envelopeData.recipient.fields, envelopeData.recipient.signatureRequired]);
 
   /**
    * All the fields for the actual recipient.

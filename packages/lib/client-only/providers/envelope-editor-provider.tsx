@@ -541,6 +541,7 @@ const mapLocalRecipientsToRecipients = ({
           ? { actionAuth: recipient.actionAuth, accessAuth: [] }
           : null,
       signingOrder: recipient.signingOrder ?? null,
+      signatureRequired: recipient.signatureRequired ?? foundRecipient?.signatureRequired ?? true,
       rejectionReason: foundRecipient?.rejectionReason || null,
       role: recipient.role,
       readStatus: foundRecipient?.readStatus || ReadStatus.NOT_OPENED,

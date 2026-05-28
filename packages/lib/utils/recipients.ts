@@ -21,11 +21,20 @@ export const RECIPIENT_ROLES_THAT_REQUIRE_FIELDS = [RecipientRole.SIGNER] as con
  *
  * Currently only SIGNERs are validated - they must have at least one signature field.
  */
-export const getRecipientsWithMissingFields = <T extends Pick<TRecipientLite, 'id' | 'role'>>(
+export const getRecipientsWithMissingFields = <
+  T extends Pick<TRecipientLite, 'id' | 'role'> &
+    Partial<Pick<TRecipientLite, 'signatureRequired'>>,
+>(
   recipients: T[],
   fields: Pick<Field, 'type' | 'recipientId'>[],
 ): T[] => {
   return recipients.filter((recipient) => {
+    // A recipient that is not required to sign does not need a signature field — they
+    // can complete the document by filling their other fields only.
+    if (recipient.signatureRequired === false) {
+      return false;
+    }
+
     if (recipient.role === RecipientRole.SIGNER) {
       const hasSignatureField = fields.some(
         (field) => field.recipientId === recipient.id && isSignatureFieldType(field.type),
@@ -98,7 +107,6 @@ export const mapRecipientToLegacyRecipient = (
     ...legacyId,
   };
 };
-
 
 export const findRecipientByEmail = <T extends { email: string }>({
   recipients,

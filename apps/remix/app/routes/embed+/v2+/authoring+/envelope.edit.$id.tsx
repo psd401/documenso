@@ -223,6 +223,7 @@ const EnvelopeEditPage = ({ embedAuthoringOptions }: EnvelopeEditPageProps) => {
         name: recipient.name,
         role: recipient.role,
         signingOrder: recipient.signingOrder ?? undefined,
+        signatureRequired: recipient.signatureRequired,
         accessAuth: recipient.authOptions?.accessAuth ?? [],
         actionAuth: recipient.authOptions?.actionAuth ?? [],
         fields,

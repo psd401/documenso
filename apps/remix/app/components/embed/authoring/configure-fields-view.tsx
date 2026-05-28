@@ -116,6 +116,7 @@ export const ConfigureFieldsView = ({
       email: signer.email || '',
       role: signer.role,
       signingOrder: signer.signingOrder || null,
+      signatureRequired: true,
       documentId: null,
       templateId: null,
       token: '',

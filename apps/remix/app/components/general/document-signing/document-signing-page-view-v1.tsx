@@ -95,7 +95,7 @@ export const DocumentSigningPageViewV1 = ({
   const isSubmitting = isPending || isSuccess;
 
   const fieldsRequiringValidation = useMemo(
-    () => fields.filter(isFieldUnsignedAndRequired),
+    () => fields.filter((field) => isFieldUnsignedAndRequired(field)),
     [fields],
   );
 

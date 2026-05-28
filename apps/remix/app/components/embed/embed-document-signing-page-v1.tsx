@@ -116,7 +116,7 @@ export const EmbedSignDocumentV1ClientPage = ({
     trpc.recipient.completeDocumentWithToken.useMutation();
 
   const fieldsRequiringValidation = useMemo(
-    () => fields.filter(isFieldUnsignedAndRequired),
+    () => fields.filter((field) => isFieldUnsignedAndRequired(field)),
     [fields],
   );
 

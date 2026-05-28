@@ -284,7 +284,9 @@ export const completeDocumentWithToken = async ({
     });
   }
 
-  if (fieldsContainUnsignedRequiredField(fields)) {
+  if (
+    fieldsContainUnsignedRequiredField(fields, { signatureRequired: recipient.signatureRequired })
+  ) {
     throw new Error(`Recipient ${recipient.id} has unsigned fields`);
   }
 

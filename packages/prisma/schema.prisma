@@ -600,6 +600,10 @@ model Recipient {
   authOptions          Json? /// [RecipientAuthOptions] @zod.custom.use(ZRecipientAuthOptionsSchema)
   signingOrder         Int? /// @zod.number.describe("The order in which the recipient should sign the document. Only works if the document is set to sequential signing.")
   rejectionReason      String?
+  /// Whether this recipient is required to provide a signature. When false, the
+  /// recipient's signature fields are optional and they can complete the document
+  /// by filling their other required fields only.
+  signatureRequired    Boolean       @default(true)
   role                 RecipientRole @default(SIGNER)
   readStatus           ReadStatus    @default(NOT_OPENED)
   signingStatus        SigningStatus @default(NOT_SIGNED)

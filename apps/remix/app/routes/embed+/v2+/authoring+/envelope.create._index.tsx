@@ -331,6 +331,7 @@ const EnvelopeCreatePage = ({ embedAuthoringOptions }: EnvelopeCreatePageProps) 
         actionAuth: [],
       },
       signingOrder: index + 1,
+      signatureRequired: true,
       rejectionReason: null,
       expiresAt: null,
       expirationNotifiedAt: null,

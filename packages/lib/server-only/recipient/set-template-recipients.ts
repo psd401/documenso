@@ -147,6 +147,7 @@ export const setTemplateRecipients = async ({
             email: recipient.email,
             role: recipient.role,
             signingOrder: recipient.signingOrder,
+            signatureRequired: recipient.signatureRequired ?? true,
             envelopeId: envelope.id,
             authOptions,
           },
@@ -155,6 +156,7 @@ export const setTemplateRecipients = async ({
             email: recipient.email,
             role: recipient.role,
             signingOrder: recipient.signingOrder,
+            signatureRequired: recipient.signatureRequired ?? true,
             token: nanoid(),
             envelopeId: envelope.id,
             authOptions,
@@ -222,6 +224,7 @@ type RecipientData = {
   name: string;
   role: RecipientRole;
   signingOrder?: number | null;
+  signatureRequired?: boolean;
   actionAuth?: TRecipientActionAuthTypes[];
 };
 

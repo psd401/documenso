@@ -145,8 +145,21 @@ export const run = async ({
     // Get the rejection reason from the rejected recipient
     const rejectionReason = rejectedRecipient?.rejectionReason ?? '';
 
+    // Recipients that are not required to sign — their signature fields are optional.
+    const recipientsNotRequiredToSign = new Set(
+      envelope.recipients
+        .filter((recipient) => !recipient.signatureRequired)
+        .map((recipient) => recipient.id),
+    );
+
     // Skip the field check if the document is rejected
-    if (!isRejected && fieldsContainUnsignedRequiredField(fields)) {
+    if (
+      !isRejected &&
+      fieldsContainUnsignedRequiredField(fields, {
+        isSignatureRequiredForRecipientId: (recipientId) =>
+          !recipientsNotRequiredToSign.has(recipientId),
+      })
+    ) {
       throw new Error(`Document ${envelope.id} has unsigned required fields`);
     }
 

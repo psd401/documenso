@@ -178,6 +178,7 @@ export const setDocumentRecipients = async ({
             email: recipient.email,
             role: recipient.role,
             signingOrder: recipient.signingOrder,
+            signatureRequired: recipient.signatureRequired ?? true,
             envelopeId: envelope.id,
             sendStatus: recipient.role === RecipientRole.CC ? SendStatus.SENT : SendStatus.NOT_SENT,
             signingStatus:
@@ -189,6 +190,7 @@ export const setDocumentRecipients = async ({
             email: recipient.email,
             role: recipient.role,
             signingOrder: recipient.signingOrder,
+            signatureRequired: recipient.signatureRequired ?? true,
             token: nanoid(),
             envelopeId: envelope.id,
             sendStatus: recipient.role === RecipientRole.CC ? SendStatus.SENT : SendStatus.NOT_SENT,
@@ -367,6 +369,7 @@ type RecipientData = {
   name: string;
   role: RecipientRole;
   signingOrder?: number | null;
+  signatureRequired?: boolean;
   accessAuth?: TRecipientAccessAuthTypes[];
   actionAuth?: TRecipientActionAuthTypes[];
 };

@@ -51,7 +51,8 @@ export type DocumentSigningCompleteDialogProps = {
     accessAuthOptions?: TRecipientAccessAuth,
     directRecipient?: { name: string; email: string },
   ) => void | Promise<void>;
-  recipient: Pick<Recipient, 'name' | 'email' | 'role' | 'token'>;
+  recipient: Pick<Recipient, 'name' | 'email' | 'role' | 'token'> &
+    Partial<Pick<Recipient, 'signatureRequired'>>;
   disabled?: boolean;
   allowDictateNextSigner?: boolean;
   defaultNextSigner?: {
@@ -124,7 +125,13 @@ export const DocumentSigningCompleteDialog = ({
     },
   });
 
-  const isComplete = useMemo(() => !fieldsContainUnsignedRequiredField(fields), [fields]);
+  const isComplete = useMemo(
+    () =>
+      !fieldsContainUnsignedRequiredField(fields, {
+        signatureRequired: recipient.signatureRequired,
+      }),
+    [fields, recipient.signatureRequired],
+  );
 
   const completionRequires2FA = useMemo(
     () => derivedRecipientAccessAuth.includes('TWO_FACTOR_AUTH'),
