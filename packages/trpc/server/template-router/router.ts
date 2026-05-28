@@ -23,6 +23,10 @@ import { findTemplates } from '@documenso/lib/server-only/template/find-template
 import { getOrganisationTemplateById } from '@documenso/lib/server-only/template/get-organisation-template-by-id';
 import { getTemplateById } from '@documenso/lib/server-only/template/get-template-by-id';
 import { toggleTemplateDirectLink } from '@documenso/lib/server-only/template/toggle-template-direct-link';
+import {
+  BULK_SEND_MAX_CSV_SIZE,
+  validateBulkSendCsv,
+} from '@documenso/lib/server-only/template/validate-bulk-send-csv';
 import { putNormalizedPdfFileServerSide } from '@documenso/lib/universal/upload/put-file.server';
 import { getPresignPostUrl } from '@documenso/lib/universal/upload/server-actions';
 import { mapSecondaryIdToTemplateId } from '@documenso/lib/utils/envelope';
@@ -59,6 +63,8 @@ import {
   ZToggleTemplateDirectLinkResponseSchema,
   ZUpdateTemplateRequestSchema,
   ZUpdateTemplateResponseSchema,
+  ZValidateBulkSendTemplateMutationSchema,
+  ZValidateBulkSendTemplateResponseSchema,
 } from './schema';
 import { searchTemplateRoute } from './search-template';
 
@@ -793,6 +799,57 @@ export const templateRouter = router({
 
   /**
    * @private
+   *
+   * Validate a bulk send CSV against a template without triggering the bulk
+   * send job, so row-level errors can be surfaced to the user before any
+   * documents are created or sent.
+   */
+  validateBulkSend: authenticatedProcedure
+    .input(ZValidateBulkSendTemplateMutationSchema)
+    .output(ZValidateBulkSendTemplateResponseSchema)
+    .mutation(async ({ ctx, input }) => {
+      const { templateId, teamId, csv } = input;
+      const { user } = ctx;
+
+      ctx.logger.info({
+        input: {
+          templateId,
+          teamId,
+        },
+      });
+
+      if (csv.length > BULK_SEND_MAX_CSV_SIZE) {
+        throw new AppError(AppErrorCode.LIMIT_EXCEEDED, {
+          message: 'File size exceeds 4MB limit',
+          statusCode: 400,
+        });
+      }
+
+      const template = await getTemplateById({
+        id: {
+          type: 'templateId',
+          id: templateId,
+        },
+        teamId,
+        userId: user.id,
+      });
+
+      if (!template) {
+        throw new AppError(AppErrorCode.NOT_FOUND, {
+          message: 'Template not found',
+        });
+      }
+
+      const { totalRows, validRowCount, errors } = validateBulkSendCsv({
+        csvContent: csv,
+        recipientCount: template.recipients.length,
+      });
+
+      return { totalRows, validRowCount, errors };
+    }),
+
+  /**
+   * @private
    */
   uploadBulkSend: authenticatedProcedure
     .input(ZBulkSendTemplateMutationSchema)
@@ -807,7 +864,7 @@ export const templateRouter = router({
         },
       });
 
-      if (csv.length > 4 * 1024 * 1024) {
+      if (csv.length > BULK_SEND_MAX_CSV_SIZE) {
         throw new AppError(AppErrorCode.LIMIT_EXCEEDED, {
           message: 'File size exceeds 4MB limit',
           statusCode: 400,

@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react';
 import { Trans } from '@lingui/react/macro';
-import { File as FileIcon, Upload, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, File as FileIcon, Upload, X } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -57,6 +57,41 @@ export const TemplateBulkSendDialog = ({
 
   const { mutateAsync: uploadBulkSend } = trpc.template.uploadBulkSend.useMutation();
 
+  const {
+    mutateAsync: validateBulkSend,
+    data: validationResult,
+    reset: resetValidation,
+    isPending: isValidating,
+  } = trpc.template.validateBulkSend.useMutation();
+
+  const errorCount = validationResult?.errors.length ?? 0;
+  const validRowCount = validationResult?.validRowCount ?? 0;
+  const totalRows = validationResult?.totalRows ?? 0;
+  const hasValidationErrors = errorCount > 0;
+  const canSubmit = Boolean(validationResult && !hasValidationErrors && validRowCount > 0);
+
+  const onFileSelected = async (file: File) => {
+    resetValidation();
+
+    try {
+      const csv = await file.text();
+
+      await validateBulkSend({
+        templateId,
+        teamId: team?.id,
+        csv,
+      });
+    } catch (err) {
+      console.error(err);
+
+      toast({
+        title: _(msg`Error`),
+        description: _(msg`Failed to validate CSV. Please check the file format and try again.`),
+        variant: 'destructive',
+      });
+    }
+  };
+
   const onDownloadTemplate = () => {
     const headers = recipients.flatMap((_, index) => [
       `recipient_${index + 1}_email`,
@@ -98,6 +133,7 @@ export const TemplateBulkSendDialog = ({
       });
 
       form.reset();
+      resetValidation();
       onSuccess?.();
     } catch (err) {
       console.error(err);
@@ -189,6 +225,7 @@ export const TemplateBulkSendDialog = ({
                               const file = e.target.files?.[0];
                               if (file) {
                                 onChange(file);
+                                void onFileSelected(file);
                               }
                             }}
                             disabled={form.formState.isSubmitting}
@@ -208,7 +245,10 @@ export const TemplateBulkSendDialog = ({
                           type="button"
                           variant="link"
                           className="p-0 text-xs text-destructive hover:text-destructive"
-                          onClick={() => onChange(null)}
+                          onClick={() => {
+                            onChange(null);
+                            resetValidation();
+                          }}
                           disabled={form.formState.isSubmitting}
                         >
                           <X className="h-4 w-4" />
@@ -231,6 +271,55 @@ export const TemplateBulkSendDialog = ({
                 </FormItem>
               )}
             />
+
+            {isValidating && (
+              <p className="text-sm text-muted-foreground">
+                <Trans>Validating CSV…</Trans>
+              </p>
+            )}
+
+            {validationResult && !isValidating && (
+              <div
+                className={
+                  hasValidationErrors
+                    ? 'rounded-lg border border-destructive/50 bg-destructive/5 p-4'
+                    : 'rounded-lg border border-green-600/40 bg-green-600/5 p-4'
+                }
+              >
+                {hasValidationErrors ? (
+                  <>
+                    <div className="flex items-center gap-2 text-sm font-medium text-destructive">
+                      <AlertTriangle className="h-4 w-4" />
+                      <span>
+                        <Trans>
+                          {errorCount} issue(s) found in your CSV. Fix them and re-upload before
+                          sending.
+                        </Trans>
+                      </span>
+                    </div>
+
+                    <ul className="mt-2 max-h-40 space-y-1 overflow-y-auto text-sm text-destructive">
+                      {validationResult.errors.map((validationError, index) => (
+                        <li key={index}>
+                          {validationError.row !== null
+                            ? `${_(msg`Row`)} ${validationError.row}: ${validationError.message}`
+                            : validationError.message}
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                ) : (
+                  <div className="flex items-center gap-2 text-sm font-medium text-green-700 dark:text-green-500">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span>
+                      <Trans>
+                        {validRowCount} of {totalRows} row(s) are valid and ready to send.
+                      </Trans>
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
 
             <FormField
               control={form.control}
@@ -258,11 +347,22 @@ export const TemplateBulkSendDialog = ({
             />
 
             <DialogFooter className="mt-4">
-              <Button variant="secondary" onClick={() => form.reset()} type="button">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  form.reset();
+                  resetValidation();
+                }}
+                type="button"
+              >
                 <Trans>Cancel</Trans>
               </Button>
 
-              <Button type="submit" loading={form.formState.isSubmitting}>
+              <Button
+                type="submit"
+                loading={form.formState.isSubmitting}
+                disabled={isValidating || !canSubmit}
+              >
                 <Trans>Upload and Process</Trans>
               </Button>
             </DialogFooter>

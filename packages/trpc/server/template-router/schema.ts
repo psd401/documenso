@@ -325,8 +325,31 @@ export const ZBulkSendTemplateMutationSchema = z.object({
   sendImmediately: z.boolean(),
 });
 
+export const ZValidateBulkSendTemplateMutationSchema = z.object({
+  templateId: z.number(),
+  teamId: z.number(),
+  csv: z.string().min(1),
+});
+
+export const ZValidateBulkSendTemplateResponseSchema = z.object({
+  totalRows: z.number(),
+  validRowCount: z.number(),
+  errors: z.array(
+    z.object({
+      row: z.number().nullable(),
+      message: z.string(),
+    }),
+  ),
+});
+
 export type TCreateTemplatePayloadSchema = z.input<typeof ZCreateTemplatePayloadSchema>;
 export type TCreateTemplateMutationSchema = z.infer<typeof ZCreateTemplateMutationSchema>;
 export type TDuplicateTemplateMutationSchema = z.infer<typeof ZDuplicateTemplateMutationSchema>;
 export type TDeleteTemplateMutationSchema = z.infer<typeof ZDeleteTemplateMutationSchema>;
 export type TBulkSendTemplateMutationSchema = z.infer<typeof ZBulkSendTemplateMutationSchema>;
+export type TValidateBulkSendTemplateMutationSchema = z.infer<
+  typeof ZValidateBulkSendTemplateMutationSchema
+>;
+export type TValidateBulkSendTemplateResponseSchema = z.infer<
+  typeof ZValidateBulkSendTemplateResponseSchema
+>;
