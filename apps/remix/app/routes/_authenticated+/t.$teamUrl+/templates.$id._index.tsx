@@ -164,6 +164,7 @@ export default function TemplatePage({ params }: Route.ComponentProps) {
               <TemplateBulkSendDialog
                 templateId={mapSecondaryIdToTemplateId(envelope.secondaryId)}
                 recipients={envelope.recipients}
+                fields={envelope.fields}
               />
 
               <Button className="w-full" asChild>

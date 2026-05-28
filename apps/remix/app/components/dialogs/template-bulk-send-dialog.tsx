@@ -33,13 +33,34 @@ type TBulkSendFormSchema = z.infer<typeof ZBulkSendFormSchema>;
 export type TemplateBulkSendDialogProps = {
   templateId: number;
   recipients: Array<{ email: string; name?: string | null }>;
+  fields?: Array<{ id: number; type: string; fieldMeta?: unknown }>;
   trigger?: React.ReactNode;
   onSuccess?: () => void;
+};
+
+/**
+ * Field types whose value can be prefilled per-recipient via a CSV column.
+ */
+const PREFILLABLE_FIELD_TYPES = ['TEXT', 'NUMBER', 'RADIO', 'CHECKBOX', 'DROPDOWN', 'DATE'];
+
+const getFieldLabel = (field: { type: string; fieldMeta?: unknown }) => {
+  if (
+    field.fieldMeta &&
+    typeof field.fieldMeta === 'object' &&
+    'label' in field.fieldMeta &&
+    typeof (field.fieldMeta as { label?: unknown }).label === 'string' &&
+    (field.fieldMeta as { label: string }).label.length > 0
+  ) {
+    return (field.fieldMeta as { label: string }).label;
+  }
+
+  return field.type;
 };
 
 export const TemplateBulkSendDialog = ({
   templateId,
   recipients,
+  fields = [],
   trigger,
   onSuccess,
 }: TemplateBulkSendDialogProps) => {
@@ -47,6 +68,10 @@ export const TemplateBulkSendDialog = ({
   const { toast } = useToast();
 
   const team = useCurrentTeam();
+
+  const prefillableFields = fields.filter((field) =>
+    PREFILLABLE_FIELD_TYPES.includes(field.type),
+  );
 
   const form = useForm<TBulkSendFormSchema>({
     resolver: zodResolver(ZBulkSendFormSchema),
@@ -58,12 +83,18 @@ export const TemplateBulkSendDialog = ({
   const { mutateAsync: uploadBulkSend } = trpc.template.uploadBulkSend.useMutation();
 
   const onDownloadTemplate = () => {
-    const headers = recipients.flatMap((_, index) => [
-      `recipient_${index + 1}_email`,
-      `recipient_${index + 1}_name`,
-    ]);
+    const headers = [
+      ...recipients.flatMap((_, index) => [
+        `recipient_${index + 1}_email`,
+        `recipient_${index + 1}_name`,
+      ]),
+      ...prefillableFields.map((field) => `field_${field.id}`),
+    ];
 
-    const exampleRow = recipients.flatMap((recipient) => [recipient.email, recipient.name || '']);
+    const exampleRow = [
+      ...recipients.flatMap((recipient) => [recipient.email, recipient.name || '']),
+      ...prefillableFields.map(() => ''),
+    ];
 
     const csv = [headers.join(','), exampleRow.join(',')].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -145,7 +176,8 @@ export const TemplateBulkSendDialog = ({
               <p className="mt-1 text-sm text-muted-foreground">
                 <Trans>
                   For each recipient, provide their email (required) and name (optional) in separate
-                  columns. Download the template CSV below for the correct format.
+                  columns. You can also prefill template field values per row. Download the template
+                  CSV below for the correct format.
                 </Trans>
               </p>
 
@@ -160,6 +192,23 @@ export const TemplateBulkSendDialog = ({
                   </li>
                 ))}
               </ul>
+
+              {prefillableFields.length > 0 && (
+                <>
+                  <p className="mt-4 text-sm">
+                    <Trans>Prefillable fields:</Trans>
+                  </p>
+
+                  <ul className="mt-2 list-inside list-disc text-sm text-muted-foreground">
+                    {prefillableFields.map((field) => (
+                      <li key={field.id}>
+                        {getFieldLabel(field)}{' '}
+                        <span className="font-mono text-xs">(field_{field.id})</span>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
             </div>
 
             <div className="flex flex-col gap-y-2">

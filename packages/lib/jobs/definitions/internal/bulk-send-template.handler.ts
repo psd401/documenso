@@ -9,6 +9,7 @@ import { BulkSendCompleteEmail } from '@documenso/email/templates/bulk-send-comp
 import { sendDocument } from '@documenso/lib/server-only/document/send-document';
 import { createDocumentFromTemplate } from '@documenso/lib/server-only/template/create-document-from-template';
 import { getTemplateById } from '@documenso/lib/server-only/template/get-template-by-id';
+import type { TFieldMetaPrefillFieldsSchema } from '@documenso/lib/types/field-meta';
 import { zEmail } from '@documenso/lib/utils/zod';
 import { prisma } from '@documenso/prisma';
 
@@ -27,6 +28,69 @@ const ZRecipientRowSchema = z.object({
     z.string().max(0, { message: 'Value must be a valid email or empty string' }),
   ]),
 });
+
+/**
+ * Maps the (advanced) template field types that support a prefilled value to the
+ * corresponding prefill schema type. Other field types (signatures, etc.) cannot
+ * be prefilled via CSV and are ignored.
+ */
+const PREFILLABLE_FIELD_TYPES: Record<
+  string,
+  'text' | 'number' | 'radio' | 'checkbox' | 'dropdown' | 'date'
+> = {
+  TEXT: 'text',
+  NUMBER: 'number',
+  RADIO: 'radio',
+  CHECKBOX: 'checkbox',
+  DROPDOWN: 'dropdown',
+  DATE: 'date',
+};
+
+/**
+ * Builds the list of prefill fields for a single CSV row.
+ *
+ * Each prefillable template field maps to a `field_<fieldId>` column. Blank cells
+ * are skipped so the template default is used. Checkbox cells accept a
+ * comma-separated list of option values.
+ */
+const buildPrefillFieldsForRow = (
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  row: Record<string, any>,
+  fields: { id: number; type: string }[],
+): TFieldMetaPrefillFieldsSchema[] => {
+  const prefillFields: TFieldMetaPrefillFieldsSchema[] = [];
+
+  for (const field of fields) {
+    const prefillType = PREFILLABLE_FIELD_TYPES[field.type];
+
+    if (!prefillType) {
+      continue;
+    }
+
+    const rawValue = row[`field_${field.id}`];
+
+    if (rawValue === undefined || rawValue === null || String(rawValue).trim() === '') {
+      continue;
+    }
+
+    const value = String(rawValue).trim();
+
+    if (prefillType === 'checkbox') {
+      prefillFields.push({
+        id: field.id,
+        type: 'checkbox',
+        value: value
+          .split(',')
+          .map((item) => item.trim())
+          .filter((item) => item.length > 0),
+      });
+    } else {
+      prefillFields.push({ id: field.id, type: prefillType, value } as TFieldMetaPrefillFieldsSchema);
+    }
+  }
+
+  return prefillFields;
+};
 
 export const run = async ({
   payload,
@@ -104,6 +168,8 @@ export const run = async ({
         }
       }
 
+      const prefillFields = buildPrefillFieldsForRow(row, template.fields);
+
       const envelope = await io.runTask(`create-document-${rowIndex}`, async () => {
         return await createDocumentFromTemplate({
           id: {
@@ -121,6 +187,7 @@ export const run = async ({
               signingOrder: recipient.signingOrder,
             };
           }),
+          prefillFields,
           requestMetadata: {
             source: 'app',
             auth: 'session',
