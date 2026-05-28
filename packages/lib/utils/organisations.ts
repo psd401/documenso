@@ -3,6 +3,7 @@ import {
   DocumentVisibility,
   type OrganisationGroup,
   type OrganisationMemberRole,
+  type TeamMemberRole,
 } from '@prisma/client';
 
 import type { ORGANISATION_MEMBER_ROLE_MAP } from '@documenso/lib/constants/organisations-translations';
@@ -16,9 +17,42 @@ import {
   ORGANISATION_MEMBER_ROLE_PERMISSIONS_MAP,
 } from '../constants/organisations';
 import { DEFAULT_DOCUMENT_EMAIL_SETTINGS } from '../types/document-email';
+import { canExecuteTeamAction } from './teams';
 
 export const isPersonalLayout = (organisations: Pick<Organisation, 'type'>[]) => {
   return organisations.length === 1 && organisations[0].type === 'PERSONAL';
+};
+
+type OrganisationWithTeamsForTokens = Pick<Organisation, 'type'> & {
+  teams: { url: string; currentTeamRole: TeamMemberRole }[];
+};
+
+/**
+ * Resolves the settings route where the current user can manage their API tokens.
+ *
+ * API tokens are scoped to a team, so the entry point differs depending on the layout:
+ * - Personal layout users manage them through their personal settings.
+ * - Organisation users manage them through a team they can administer.
+ *
+ * Returns `null` when the user has no team in which API tokens can be managed.
+ */
+export const getApiTokenSettingsRoute = (
+  organisations: OrganisationWithTeamsForTokens[],
+): string | null => {
+  if (isPersonalLayout(organisations)) {
+    return '/settings/tokens';
+  }
+
+  const teams = organisations.flatMap((organisation) => organisation.teams);
+
+  const manageableTeam =
+    teams.find((team) => canExecuteTeamAction('MANAGE_TEAM', team.currentTeamRole)) ?? teams[0];
+
+  if (!manageableTeam) {
+    return null;
+  }
+
+  return `/t/${manageableTeam.url}/settings/tokens`;
 };
 
 /**

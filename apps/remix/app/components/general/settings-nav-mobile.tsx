@@ -17,7 +17,11 @@ import { Link, useLocation } from 'react-router';
 
 import { useSession } from '@documenso/lib/client-only/providers/session';
 import { IS_BILLING_ENABLED } from '@documenso/lib/constants/app';
-import { canExecuteOrganisationAction, isPersonalLayout } from '@documenso/lib/utils/organisations';
+import {
+  canExecuteOrganisationAction,
+  getApiTokenSettingsRoute,
+  isPersonalLayout,
+} from '@documenso/lib/utils/organisations';
 import { cn } from '@documenso/ui/lib/utils';
 import { Button } from '@documenso/ui/primitives/button';
 
@@ -33,6 +37,8 @@ export const SettingsMobileNav = ({ className, ...props }: SettingsMobileNavProp
   const hasManageableBillingOrgs = organisations.some((org) =>
     canExecuteOrganisationAction('MANAGE_BILLING', org.currentOrganisationRole),
   );
+
+  const apiTokenSettingsRoute = getApiTokenSettingsRoute(organisations);
 
   return (
     <div
@@ -146,6 +152,21 @@ export const SettingsMobileNav = ({ className, ...props }: SettingsMobileNavProp
           <Trans>Organisations</Trans>
         </Button>
       </Link>
+
+      {!isPersonalLayoutMode && apiTokenSettingsRoute && (
+        <Link to={apiTokenSettingsRoute}>
+          <Button
+            variant="ghost"
+            className={cn(
+              'w-full justify-start',
+              pathname?.endsWith('/settings/tokens') && 'bg-secondary',
+            )}
+          >
+            <BracesIcon className="mr-2 h-5 w-5" />
+            <Trans>API Tokens</Trans>
+          </Button>
+        </Link>
+      )}
 
       {IS_BILLING_ENABLED() && hasManageableBillingOrgs && (
         <Link to={isPersonalLayoutMode ? '/settings/billing-personal' : `/settings/billing`}>
