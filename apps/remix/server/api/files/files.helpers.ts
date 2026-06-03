@@ -12,6 +12,7 @@ import { generatePartialDocumentPdf } from '@documenso/lib/server-only/pdf/gener
 import { getTeamById } from '@documenso/lib/server-only/team/get-team';
 import { sha256 } from '@documenso/lib/universal/crypto';
 import { getFileServerSide } from '@documenso/lib/universal/upload/get-file.server';
+import { type ZipFile, createZip } from '@documenso/lib/universal/zip';
 import { prisma } from '@documenso/prisma';
 
 import type { HonoEnv } from '../../router';
@@ -128,6 +129,112 @@ export const handleEnvelopeItemFileRequest = async ({
   }
 
   return c.body(file);
+};
+
+type EnvelopeZipItem = {
+  title: string;
+  documentData: {
+    type: DocumentDataType;
+    data: string;
+    initialData: string;
+  } | null;
+};
+
+type BuildEnvelopeZipResponseOptions = {
+  envelopeTitle: string;
+  items: EnvelopeZipItem[];
+  version: 'signed' | 'original';
+  context: Context<HonoEnv>;
+};
+
+/**
+ * Ensures every entry in the archive has a unique name. PDF titles within an
+ * envelope are not guaranteed to be unique, so colliding names get a numeric
+ * suffix (e.g. "report (2).pdf") to avoid silently overwriting an entry.
+ */
+const dedupeFileName = (name: string, usedNames: Set<string>): string => {
+  if (!usedNames.has(name)) {
+    usedNames.add(name);
+
+    return name;
+  }
+
+  const extensionMatch = /\.[^.]+$/.exec(name);
+  const extension = extensionMatch ? extensionMatch[0] : '';
+  const base = extension ? name.slice(0, -extension.length) : name;
+
+  let counter = 2;
+  let candidate = `${base} (${counter})${extension}`;
+
+  while (usedNames.has(candidate)) {
+    counter += 1;
+    candidate = `${base} (${counter})${extension}`;
+  }
+
+  usedNames.add(candidate);
+
+  return candidate;
+};
+
+/**
+ * Bundles every document in an envelope into a single ZIP archive and returns
+ * it as a download. Used by the "Download all" action so a user does not have
+ * to download each document in a multi-document envelope individually.
+ */
+export const buildEnvelopeZipResponse = async ({
+  envelopeTitle,
+  items,
+  version,
+  context: c,
+}: BuildEnvelopeZipResponseOptions) => {
+  const usedNames = new Set<string>();
+  const suffix = version === 'signed' ? '_signed.pdf' : '.pdf';
+
+  const files: ZipFile[] = [];
+
+  for (const item of items) {
+    if (!item.documentData) {
+      continue;
+    }
+
+    const documentDataToUse =
+      version === 'signed' ? item.documentData.data : item.documentData.initialData;
+
+    const file = await getFileServerSide({
+      type: item.documentData.type,
+      data: documentDataToUse,
+    }).catch((error) => {
+      console.error(error);
+
+      return null;
+    });
+
+    if (!file) {
+      continue;
+    }
+
+    const baseTitle = item.title.replace(/\.pdf$/, '');
+    const name = dedupeFileName(`${baseTitle}${suffix}`, usedNames);
+
+    files.push({ name, data: file });
+  }
+
+  if (files.length === 0) {
+    return c.json({ error: 'No files available to download' }, 404);
+  }
+
+  const zip = createZip(files);
+
+  const baseZipTitle = envelopeTitle.replace(/\.pdf$/, '') || 'documents';
+  const zipFilename = `${baseZipTitle}.zip`;
+
+  c.header('Content-Type', 'application/zip');
+  c.header('Content-Disposition', contentDisposition(zipFilename));
+  c.header('Cache-Control', 'no-cache, no-store, must-revalidate');
+  c.header('Pragma', 'no-cache');
+  c.header('Expires', '0');
+
+  return c.body(zip);
 };
 
 type CheckEnvelopeFileAccessOptions = {

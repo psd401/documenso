@@ -37,6 +37,26 @@ export const getEnvelopeItemPdfUrl = (options: EnvelopeItemPdfUrlOptions) => {
     : `${NEXT_PUBLIC_WEBAPP_URL()}/api/files/envelope/${envelopeId}/envelopeItem/${id}${presignToken ? `?token=${presignToken}` : ''}`;
 };
 
+export type EnvelopeDownloadAllUrlOptions = {
+  envelopeId: string;
+  token: string | undefined;
+  version: 'original' | 'signed';
+};
+
+/**
+ * Builds the URL that returns every document in an envelope bundled into a
+ * single ZIP archive.
+ */
+export const getEnvelopeDownloadAllUrl = ({
+  envelopeId,
+  token,
+  version,
+}: EnvelopeDownloadAllUrlOptions) => {
+  return token
+    ? `${NEXT_PUBLIC_WEBAPP_URL()}/api/files/token/${token}/download-all/${version}`
+    : `${NEXT_PUBLIC_WEBAPP_URL()}/api/files/envelope/${envelopeId}/download-all/${version}`;
+};
+
 export type DocumentDataUrlOptions = {
   envelopeId: string;
   envelopeItemId: string;
