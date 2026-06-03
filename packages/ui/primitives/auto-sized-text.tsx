@@ -66,7 +66,10 @@ export function AutoSizedText({
       return;
     }
 
-    let newFontSize: number;
+    // Default to the current size so that when the element already fits (neither
+    // branch below runs) the font size is left unchanged instead of becoming
+    // undefined.
+    let newFontSize: number = fontSize.current;
 
     const targetHeight =
       maxHeight && maxHeight < parentDimensions.height ? maxHeight : parentDimensions.height;

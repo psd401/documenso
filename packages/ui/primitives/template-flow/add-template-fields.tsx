@@ -52,6 +52,11 @@ import {
   DocumentFlowFormContainerHeader,
   DocumentFlowFormContainerStep,
 } from '@documenso/ui/primitives/document-flow/document-flow-root';
+import {
+  type BulkFieldSettingsValue,
+  BulkFieldSettings,
+  applyBulkSettingsToField,
+} from '@documenso/ui/primitives/document-flow/bulk-field-settings';
 import { FieldItem } from '@documenso/ui/primitives/document-flow/field-item';
 import type { DocumentFlowStep } from '@documenso/ui/primitives/document-flow/types';
 import { FRIENDLY_FIELD_TYPE } from '@documenso/ui/primitives/document-flow/types';
@@ -159,9 +164,12 @@ export const AddTemplateFieldsFormPartial = ({
   });
 
   const {
+    selectedFieldIds,
+    setSelectedFieldIds,
     isFieldSelected,
     onFieldActivate,
     removeField,
+    requestDeleteFields,
     bulkDeleteCount,
     isBulkDeleteOpen,
     onBulkDeleteOpenChange,
@@ -173,6 +181,22 @@ export const AddTemplateFieldsFormPartial = ({
     onAfterChange: () => void handleAutoSave(),
     onActiveFieldIdChange: setActiveFieldId,
   });
+
+  const selectedFields = useMemo(
+    () => localFields.filter((field) => selectedFieldIds.includes(field.formId)),
+    [localFields, selectedFieldIds],
+  );
+
+  const applyBulkFieldSettings = (update: BulkFieldSettingsValue) => {
+    const updatedFields = form
+      .getValues('fields')
+      .map((field) =>
+        selectedFieldIds.includes(field.formId) ? applyBulkSettingsToField(field, update) : field,
+      );
+
+    form.setValue('fields', updatedFields);
+    void handleAutoSave();
+  };
 
   const [selectedField, setSelectedField] = useState<FieldType | null>(null);
   const [selectedSigner, setSelectedSigner] = useState<TRecipientLite | null>(null);
@@ -573,6 +597,12 @@ export const AddTemplateFieldsFormPartial = ({
     void handleAutoSave();
   };
 
+  // Clear the multi-selection when switching recipients so the bulk-edit panel
+  // never targets fields belonging to a recipient that is no longer active.
+  useEffect(() => {
+    setSelectedFieldIds([]);
+  }, [selectedSigner?.id, setSelectedFieldIds]);
+
   return (
     <>
       {showAdvancedSettings && currentField && (
@@ -592,6 +622,15 @@ export const AddTemplateFieldsFormPartial = ({
             await handleAutoSave();
           }}
           onFieldMetaChange={(fieldState) => handleSavedFieldSettings(fieldState)}
+        />
+      )}
+
+      {!showAdvancedSettings && selectedFields.length >= 2 && (
+        <BulkFieldSettings
+          fields={selectedFields}
+          onApply={applyBulkFieldSettings}
+          onClearSelection={() => setSelectedFieldIds([])}
+          onDeleteSelected={() => requestDeleteFields(selectedFieldIds)}
         />
       )}
 

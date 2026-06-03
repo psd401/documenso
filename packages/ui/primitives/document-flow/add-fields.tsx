@@ -56,6 +56,11 @@ import {
   DocumentFlowFormContainerHeader,
   DocumentFlowFormContainerStep,
 } from './document-flow-root';
+import {
+  type BulkFieldSettingsValue,
+  BulkFieldSettings,
+  applyBulkSettingsToField,
+} from './bulk-field-settings';
 import { FieldItem } from './field-item';
 import { FieldAdvancedSettings } from './field-item-advanced-settings';
 import { MissingSignatureFieldDialog } from './missing-signature-field-dialog';
@@ -594,9 +599,12 @@ export const AddFieldsFormPartial = ({
   };
 
   const {
+    selectedFieldIds,
+    setSelectedFieldIds,
     isFieldSelected,
     onFieldActivate,
     removeField,
+    requestDeleteFields,
     bulkDeleteCount,
     isBulkDeleteOpen,
     onBulkDeleteOpenChange,
@@ -608,6 +616,28 @@ export const AddFieldsFormPartial = ({
     onAfterChange: () => void handleAutoSave(),
     onActiveFieldIdChange: setActiveFieldId,
   });
+
+  const selectedFields = useMemo(
+    () => localFields.filter((field) => selectedFieldIds.includes(field.formId)),
+    [localFields, selectedFieldIds],
+  );
+
+  const applyBulkFieldSettings = (update: BulkFieldSettingsValue) => {
+    const updatedFields = form
+      .getValues('fields')
+      .map((field) =>
+        selectedFieldIds.includes(field.formId) ? applyBulkSettingsToField(field, update) : field,
+      );
+
+    form.setValue('fields', updatedFields);
+    void handleAutoSave();
+  };
+
+  // Clear the multi-selection when switching recipients so the bulk-edit panel
+  // never targets fields belonging to a recipient that is no longer active.
+  useEffect(() => {
+    setSelectedFieldIds([]);
+  }, [selectedSigner?.id, setSelectedFieldIds]);
 
   return (
     <>
@@ -632,6 +662,15 @@ export const AddFieldsFormPartial = ({
             await handleAutoSave();
           }}
           onFieldMetaChange={(fieldState) => handleSavedFieldSettings(fieldState)}
+        />
+      )}
+
+      {!showAdvancedSettings && selectedFields.length >= 2 && (
+        <BulkFieldSettings
+          fields={selectedFields}
+          onApply={applyBulkFieldSettings}
+          onClearSelection={() => setSelectedFieldIds([])}
+          onDeleteSelected={() => requestDeleteFields(selectedFieldIds)}
         />
       )}
 
