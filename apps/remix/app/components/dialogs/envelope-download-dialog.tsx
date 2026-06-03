@@ -5,6 +5,7 @@ import { Trans } from '@lingui/react/macro';
 import { DocumentStatus, type EnvelopeItem } from '@prisma/client';
 import { DownloadIcon, FileTextIcon } from 'lucide-react';
 
+import { downloadEnvelopeZip } from '@documenso/lib/client-only/download-envelope-zip';
 import { downloadPDF } from '@documenso/lib/client-only/download-pdf';
 import { trpc } from '@documenso/trpc/react';
 import { Button } from '@documenso/ui/primitives/button';
@@ -29,6 +30,11 @@ type EnvelopeDownloadDialogProps = {
   envelopeItems?: EnvelopeItemToDownload[];
 
   /**
+   * The envelope title, used to name the "download all" ZIP archive.
+   */
+  envelopeTitle?: string;
+
+  /**
    * The recipient token to download the document.
    *
    * If not provided, it will be assumed that the current user can access the document.
@@ -48,6 +54,7 @@ export const EnvelopeDownloadDialog = ({
   envelopeId,
   envelopeStatus,
   envelopeItems: initialEnvelopeItems,
+  envelopeTitle,
   token,
   canDownloadPartial = false,
   trigger,
@@ -60,6 +67,8 @@ export const EnvelopeDownloadDialog = ({
   const [isDownloadingState, setIsDownloadingState] = useState<{
     [envelopeItemIdAndVersion: string]: boolean;
   }>({});
+
+  const [isDownloadingAll, setIsDownloadingAll] = useState(false);
 
   const generateDownloadKey = (envelopeItemId: string, version: DownloadVersion) =>
     `${envelopeItemId}-${version}`;
@@ -121,6 +130,34 @@ export const EnvelopeDownloadDialog = ({
     }
   };
 
+  const onDownloadAll = async () => {
+    if (isDownloadingAll) {
+      return;
+    }
+
+    setIsDownloadingAll(true);
+
+    try {
+      await downloadEnvelopeZip({
+        envelopeId,
+        token,
+        fileName: envelopeTitle,
+        version: envelopeStatus === DocumentStatus.COMPLETED ? 'signed' : 'original',
+      });
+    } catch (error) {
+      console.error(error);
+
+      toast({
+        title: t`Something went wrong`,
+        description: t`These documents could not be downloaded at this time. Please try again.`,
+        variant: 'destructive',
+        duration: 7500,
+      });
+    } finally {
+      setIsDownloadingAll(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={(value) => setOpen(value)}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
@@ -135,7 +172,20 @@ export const EnvelopeDownloadDialog = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex w-full flex-col gap-4 overflow-hidden">
+        {!isLoadingEnvelopeItems && envelopeItems.length > 1 && (
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-muted-foreground text-xs">
+              {t`${envelopeItems.length} documents`}
+            </p>
+
+            <Button variant="default" size="sm" onClick={onDownloadAll} loading={isDownloadingAll}>
+              {!isDownloadingAll && <DownloadIcon className="mr-2 h-4 w-4" />}
+              <Trans>Download all</Trans>
+            </Button>
+          </div>
+        )}
+
+        <div className="-mx-1 flex max-h-[60vh] w-full flex-col gap-4 overflow-y-auto px-1">
           {isLoadingEnvelopeItems ? (
             <>
               {Array.from({ length: 1 }).map((_, index) => (

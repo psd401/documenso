@@ -152,6 +152,7 @@ export const DocumentsTableActionDropdown = ({
         <EnvelopeDownloadDialog
           envelopeId={row.envelopeId}
           envelopeStatus={row.status}
+          envelopeTitle={row.title}
           token={recipient?.token}
           canDownloadPartial={canManageDocument}
           trigger={

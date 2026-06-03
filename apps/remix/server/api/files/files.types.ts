@@ -72,3 +72,21 @@ export const ZGetEnvelopeItemFileTokenDownloadRequestParamsSchema = z.object({
 export type TGetEnvelopeItemFileTokenDownloadRequestParams = z.infer<
   typeof ZGetEnvelopeItemFileTokenDownloadRequestParamsSchema
 >;
+
+export const ZDownloadAllEnvelopeFilesRequestParamsSchema = z.object({
+  envelopeId: z.string().min(1),
+  version: z.enum(['signed', 'original']).default('signed'),
+});
+
+export type TDownloadAllEnvelopeFilesRequestParams = z.infer<
+  typeof ZDownloadAllEnvelopeFilesRequestParamsSchema
+>;
+
+export const ZDownloadAllEnvelopeFilesTokenRequestParamsSchema = z.object({
+  token: z.string().min(1),
+  version: z.enum(['signed', 'original']).default('signed'),
+});
+
+export type TDownloadAllEnvelopeFilesTokenRequestParams = z.infer<
+  typeof ZDownloadAllEnvelopeFilesTokenRequestParamsSchema
+>;

@@ -11,9 +11,15 @@ import { getPresignPostUrl } from '@documenso/lib/universal/upload/server-action
 import { prisma } from '@documenso/prisma';
 
 import type { HonoEnv } from '../../router';
-import { checkEnvelopeFileAccess, handleEnvelopeItemFileRequest } from './files.helpers';
+import {
+  buildEnvelopeZipResponse,
+  checkEnvelopeFileAccess,
+  handleEnvelopeItemFileRequest,
+} from './files.helpers';
 import {
   type TGetPresignedPostUrlResponse,
+  ZDownloadAllEnvelopeFilesRequestParamsSchema,
+  ZDownloadAllEnvelopeFilesTokenRequestParamsSchema,
   ZGetEnvelopeItemFileDownloadRequestParamsSchema,
   ZGetEnvelopeItemFileRequestParamsSchema,
   ZGetEnvelopeItemFileRequestQuerySchema,
@@ -217,6 +223,60 @@ export const filesRoute = new Hono<HonoEnv>()
     },
   )
   .get(
+    '/envelope/:envelopeId/download-all/:version?',
+    sValidator('param', ZDownloadAllEnvelopeFilesRequestParamsSchema),
+    async (c) => {
+      const { envelopeId, version } = c.req.valid('param');
+
+      const session = await getOptionalSession(c);
+
+      if (!session.user) {
+        return c.json({ error: 'Unauthorized' }, 401);
+      }
+
+      const envelope = await prisma.envelope.findFirst({
+        where: {
+          id: envelopeId,
+        },
+        include: {
+          envelopeItems: {
+            orderBy: {
+              order: 'asc',
+            },
+            include: {
+              documentData: true,
+            },
+          },
+        },
+      });
+
+      if (!envelope) {
+        return c.json({ error: 'Envelope not found' }, 404);
+      }
+
+      const hasDownloadAccess = await checkEnvelopeFileAccess({
+        userId: session.user.id,
+        teamId: envelope.teamId,
+        envelopeType: envelope.type,
+        templateType: envelope.templateType,
+      });
+
+      if (!hasDownloadAccess) {
+        return c.json(
+          { error: 'User does not have access to the team that this envelope is associated with' },
+          403,
+        );
+      }
+
+      return await buildEnvelopeZipResponse({
+        envelopeTitle: envelope.title,
+        items: envelope.envelopeItems,
+        version,
+        context: c,
+      });
+    },
+  )
+  .get(
     '/token/:token/envelopeItem/:envelopeItemId',
     sValidator('param', ZGetEnvelopeItemFileTokenRequestParamsSchema),
     async (c) => {
@@ -320,6 +380,52 @@ export const filesRoute = new Hono<HonoEnv>()
         documentData: envelopeItem.documentData,
         version,
         isDownload: true,
+        context: c,
+      });
+    },
+  )
+  .get(
+    '/token/:token/download-all/:version?',
+    sValidator('param', ZDownloadAllEnvelopeFilesTokenRequestParamsSchema),
+    async (c) => {
+      const { token, version } = c.req.valid('param');
+
+      let envelopeWhereQuery: Prisma.EnvelopeWhereInput = {
+        recipients: {
+          some: {
+            token,
+          },
+        },
+      };
+
+      if (token.startsWith('qr_')) {
+        envelopeWhereQuery = {
+          qrToken: token,
+        };
+      }
+
+      const envelope = await prisma.envelope.findFirst({
+        where: envelopeWhereQuery,
+        include: {
+          envelopeItems: {
+            orderBy: {
+              order: 'asc',
+            },
+            include: {
+              documentData: true,
+            },
+          },
+        },
+      });
+
+      if (!envelope) {
+        return c.json({ error: 'Envelope not found' }, 404);
+      }
+
+      return await buildEnvelopeZipResponse({
+        envelopeTitle: envelope.title,
+        items: envelope.envelopeItems,
+        version,
         context: c,
       });
     },
