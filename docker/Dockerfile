@@ -97,7 +97,10 @@ FROM base AS runner
 
 ENV HUSKY 0
 ENV DOCKER_OUTPUT 1
-ENV NODE_TLS_REJECT_UNAUTHORIZED=0
+# NODE_TLS_REJECT_UNAUTHORIZED is intentionally NOT set as a runtime ENV: outbound TLS
+# (Google OAuth/OIDC, gmail SMTP relay) must be verified in production. It is applied
+# inline only on the build-time RUN commands below, which may run behind a TLS-inspecting
+# proxy. Verified safe on dev+prod 2026-06-04 (all Google/SMTP certs verify with it unset).
 RUN npm config set strict-ssl false
 
 # Telemetry credentials (baked into image at build time, can be disabled at runtime)
@@ -121,7 +124,7 @@ COPY --from=builder --chown=nodejs:nodejs /app/out/full/packages/tailwind-config
 # Copy the patches across
 COPY --from=builder --chown=nodejs:nodejs /app/patches ./patches
 
-RUN npm ci --only=production
+RUN NODE_TLS_REJECT_UNAUTHORIZED=0 npm ci --only=production
 
 # Automatically leverage output traces to reduce image size
 # https://nodejs.org/docs/advanced-features/output-file-tracing
@@ -133,7 +136,7 @@ COPY --from=installer --chown=nodejs:nodejs /app/packages/prisma/schema.prisma .
 COPY --from=installer --chown=nodejs:nodejs /app/packages/prisma/migrations ./packages/prisma/migrations
 
 # Generate the prisma client again
-RUN npx prisma generate --schema ./packages/prisma/schema.prisma
+RUN NODE_TLS_REJECT_UNAUTHORIZED=0 npx prisma generate --schema ./packages/prisma/schema.prisma
 
 
 # Get the start script from docker/
