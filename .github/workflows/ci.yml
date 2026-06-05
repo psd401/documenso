@@ -60,12 +60,14 @@ jobs:
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
 
-      - name: Smoke test — DOCX→PDF conversion deps in the runtime image
+      - name: Smoke test — document-conversion deps in the runtime image
         run: |
-          # Regression guard (#95/#96): the runtime image must ship LibreOffice (soffice) and
-          # Liberation fonts, or on-the-fly .docx/.doc uploads fail with DEPENDENCY_MISSING.
-          # convert-to-pdf.ts resolves the binary via `which soffice`, so assert it is on PATH.
+          # Regression guard (#95/#96, #28 encrypted): the runtime image must ship LibreOffice
+          # (soffice) + Liberation fonts for .docx/.doc upload, and qpdf for encrypted-PDF
+          # decryption, or those uploads fail with DEPENDENCY_MISSING. convert-to-pdf.ts and
+          # decrypt-pdf.ts resolve the binaries via `which`, so assert both are on PATH.
           docker run --rm documenso-${{ github.sha }} sh -c 'command -v soffice'
+          docker run --rm documenso-${{ github.sha }} sh -c 'command -v qpdf'
           docker run --rm documenso-${{ github.sha }} sh -c 'fc-list | grep -iq liberation'
 
       - # Temp fix
