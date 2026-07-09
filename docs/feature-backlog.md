@@ -4,6 +4,16 @@ Feature requests and improvement ideas. Not yet planned or built.
 
 ---
 
+## Typed confirmation for bulk delete
+
+Require the user to type a confirmation phrase ("Delete 4 documents", matching the selection count) before the bulk delete action runs, in the style of Amazon's delete checks. Single-document delete keeps the current dialog.
+
+**Why:** On 2026-07-08 a staff member using the new bulk toolbar meant to resend reminders on selected pending documents and hit Delete instead, hard-deleting 4 pending Technology Use Agreements (`envelope.bulk.delete` deletes pending documents unrecoverably; only completed documents are soft-deleted). Recovery required restoring rows from the nightly pg_dump. Resend and Delete sit one mis-click apart in the same toolbar.
+
+**Approach:** Confirmation dialog for `envelope.bulk.delete` with a text input that must equal "Delete N documents" before the destructive button enables. Consider also soft-deleting pending documents in the fork so bulk deletion is reversible.
+
+---
+
 ## Admin announcement banners
 
 Ability for org admins to display a dismissible banner at the top of the app (e.g., scheduled maintenance notices, policy changes). Motivated by the 2026-04-30 cutover where we couldn't show advance notice to users because the upstream Docker image and standard Caddy don't support content injection.
