@@ -132,7 +132,15 @@ test('[BULK_ACTIONS]: can delete multiple templates', async ({ page }) => {
   await expect(page.getByText('You are about to delete 2 templates')).toBeVisible();
   await expect(page.getByText('irreversible')).toBeVisible();
 
-  await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
+  const deleteButton = page.getByRole('dialog').getByRole('button', { name: 'Delete' });
+
+  // The destructive button stays disabled until the exact confirmation phrase is typed.
+  await expect(deleteButton).toBeDisabled();
+
+  await page.getByRole('dialog').getByRole('textbox').fill('Delete 2 templates');
+  await expect(deleteButton).toBeEnabled();
+
+  await deleteButton.click();
 
   await expectToastTextToBeVisible(page, 'Templates deleted');
 
@@ -175,6 +183,7 @@ test('[BULK_ACTIONS]: selection clears after successful delete', async ({ page }
   await expect(page.getByText('1 selected')).toBeVisible();
 
   await page.getByRole('button', { name: 'Delete' }).click();
+  await page.getByRole('dialog').getByRole('textbox').fill('Delete 1 template');
   await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
 
   await expectToastTextToBeVisible(page, 'Templates deleted');
