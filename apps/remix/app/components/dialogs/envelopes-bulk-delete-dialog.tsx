@@ -1,8 +1,13 @@
+import { useEffect } from 'react';
+
+import { zodResolver } from '@hookform/resolvers/zod';
 import { plural } from '@lingui/core/macro';
 import { Plural, useLingui } from '@lingui/react/macro';
 import { Trans } from '@lingui/react/macro';
 import { EnvelopeType } from '@prisma/client';
 import type * as DialogPrimitive from '@radix-ui/react-dialog';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 
 import { trpc } from '@documenso/trpc/react';
 import { Alert, AlertDescription } from '@documenso/ui/primitives/alert';
@@ -15,6 +20,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@documenso/ui/primitives/dialog';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@documenso/ui/primitives/form/form';
+import { Input } from '@documenso/ui/primitives/input';
 import { useToast } from '@documenso/ui/primitives/use-toast';
 
 export type EnvelopesBulkDeleteDialogProps = {
@@ -39,6 +53,31 @@ export const EnvelopesBulkDeleteDialog = ({
   const trpcUtils = trpc.useUtils();
 
   const isDocument = envelopeType === EnvelopeType.DOCUMENT;
+
+  const confirmationMessage = isDocument
+    ? plural(envelopeIds.length, {
+        one: 'Delete # document',
+        other: 'Delete # documents',
+      })
+    : plural(envelopeIds.length, {
+        one: 'Delete # template',
+        other: 'Delete # templates',
+      });
+
+  const ZBulkDeleteFormSchema = z.object({
+    confirmation: z.literal(confirmationMessage, {
+      errorMap: () => ({ message: t`You must type "${confirmationMessage}" to confirm` }),
+    }),
+  });
+
+  const form = useForm<z.infer<typeof ZBulkDeleteFormSchema>>({
+    resolver: zodResolver(ZBulkDeleteFormSchema),
+    defaultValues: {
+      confirmation: '',
+    },
+  });
+
+  const isConfirmed = form.watch('confirmation') === confirmationMessage;
 
   const { mutateAsync: bulkDeleteEnvelopes, isPending } = trpc.envelope.bulk.delete.useMutation({
     onSuccess: async (result) => {
@@ -83,6 +122,16 @@ export const EnvelopesBulkDeleteDialog = ({
       });
     },
   });
+
+  useEffect(() => {
+    if (!open) {
+      form.reset();
+    }
+  }, [open, form]);
+
+  const onFormSubmit = async () => {
+    await bulkDeleteEnvelopes({ envelopeIds });
+  };
 
   return (
     <Dialog {...props} open={open} onOpenChange={onOpenChange}>
@@ -148,27 +197,50 @@ export const EnvelopesBulkDeleteDialog = ({
           </AlertDescription>
         </Alert>
 
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => onOpenChange(false)}
-            disabled={isPending}
-          >
-            <Trans>Cancel</Trans>
-          </Button>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onFormSubmit)}>
+            <fieldset className="flex h-full flex-col space-y-4" disabled={isPending}>
+              <FormField
+                control={form.control}
+                name="confirmation"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      <Trans>
+                        Confirm by typing{' '}
+                        <span className="text-destructive font-semibold">{confirmationMessage}</span>
+                      </Trans>
+                    </FormLabel>
+                    <FormControl>
+                      <Input className="bg-background" autoComplete="off" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          <Button
-            onClick={(e) => {
-              e.preventDefault();
-              void bulkDeleteEnvelopes({ envelopeIds });
-            }}
-            loading={isPending}
-            variant="destructive"
-          >
-            <Trans>Delete</Trans>
-          </Button>
-        </DialogFooter>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => onOpenChange(false)}
+                  disabled={isPending}
+                >
+                  <Trans>Cancel</Trans>
+                </Button>
+
+                <Button
+                  type="submit"
+                  loading={isPending}
+                  disabled={!isConfirmed}
+                  variant="destructive"
+                >
+                  <Trans>Delete</Trans>
+                </Button>
+              </DialogFooter>
+            </fieldset>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );
