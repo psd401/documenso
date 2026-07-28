@@ -14,6 +14,7 @@ import {
   MailOpenIcon,
   PenIcon,
   PlusIcon,
+  RotateCcwIcon,
   UserIcon,
 } from 'lucide-react';
 import { DateTime } from 'luxon';
@@ -28,6 +29,7 @@ import { CopyTextButton } from '@documenso/ui/components/common/copy-text-button
 import { SignatureIcon } from '@documenso/ui/icons/signature';
 import { AvatarWithText } from '@documenso/ui/primitives/avatar';
 import { Badge } from '@documenso/ui/primitives/badge';
+import { Button } from '@documenso/ui/primitives/button';
 import { PopoverHover } from '@documenso/ui/primitives/popover';
 import {
   Tooltip,
@@ -36,6 +38,8 @@ import {
   TooltipTrigger,
 } from '@documenso/ui/primitives/tooltip';
 import { useToast } from '@documenso/ui/primitives/use-toast';
+
+import { DocumentSendBackForCorrectionDialog } from './document-send-back-for-correction-dialog';
 
 export type DocumentPageViewRecipientsProps = {
   envelope: TEnvelope;
@@ -153,6 +157,38 @@ export const DocumentPageViewRecipients = ({
                       ))
                       .exhaustive()}
                   </Badge>
+                )}
+
+              {envelope.status === DocumentStatus.PENDING &&
+                recipient.signingStatus === SigningStatus.SIGNED &&
+                recipient.role !== RecipientRole.CC &&
+                recipient.role !== RecipientRole.VIEWER && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="ml-1 inline-flex">
+                          <DocumentSendBackForCorrectionDialog
+                            envelopeId={envelope.id}
+                            recipientId={recipient.id}
+                            recipientName={recipient.name || recipient.email}
+                            trigger={
+                              <Button
+                                variant="ghost"
+                                className="h-6 w-6 p-0"
+                                aria-label={_(msg`Send back for correction`)}
+                              >
+                                <RotateCcwIcon className="h-3.5 w-3.5" />
+                              </Button>
+                            }
+                          />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent sideOffset={2}>
+                        <Trans>Send back for correction</Trans>
+                        <TooltipArrow className="fill-background" />
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 )}
 
               {envelope.status !== DocumentStatus.DRAFT &&

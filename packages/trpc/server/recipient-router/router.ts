@@ -2,6 +2,7 @@ import { EnvelopeType } from '@prisma/client';
 
 import { completeDocumentWithToken } from '@documenso/lib/server-only/document/complete-document-with-token';
 import { rejectDocumentWithToken } from '@documenso/lib/server-only/document/reject-document-with-token';
+import { sendDocumentBackForCorrectionWithToken } from '@documenso/lib/server-only/document/send-document-back-for-correction';
 import { createEnvelopeRecipients } from '@documenso/lib/server-only/recipient/create-envelope-recipients';
 import { deleteEnvelopeRecipient } from '@documenso/lib/server-only/recipient/delete-envelope-recipient';
 import { getRecipientById } from '@documenso/lib/server-only/recipient/get-recipient-by-id';
@@ -27,6 +28,7 @@ import {
   ZGetRecipientRequestSchema,
   ZGetRecipientResponseSchema,
   ZRejectDocumentWithTokenMutationSchema,
+  ZSendDocumentBackForCorrectionWithTokenMutationSchema,
   ZSetDocumentRecipientsRequestSchema,
   ZSetDocumentRecipientsResponseSchema,
   ZSetTemplateRecipientsRequestSchema,
@@ -603,6 +605,32 @@ export const recipientRouter = router({
           type: 'documentId',
           id: documentId,
         },
+        reason,
+        requestMetadata: ctx.metadata.requestMetadata,
+      });
+    }),
+
+  /**
+   * @private
+   */
+  sendDocumentBackForCorrectionWithToken: procedure
+    .input(ZSendDocumentBackForCorrectionWithTokenMutationSchema)
+    .mutation(async ({ input, ctx }) => {
+      const { token, documentId, targetRecipientId, reason } = input;
+
+      ctx.logger.info({
+        input: {
+          documentId,
+        },
+      });
+
+      return await sendDocumentBackForCorrectionWithToken({
+        token,
+        id: {
+          type: 'documentId',
+          id: documentId,
+        },
+        targetRecipientId,
         reason,
         requestMetadata: ctx.metadata.requestMetadata,
       });

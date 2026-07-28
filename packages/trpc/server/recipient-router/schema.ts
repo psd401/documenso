@@ -191,3 +191,17 @@ export const ZRejectDocumentWithTokenMutationSchema = z.object({
 export type TRejectDocumentWithTokenMutationSchema = z.infer<
   typeof ZRejectDocumentWithTokenMutationSchema
 >;
+
+export const ZSendDocumentBackForCorrectionWithTokenMutationSchema = z.object({
+  token: z.string(),
+  documentId: z.number(),
+  /**
+   * The recipient to send the document back to, or null to send it back to the sender.
+   */
+  targetRecipientId: z.number().nullable(),
+  reason: z.string().min(1).max(500),
+});
+
+export type TSendDocumentBackForCorrectionWithTokenMutationSchema = z.infer<
+  typeof ZSendDocumentBackForCorrectionWithTokenMutationSchema
+>;
