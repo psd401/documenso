@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 
 import { Plural, Trans, useLingui } from '@lingui/react/macro';
-import { EnvelopeType, RecipientRole } from '@prisma/client';
+import { EnvelopeType, RecipientRole, SigningStatus } from '@prisma/client';
 import { motion } from 'framer-motion';
 import {
   ArrowLeftIcon,
@@ -10,6 +10,7 @@ import {
   PanelLeftCloseIcon,
   PanelLeftOpenIcon,
   PaperclipIcon,
+  RotateCcwIcon,
 } from 'lucide-react';
 import { Link } from 'react-router';
 import { match } from 'ts-pattern';
@@ -41,6 +42,7 @@ import EnvelopeSignerForm from '../envelope-signing/envelope-signer-form';
 import { EnvelopeSignerHeader } from '../envelope-signing/envelope-signer-header';
 import { DocumentSigningMobileWidget } from './document-signing-mobile-widget';
 import { DocumentSigningRejectDialog } from './document-signing-reject-dialog';
+import { DocumentSigningSendBackDialog } from './document-signing-send-back-dialog';
 import { useRequiredEnvelopeSigningContext } from './envelope-signing-provider';
 
 export const DocumentSigningPageViewV2 = () => {
@@ -50,6 +52,7 @@ export const DocumentSigningPageViewV2 = () => {
 
   const {
     isDirectTemplate,
+    envelopeData,
     envelope,
     recipient,
     recipientFields,
@@ -80,6 +83,22 @@ export const DocumentSigningPageViewV2 = () => {
 
     return recipientFields.filter((field) => !field.inserted);
   }, [recipientFieldsRemaining, selectedAssistantRecipientFields, currentEnvelopeItem]);
+
+  /**
+   * Recipients who have already completed their part, and can therefore be sent the
+   * document back to for correction.
+   */
+  const earlierRecipients = useMemo(
+    () =>
+      envelope.recipients.filter(
+        (candidate) =>
+          candidate.id !== recipient.id &&
+          candidate.signingStatus === SigningStatus.SIGNED &&
+          candidate.role !== RecipientRole.CC &&
+          candidate.role !== RecipientRole.VIEWER,
+      ),
+    [envelope.recipients, recipient.id],
+  );
 
   return (
     <div className="min-h-screen w-screen bg-gray-50 dark:bg-background">
@@ -223,6 +242,21 @@ export const DocumentSigningPageViewV2 = () => {
                       >
                         <BanIcon className="mr-2 h-4 w-4" />
                         <Trans>Reject Document</Trans>
+                      </Button>
+                    }
+                  />
+                )}
+
+                {envelope.type === EnvelopeType.DOCUMENT && allowDocumentRejection && (
+                  <DocumentSigningSendBackDialog
+                    documentId={mapSecondaryIdToDocumentId(envelope.secondaryId)}
+                    token={recipient.token}
+                    senderName={envelopeData.sender.name || envelopeData.sender.email}
+                    earlierRecipients={earlierRecipients}
+                    trigger={
+                      <Button variant="ghost" size="sm" className="w-full justify-start">
+                        <RotateCcwIcon className="mr-2 h-4 w-4" />
+                        <Trans>Send Back for Correction</Trans>
                       </Button>
                     }
                   />

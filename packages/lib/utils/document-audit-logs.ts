@@ -515,6 +515,26 @@ export const formatDocumentAuditLogAction = (
       you: msg`You rejected the document`,
       user: msg`${user} rejected the document`,
     }))
+    .with(
+      { type: DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_RECIPIENT_SENT_BACK_FOR_CORRECTION },
+      ({ data }) => {
+        const target = data.targetRecipientName || data.targetRecipientEmail;
+
+        if (!target) {
+          return {
+            anonymous: msg`Document sent back to the sender for correction`,
+            you: msg`You sent the document back to the sender for correction`,
+            user: msg`${user} sent the document back to the sender for correction`,
+          };
+        }
+
+        return {
+          anonymous: msg`Document sent back to ${target} for correction`,
+          you: msg`You sent the document back to ${target} for correction`,
+          user: msg`${user} sent the document back to ${target} for correction`,
+        };
+      },
+    )
     .with({ type: DOCUMENT_AUDIT_LOG_TYPE.DOCUMENT_ACCESS_AUTH_2FA_REQUESTED }, () => ({
       anonymous: msg`Recipient requested a 2FA token for the document`,
       you: msg`You requested a 2FA token for the document`,
