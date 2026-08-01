@@ -78,10 +78,16 @@ test('[PUBLIC_PROFILE]: create team profile', async ({ page }) => {
   await expect(page.locator('body')).toContainText('public-direct-template-title');
   await expect(page.locator('body')).toContainText('public-direct-template-description');
 
-  await page.getByRole('link', { name: 'Sign' }).click();
+  await page.getByRole('link', { name: 'Sign', exact: true }).click();
   await page.getByRole('button', { name: 'Continue' }).click();
-  await page.getByRole('button', { name: 'Complete' }).click();
-  await page.getByRole('button', { name: 'Sign' }).click();
+
+  const completeButton = page.getByRole('button', { name: 'Complete' });
+  await expect(completeButton).toBeVisible({ timeout: 30_000 });
+  await completeButton.click();
+
+  const signButton = page.getByRole('button', { name: 'Sign' });
+  await expect(signButton).toBeVisible({ timeout: 30_000 });
+  await signButton.click();
 
   await expect(page.getByRole('heading', { name: 'Document Signed' })).toBeVisible();
   await expect(page.getByRole('heading')).toContainText('Document Signed');

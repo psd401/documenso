@@ -158,8 +158,10 @@ test('[DIRECT_TEMPLATES]: V1 direct template link auth access', async ({ page })
   await expect(page.getByLabel('Email')).toBeDisabled();
 
   await page.getByRole('button', { name: 'Continue' }).click();
+  await expect(page.getByRole('button', { name: 'Complete' })).toBeVisible({ timeout: 30_000 });
   await page.getByRole('button', { name: 'Complete' }).click();
 
+  await expect(page.getByRole('button', { name: 'Sign' })).toBeVisible({ timeout: 30_000 });
   await page.getByRole('button', { name: 'Sign' }).click();
   await page.waitForURL(/\/sign/);
   await expect(page.getByRole('heading', { name: 'Document Signed' })).toBeVisible();
@@ -200,6 +202,7 @@ test('[DIRECT_TEMPLATES]: V2 direct template link auth access', async ({ page })
   await page.getByRole('button', { name: 'Complete' }).click();
   await expect(page.getByLabel('Your Email')).not.toBeVisible();
 
+  await expect(page.getByRole('button', { name: 'Sign' })).toBeVisible({ timeout: 30_000 });
   await page.getByRole('button', { name: 'Sign' }).click();
   await page.waitForURL(/\/sign/);
   await expect(page.getByRole('heading', { name: 'Document Signed' })).toBeVisible();
@@ -222,7 +225,7 @@ test('[DIRECT_TEMPLATES]: use direct template link with 1 recipient', async ({ p
   await expect(page.getByRole('heading', { name: 'General' })).toBeVisible();
 
   await page.waitForTimeout(100);
-  await page.getByPlaceholder('recipient@documenso.com').fill(seedTestEmail());
+  await page.getByRole('textbox', { name: /^Email/ }).fill(seedTestEmail());
 
   await page.getByRole('button', { name: 'Continue' }).click();
 
@@ -281,7 +284,7 @@ test('[DIRECT_TEMPLATES]: V1 use direct template link with 2 recipients with nex
   await expect(page.getByRole('heading', { name: 'General' })).toBeVisible();
 
   await page.waitForTimeout(100);
-  await page.getByPlaceholder('recipient@documenso.com').fill(seedTestEmail());
+  await page.getByRole('textbox', { name: /^Email/ }).fill(seedTestEmail());
 
   await page.getByRole('button', { name: 'Continue' }).click();
   await page.getByRole('button', { name: 'Complete' }).click();

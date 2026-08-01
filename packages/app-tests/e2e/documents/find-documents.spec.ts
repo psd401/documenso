@@ -1167,8 +1167,9 @@ test.describe('Find Documents UI - Sender Filter', () => {
       include: { members: { include: { user: true }, orderBy: { id: 'asc' } } },
     });
 
-    const member1 = org.members[1].user;
-    const member2 = org.members[2].user;
+    const [member1, member2] = org.members
+      .filter((member) => member.userId !== owner.id)
+      .map((member) => member.user);
 
     const { user: outsideUser } = await seedUser();
 
@@ -1207,11 +1208,12 @@ test.describe('Find Documents UI - Sender Filter', () => {
 
     // Filter by member1
     await page.locator('button').filter({ hasText: 'Sender: All' }).click();
-    await page.getByRole('option', { name: member1.name ?? '' }).click();
-    await page.waitForURL(/senderIds/);
+    await page.getByRole('option', { name: member1.name ?? '', exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`senderIds=${member1.id}`));
+    await expect(page.locator('button').filter({ hasText: member1.name ?? '' })).toBeVisible();
 
     // Should only show member1's doc
-    await checkDocumentTabCount(page, 'All', 1);
+    await expect(page.getByTestId('data-table-count')).toContainText('Showing 1');
     await expect(page.getByRole('link', { name: 'Member1 Sent Doc' })).toBeVisible();
   });
 });

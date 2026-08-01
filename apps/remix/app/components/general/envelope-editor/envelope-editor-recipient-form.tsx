@@ -349,11 +349,16 @@ export const EnvelopeEditorRecipientForm = () => {
       removeSigner(formStateIndex);
 
       const updatedSigners = form.getValues('signers').filter((s) => s.formId !== signer.formId);
+      const normalizedSigners = normalizeSigningOrders(updatedSigners);
 
-      form.setValue('signers', normalizeSigningOrders(updatedSigners), {
+      form.setValue('signers', normalizedSigners, {
         shouldValidate: true,
         shouldDirty: true,
       });
+
+      // Enqueue the removal immediately so rapid step navigation cannot flush
+      // before the form-change effect has observed the updated recipients.
+      setRecipientsDebounced(normalizedSigners);
     }
   };
 
@@ -515,8 +520,7 @@ export const EnvelopeEditorRecipientForm = () => {
 
       const updatedSigner = updatedSigners.find((s) => s.formId === signer.formId);
       const isLastSlot =
-        updatedSigner?.signingOrder ===
-        Math.max(...updatedSigners.map((s) => s.signingOrder ?? 0));
+        updatedSigner?.signingOrder === Math.max(...updatedSigners.map((s) => s.signingOrder ?? 0));
 
       if (signer.role === RecipientRole.ASSISTANT && isLastSlot) {
         toast({

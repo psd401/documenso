@@ -7,14 +7,13 @@ import { prisma } from '@documenso/prisma';
 import {
   type TEnvelopeEditorSurface,
   addEnvelopeItemPdf,
-  assertRecipientRole,
   clickAddMyselfButton,
   clickAddSignerButton,
   clickEnvelopeEditorStep,
   getEnvelopeEditorSettingsTrigger,
   getRecipientEmailInputs,
-  getRecipientNameInputs,
   getRecipientRemoveButtons,
+  getRecipientRows,
   getSigningOrderInputs,
   openDocumentEnvelopeEditor,
   openEmbeddedEnvelopeEditor,
@@ -31,7 +30,7 @@ import { expectToastTextToBeVisible } from '../fixtures/generic';
 
 type RecipientFlowResult = {
   externalId: string;
-  expectedRecipientsBySigningOrder: Array<{
+  expectedRecipients: Array<{
     email: string;
     name: string;
     role: RecipientRole;
@@ -76,6 +75,20 @@ const navigateToAddFieldsAndBack = async (root: Page) => {
 
   await clickEnvelopeEditorStep(root, 'upload');
   await expect(root.getByRole('heading', { name: 'Recipients' })).toBeVisible();
+};
+
+const getRecipientRowByEmail = async (root: Page, email: string) => {
+  const recipientEmailInputs = await getRecipientEmailInputs(root).all();
+  const recipientEmails = await Promise.all(
+    recipientEmailInputs.map(async (input) => input.inputValue()),
+  );
+  const recipientIndex = recipientEmails.indexOf(email);
+
+  if (recipientIndex === -1) {
+    throw new Error(`Could not find recipient row for ${email}`);
+  }
+
+  return getRecipientRows(root).nth(recipientIndex);
 };
 
 const runRecipientFlow = async (surface: TEnvelopeEditorSurface): Promise<RecipientFlowResult> => {
@@ -128,18 +141,28 @@ const runRecipientFlow = async (surface: TEnvelopeEditorSurface): Promise<Recipi
   await navigateToAddFieldsAndBack(surface.root);
 
   await expect(getRecipientEmailInputs(surface.root)).toHaveCount(2);
-  await expect(getRecipientEmailInputs(surface.root).nth(0)).toHaveValue(primaryRecipient.email);
-  await expect(getRecipientEmailInputs(surface.root).nth(1)).toHaveValue(
+  const primaryRecipientRow = await getRecipientRowByEmail(surface.root, primaryRecipient.email);
+  const secondRecipientRow = await getRecipientRowByEmail(
+    surface.root,
     TEST_RECIPIENT_VALUES.secondRecipient.email,
   );
 
-  await expect(getRecipientNameInputs(surface.root).nth(0)).toHaveValue(primaryRecipient.name);
-  await expect(getRecipientNameInputs(surface.root).nth(1)).toHaveValue(
+  await expect(primaryRecipientRow).toHaveCount(1);
+  await expect(secondRecipientRow).toHaveCount(1);
+  await expect(primaryRecipientRow.locator('input[placeholder^="Recipient "]')).toHaveValue(
+    primaryRecipient.name,
+  );
+  await expect(secondRecipientRow.locator('input[placeholder^="Recipient "]')).toHaveValue(
     TEST_RECIPIENT_VALUES.secondRecipient.name,
   );
-
-  await assertRecipientRole(surface.root, 0, 'Needs to sign');
-  await assertRecipientRole(surface.root, 1, 'Needs to approve');
+  await expect(primaryRecipientRow.locator('button[role="combobox"]').first()).toHaveAttribute(
+    'title',
+    'SIGNER',
+  );
+  await expect(secondRecipientRow.locator('button[role="combobox"]').first()).toHaveAttribute(
+    'title',
+    'APPROVER',
+  );
 
   await expect(surface.root.locator('#signingOrder')).toHaveAttribute('aria-checked', 'true');
   await expect(surface.root.locator('#allowDictateNextSigner')).toHaveAttribute(
@@ -148,13 +171,13 @@ const runRecipientFlow = async (surface: TEnvelopeEditorSurface): Promise<Recipi
   );
 
   // Both recipients share the same signing order slot.
-  await expect(getSigningOrderInputs(surface.root).nth(0)).toHaveValue('1');
-  await expect(getSigningOrderInputs(surface.root).nth(1)).toHaveValue('1');
+  await expect(primaryRecipientRow.getByTestId('signing-order-input')).toHaveValue('1');
+  await expect(secondRecipientRow.getByTestId('signing-order-input')).toHaveValue('1');
 
   return {
     externalId,
     removedRecipientEmail: TEST_RECIPIENT_VALUES.thirdRecipient.email,
-    expectedRecipientsBySigningOrder: [
+    expectedRecipients: [
       {
         email: primaryRecipient.email,
         name: primaryRecipient.name,
@@ -174,12 +197,12 @@ const runRecipientFlow = async (surface: TEnvelopeEditorSurface): Promise<Recipi
 const assertRecipientsPersistedInDatabase = async ({
   surface,
   externalId,
-  expectedRecipientsBySigningOrder,
+  expectedRecipients,
   removedRecipientEmail,
 }: {
   surface: TEnvelopeEditorSurface;
   externalId: string;
-  expectedRecipientsBySigningOrder: RecipientFlowResult['expectedRecipientsBySigningOrder'];
+  expectedRecipients: RecipientFlowResult['expectedRecipients'];
   removedRecipientEmail: string;
 }) => {
   const envelope = await prisma.envelope.findFirstOrThrow({
@@ -191,27 +214,23 @@ const assertRecipientsPersistedInDatabase = async ({
     },
     include: {
       documentMeta: true,
-      recipients: {
-        // `id` breaks ties between recipients that share a signing order slot.
-        orderBy: [{ signingOrder: 'asc' }, { id: 'asc' }],
-      },
+      recipients: true,
     },
     orderBy: {
       createdAt: 'desc',
     },
   });
 
-  expect(envelope.recipients).toHaveLength(expectedRecipientsBySigningOrder.length);
+  expect(envelope.recipients).toHaveLength(expectedRecipients.length);
   expect(envelope.documentMeta.signingOrder).toBe(DocumentSigningOrder.SEQUENTIAL);
   expect(envelope.documentMeta.allowDictateNextSigner).toBe(true);
 
-  expectedRecipientsBySigningOrder.forEach((expectedRecipient, index) => {
-    const recipient = envelope.recipients[index];
+  expectedRecipients.forEach((expectedRecipient) => {
+    const recipient = envelope.recipients.find(
+      (candidate) => candidate.email === expectedRecipient.email,
+    );
 
-    expect(recipient.email).toBe(expectedRecipient.email);
-    expect(recipient.name).toBe(expectedRecipient.name);
-    expect(recipient.role).toBe(expectedRecipient.role);
-    expect(recipient.signingOrder).toBe(expectedRecipient.signingOrder);
+    expect(recipient).toMatchObject(expectedRecipient);
   });
 
   expect(envelope.recipients.some((recipient) => recipient.email === removedRecipientEmail)).toBe(

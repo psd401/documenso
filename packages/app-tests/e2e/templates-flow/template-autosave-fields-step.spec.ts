@@ -151,7 +151,7 @@ test.describe('AutoSave Fields Step', () => {
     await page.getByRole('combobox').first().click();
     await page.getByRole('option', { name: 'Recipient 1 (recipient1@documenso.com)' }).click();
 
-    await page.getByText('Text').nth(1).click();
+    await page.locator('[data-field-type="TEXT"]:not([data-disabled])').click();
     await page.getByRole('button', { name: 'Remove' }).click();
 
     await triggerAutosave(page);
@@ -220,7 +220,7 @@ test.describe('AutoSave Fields Step', () => {
     await page.getByRole('combobox').first().click();
     await page.getByRole('option', { name: 'Recipient 1 (recipient1@documenso.com)' }).click();
 
-    await page.getByText('Signature').nth(1).click();
+    await page.locator('[data-field-type="SIGNATURE"]:not([data-disabled])').click();
     await page.getByRole('button', { name: 'Duplicate', exact: true }).click();
 
     await triggerAutosave(page);

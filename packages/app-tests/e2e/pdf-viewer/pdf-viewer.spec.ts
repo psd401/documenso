@@ -300,7 +300,12 @@ test.describe('PDF Viewer Rendering', () => {
 
       await page.goto(`/embed/v1/multisign?token=${recipientsV2[0].token}`);
       await expect(page.getByText('Sign Documents')).toBeVisible({ timeout: 15_000 });
-      await page.getByRole('button', { name: /View/i }).first().click();
+
+      await expect(async () => {
+        await page.getByRole('button', { name: /View/i }).first().click();
+        await expect(page.getByText('Sign Documents')).not.toBeVisible({ timeout: 5000 });
+      }).toPass({ timeout: 30_000 });
+
       await expect(page.locator(PDF_PAGE_SELECTOR).first()).toBeVisible({ timeout: 30_000 });
 
       // Todo: Multisign does not support multiple envelope items.

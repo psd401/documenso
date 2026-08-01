@@ -15,9 +15,8 @@ test('[USER] can reset password via forgot password', async ({ page }: { page: P
     password: oldPassword,
   });
 
-  await page.goto('http://localhost:3000/signin');
-  await page.getByRole('link', { name: 'Forgot your password?' }).click();
-  await expect(page).toHaveURL('http://localhost:3000/forgot-password');
+  await page.goto('/forgot-password');
+  await expect(page).toHaveURL('/forgot-password');
 
   await page.getByRole('textbox', { name: 'Email' }).click();
   await page.getByRole('textbox', { name: 'Email' }).fill(user.email);
@@ -38,7 +37,7 @@ test('[USER] can reset password via forgot password', async ({ page }: { page: P
     },
   });
 
-  await page.goto(`http://localhost:3000/reset-password/${foundToken.token}`);
+  await page.goto(`/reset-password/${foundToken.token}`);
 
   // Assert that password cannot be same as old password.
   await page.getByLabel('Password', { exact: true }).fill(oldPassword);
@@ -134,9 +133,8 @@ test('[USER] password reset invalidates all sessions', async ({ page }: { page: 
 
   await page.context().clearCookies();
 
-  await page.goto('http://localhost:3000/signin');
-  await page.getByRole('link', { name: 'Forgot your password?' }).click();
-  await expect(page).toHaveURL('http://localhost:3000/forgot-password');
+  await page.goto('/forgot-password');
+  await expect(page).toHaveURL('/forgot-password');
   await page.getByRole('textbox', { name: 'Email' }).fill(user.email);
   await page.getByRole('button', { name: 'Reset Password' }).click();
   await expect(page.locator('body')).toContainText('Reset email sent', {
@@ -147,7 +145,7 @@ test('[USER] password reset invalidates all sessions', async ({ page }: { page: 
     where: { userId: user.id },
   });
 
-  await page.goto(`http://localhost:3000/reset-password/${foundToken.token}`);
+  await page.goto(`/reset-password/${foundToken.token}`);
   await page.getByLabel('Password', { exact: true }).fill(newPassword);
   await page.getByLabel('Repeat Password').fill(newPassword);
   await page.getByRole('button', { name: 'Reset Password' }).click();
@@ -155,8 +153,8 @@ test('[USER] password reset invalidates all sessions', async ({ page }: { page: 
 
   await page.context().addCookies(initialCookies);
 
-  await page.goto('http://localhost:3000/settings/profile');
-  await expect(page).toHaveURL('http://localhost:3000/signin');
+  await page.goto('/settings/profile');
+  await expect(page).toHaveURL('/signin');
 
   expect(await checkSessionValid(page)).toBe(false);
 
@@ -204,7 +202,7 @@ test('[USER] password update invalidates other sessions but keeps current', asyn
 
   expect(await checkSessionValid(page)).toBe(true);
 
-  await page.goto('http://localhost:3000/settings/security');
+  await page.goto('/settings/security');
   await page.getByLabel('Current password').fill(oldPassword);
   await page.getByLabel('New password').fill(newPassword);
   await page.getByLabel('Repeat password').fill(newPassword);
@@ -215,13 +213,13 @@ test('[USER] password update invalidates other sessions but keeps current', asyn
 
   await page.context().clearCookies();
   await page.context().addCookies(initialCookies);
-  await page.goto('http://localhost:3000/settings/profile');
-  await expect(page).toHaveURL('http://localhost:3000/signin');
+  await page.goto('/settings/profile');
+  await expect(page).toHaveURL('/signin');
   expect(await checkSessionValid(page)).toBe(false);
 
   await page.context().clearCookies();
   await page.context().addCookies(finalCookies);
-  await page.goto('http://localhost:3000/settings/security');
-  await expect(page).toHaveURL('http://localhost:3000/settings/security');
+  await page.goto('/settings/security');
+  await expect(page).toHaveURL('/settings/security');
   expect(await checkSessionValid(page)).toBe(true);
 });

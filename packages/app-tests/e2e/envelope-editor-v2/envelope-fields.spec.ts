@@ -120,12 +120,10 @@ const runAddAndPersistSignatureTextFields = async (
   await expect(surface.root.locator('.konva-container canvas').first()).toBeVisible();
 
   await placeFieldOnPdf(surface.root, 'Signature', { x: 120, y: 140 });
-  let fieldCount = await getKonvaElementCountForPage(surface.root, 1, '.field-group');
-  expect(fieldCount).toBe(1);
+  await expectFieldCount(surface.root, 1);
 
   await placeFieldOnPdf(surface.root, 'Text', { x: 220, y: 240 });
-  fieldCount = await getKonvaElementCountForPage(surface.root, 1, '.field-group');
-  expect(fieldCount).toBe(2);
+  await expectFieldCount(surface.root, 2);
 
   await clickEnvelopeEditorStep(surface.root, 'upload');
   await expect(surface.root.getByRole('heading', { name: 'Recipients' })).toBeVisible();
@@ -133,8 +131,7 @@ const runAddAndPersistSignatureTextFields = async (
   await clickEnvelopeEditorStep(surface.root, 'addFields');
   await surface.root.locator('.konva-container canvas').first().waitFor({ state: 'visible' });
   await expect(surface.root.getByText('Selected Recipient')).toBeVisible();
-  fieldCount = await getKonvaElementCountForPage(surface.root, 1, '.field-group');
-  expect(fieldCount).toBe(2);
+  await expectFieldCount(surface.root, 2);
 
   return {
     externalId,
@@ -214,6 +211,12 @@ const MULTI_RECIPIENT_VALUES = {
   },
 };
 
+const expectFieldCount = async (root: Page, expectedCount: number) => {
+  await expect
+    .poll(async () => getKonvaElementCountForPage(root, 1, '.field-group'))
+    .toBe(expectedCount);
+};
+
 const runMultiRecipientFieldFlow = async (
   surface: TEnvelopeEditorSurface,
 ): Promise<TMultiRecipientFlowResult> => {
@@ -247,25 +250,21 @@ const runMultiRecipientFieldFlow = async (
   await expect(root.getByText('Selected Recipient')).toBeVisible();
   await expect(root.locator('.konva-container canvas').first()).toBeVisible();
 
-  let fieldCount = await getKonvaElementCountForPage(root, 1, '.field-group');
-  expect(fieldCount).toBe(0);
+  await expectFieldCount(root, 0);
 
   // Place Signature for recipient #1 (auto-selected).
   await placeFieldOnPdf(root, 'Signature', { x: 120, y: 140 });
-  fieldCount = await getKonvaElementCountForPage(root, 1, '.field-group');
-  expect(fieldCount).toBe(1);
+  await expectFieldCount(root, 1);
 
   // Switch recipient and place text field for recipient #2.
   await selectRecipientInFieldsStep(root, MULTI_RECIPIENT_VALUES.secondSigner.email);
   await placeFieldOnPdf(root, 'Text', { x: 220, y: 240 });
-  fieldCount = await getKonvaElementCountForPage(root, 1, '.field-group');
-  expect(fieldCount).toBe(2);
+  await expectFieldCount(root, 2);
 
   // Navigate away and back to ensure fields are persisted in the UI.
   await clickEnvelopeEditorStep(root, 'upload');
   await clickEnvelopeEditorStep(root, 'addFields');
-  fieldCount = await getKonvaElementCountForPage(root, 1, '.field-group');
-  expect(fieldCount).toBe(2);
+  await expectFieldCount(root, 2);
 
   // Phase 2: cascade deletion — go back to recipients and remove the second one.
   await clickEnvelopeEditorStep(root, 'upload');
@@ -276,8 +275,7 @@ const runMultiRecipientFieldFlow = async (
 
   // Go back to fields and verify cascade removal.
   await clickEnvelopeEditorStep(root, 'addFields');
-  fieldCount = await getKonvaElementCountForPage(root, 1, '.field-group');
-  expect(fieldCount).toBe(1);
+  await expectFieldCount(root, 1);
 
   return {
     externalId,
@@ -436,8 +434,7 @@ const runAllFieldTypesFlow = async (
   await root.locator('[data-testid="field-form-defaultValue"]').click();
   await root.getByRole('option', { name: 'Red' }).click();
 
-  let fieldCount = await getKonvaElementCountForPage(root, 1, '.field-group');
-  expect(fieldCount).toBe(10);
+  await expectFieldCount(root, 10);
 
   // Wait briefly for auto-save to fire on the last configured field.
   await root.waitForTimeout(500);
@@ -445,8 +442,7 @@ const runAllFieldTypesFlow = async (
   // Navigate away and back to verify persistence.
   await clickEnvelopeEditorStep(root, 'upload');
   await clickEnvelopeEditorStep(root, 'addFields');
-  fieldCount = await getKonvaElementCountForPage(root, 1, '.field-group');
-  expect(fieldCount).toBe(10);
+  await expectFieldCount(root, 10);
 
   return { externalId };
 };
@@ -580,8 +576,7 @@ const runDuplicateDeleteFieldFlow = async (
 
   // Place a Signature field.
   await placeFieldOnPdf(root, 'Signature', { x: 150, y: 150 });
-  let fieldCount = await getKonvaElementCountForPage(root, 1, '.field-group');
-  expect(fieldCount).toBe(1);
+  await expectFieldCount(root, 1);
 
   // Select the field on canvas to show the action toolbar.
   await selectFieldOnCanvas(root, { x: 150, y: 150 });
@@ -589,27 +584,23 @@ const runDuplicateDeleteFieldFlow = async (
 
   // Duplicate the field.
   await root.locator('button[title="Duplicate"]').click();
-  fieldCount = await getKonvaElementCountForPage(root, 1, '.field-group');
-  expect(fieldCount).toBe(2);
+  await expectFieldCount(root, 2);
 
   // Navigate away and back to persist changes.
   await clickEnvelopeEditorStep(root, 'upload');
   await clickEnvelopeEditorStep(root, 'addFields');
-  fieldCount = await getKonvaElementCountForPage(root, 1, '.field-group');
-  expect(fieldCount).toBe(2);
+  await expectFieldCount(root, 2);
 
   // Select a field and delete it via the Remove button.
   await selectFieldOnCanvas(root, { x: 150, y: 150 });
   await expect(root.locator('button[title="Remove"]')).toBeVisible();
   await root.locator('button[title="Remove"]').click();
-  fieldCount = await getKonvaElementCountForPage(root, 1, '.field-group');
-  expect(fieldCount).toBe(1);
+  await expectFieldCount(root, 1);
 
   // Navigate away and back to verify persistence.
   await clickEnvelopeEditorStep(root, 'upload');
   await clickEnvelopeEditorStep(root, 'addFields');
-  fieldCount = await getKonvaElementCountForPage(root, 1, '.field-group');
-  expect(fieldCount).toBe(1);
+  await expectFieldCount(root, 1);
 
   return { externalId };
 };

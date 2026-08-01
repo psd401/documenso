@@ -2,7 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const seedDatabase = async () => {
-  const files = fs.readdirSync(path.join(__dirname, './seed'));
+  const files = fs
+    .readdirSync(path.join(__dirname, './seed'))
+    .filter((file) => file.endsWith('-seed.ts'))
+    .sort();
 
   for (const file of files) {
     const stat = fs.statSync(path.join(__dirname, './seed', file));

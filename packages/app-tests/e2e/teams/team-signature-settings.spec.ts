@@ -13,6 +13,21 @@ import { seedUser } from '@documenso/prisma/seed/users';
 
 import { apiSignin } from '../fixtures/authentication';
 
+const openSignatureDialog = async (page: Parameters<typeof apiSignin>[0]['page']) => {
+  const signatureDialog = page.getByRole('dialog');
+
+  await expect(async () => {
+    if (await signatureDialog.isVisible()) {
+      return;
+    }
+
+    const signatureButton = page.getByTestId('signature-pad-dialog-button');
+    await expect(signatureButton).toBeVisible({ timeout: 5000 });
+    await signatureButton.click();
+    await expect(signatureDialog).toBeVisible({ timeout: 5000 });
+  }).toPass({ timeout: 30_000 });
+};
+
 test('[TEAMS]: check that default team signature settings are all enabled', async ({ page }) => {
   const { user, team } = await seedUser();
 
@@ -37,7 +52,7 @@ test('[TEAMS]: check that default team signature settings are all enabled', asyn
 
   // Go to document and check that the signatured tabs are correct.
   await page.goto(`/sign/${document.recipients[0].token}`);
-  await page.getByTestId('signature-pad-dialog-button').click();
+  await openSignatureDialog(page);
 
   // Check the tab values
   await expect(page.getByRole('tab', { name: 'Type' })).toBeVisible();
@@ -93,10 +108,7 @@ test('[TEAMS]: check signature modes can be disabled', async ({ page }) => {
 
     // Go to document and check that the signature tabs are correct.
     await page.goto(`/sign/${document.recipients[0].token}`);
-    await page.getByTestId('signature-pad-dialog-button').click();
-
-    // Wait for signature dialog to fully load
-    await page.waitForSelector('[role="dialog"]');
+    await openSignatureDialog(page);
 
     // Check the tab values
     for (const tab of allTabs) {

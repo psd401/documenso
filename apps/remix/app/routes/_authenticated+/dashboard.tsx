@@ -10,6 +10,7 @@ import { useSession } from '@documenso/lib/client-only/providers/session';
 import { ORGANISATION_MEMBER_ROLE_MAP } from '@documenso/lib/constants/organisations-translations';
 import { TEAM_MEMBER_ROLE_MAP } from '@documenso/lib/constants/teams-translations';
 import { formatAvatarUrl } from '@documenso/lib/utils/avatars';
+import { isAdmin } from '@documenso/lib/utils/is-admin';
 import { canExecuteOrganisationAction } from '@documenso/lib/utils/organisations';
 import { canExecuteTeamAction } from '@documenso/lib/utils/teams';
 import { Avatar, AvatarFallback, AvatarImage } from '@documenso/ui/primitives/avatar';
@@ -67,15 +68,21 @@ export default function DashboardPage() {
                 <Trans>No organisations found</Trans>
               </p>
               <p className="text-sm text-muted-foreground">
-                <Trans>Create an organisation to get started.</Trans>
+                {isAdmin(user) ? (
+                  <Trans>Create an organisation to get started.</Trans>
+                ) : (
+                  <Trans>Contact your administrator to request organisation access.</Trans>
+                )}
               </p>
             </div>
 
-            <Button asChild className="mt-4" variant="outline">
-              <Link to="/settings/organisations?action=add-organisation">
-                <Trans>Create organisation</Trans>
-              </Link>
-            </Button>
+            {isAdmin(user) && (
+              <Button asChild className="mt-4" variant="outline">
+                <Link to="/settings/organisations?action=add-organisation">
+                  <Trans>Create organisation</Trans>
+                </Link>
+              </Button>
+            )}
           </div>
         )}
 
