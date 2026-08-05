@@ -41,7 +41,7 @@ export const TemplateFooter = ({ isDocument = true }: TemplateFooterProps) => {
         <Text className="my-8 text-sm text-slate-400">
           Peninsula School District
           <br />
-          14015 1st Ave S, Gig Harbor, WA 98332
+          14015 62nd Ave NW, Gig Harbor, WA 98332
         </Text>
       )}
     </Section>

@@ -1,3 +1,5 @@
+// ABOUTME: Tests for parseBrandingLogoFile covering valid logo references, empty values,
+// ABOUTME: invalid JSON (including the corrupt single-quote value), and wrong-shape JSON.
 import { DocumentDataType } from '@prisma/client';
 import { describe, expect, it } from 'vitest';
 

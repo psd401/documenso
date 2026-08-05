@@ -1,3 +1,5 @@
+// ABOUTME: Renders the email TemplateFooter and pins the district office address in the
+// ABOUTME: branding-disabled fallback, plus custom company details when branding is enabled.
 import { createElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
