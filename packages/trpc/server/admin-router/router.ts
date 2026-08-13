@@ -1,7 +1,9 @@
 import { router } from '../trpc';
 import { createAdminOrganisationRoute } from './create-admin-organisation';
+import { createDirectoryMappingRoute } from './create-directory-mapping';
 import { createStripeCustomerRoute } from './create-stripe-customer';
 import { createSubscriptionClaimRoute } from './create-subscription-claim';
+import { deleteDirectoryMappingRoute } from './delete-directory-mapping';
 import { deleteDocumentRoute } from './delete-document';
 import { deleteAdminOrganisationMemberRoute } from './delete-organisation-member';
 import { deleteSubscriptionClaimRoute } from './delete-subscription-claim';
@@ -11,6 +13,7 @@ import { disableUserRoute } from './disable-user';
 import { downloadDocumentAuditLogsRoute } from './download-document-audit-logs';
 import { enableUserRoute } from './enable-user';
 import { findAdminOrganisationsRoute } from './find-admin-organisations';
+import { findDirectoryMappingsRoute } from './find-directory-mappings';
 import { findDocumentAuditLogsRoute } from './find-document-audit-logs';
 import { findDocumentJobsRoute } from './find-document-jobs';
 import { findDocumentsRoute } from './find-documents';
@@ -22,6 +25,7 @@ import { getAdminOrganisationRoute } from './get-admin-organisation';
 import { getAdminTeamRoute } from './get-admin-team';
 import { getEmailDomainRoute } from './get-email-domain';
 import { getUserRoute } from './get-user';
+import { listDirectoryMappingGroupsRoute } from './list-directory-mapping-groups';
 import { promoteMemberToOwnerRoute } from './promote-member-to-owner';
 import { reregisterEmailDomainRoute } from './reregister-email-domain';
 import { resealDocumentRoute } from './reseal-document';
@@ -29,6 +33,7 @@ import { resetTwoFactorRoute } from './reset-two-factor-authentication';
 import { resyncLicenseRoute } from './resync-license';
 import { swapOrganisationSubscriptionRoute } from './swap-organisation-subscription';
 import { updateAdminOrganisationRoute } from './update-admin-organisation';
+import { updateDirectoryMappingRoute } from './update-directory-mapping';
 import { updateOrganisationMemberRoleRoute } from './update-organisation-member-role';
 import { updateRecipientRoute } from './update-recipient';
 import { updateSiteSettingRoute } from './update-site-setting';
@@ -53,6 +58,13 @@ export const adminRouter = router({
     create: createSubscriptionClaimRoute,
     update: updateSubscriptionClaimRoute,
     delete: deleteSubscriptionClaimRoute,
+  },
+  directoryMappings: {
+    find: findDirectoryMappingsRoute,
+    create: createDirectoryMappingRoute,
+    update: updateDirectoryMappingRoute,
+    delete: deleteDirectoryMappingRoute,
+    listGroups: listDirectoryMappingGroupsRoute,
   },
   stripe: {
     createCustomer: createStripeCustomerRoute,
