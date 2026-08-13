@@ -6,6 +6,7 @@ import { deleteCookie } from 'hono/cookie';
 import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
 import { isEmailDomainAllowedForSignup } from '@documenso/lib/constants/auth';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
+import { applyDirectoryMappings } from '@documenso/lib/server-only/directory-sync/apply-directory-mappings';
 import { onCreateUserHook } from '@documenso/lib/server-only/user/create-user';
 import { deletedServiceAccountEmail } from '@documenso/lib/server-only/user/service-accounts/deleted-account';
 import { legacyServiceAccountEmail } from '@documenso/lib/server-only/user/service-accounts/legacy-service-account';
@@ -78,10 +79,14 @@ export const handleOAuthCallbackUrl = async (options: HandleOAuthCallbackUrlOpti
     await onAuthorize({ userId: existingAccount.user.id }, c);
 
     if (clientOptions.id === 'google') {
-      void syncGoogleDirectory(existingAccount.user.id, email).catch((err: unknown) => {
-        const message = err instanceof Error ? err.message : 'Unknown error';
-        console.warn(`[directory-sync] Sync failed: ${message}`);
-      });
+      void syncGoogleDirectory(existingAccount.user.id, email)
+        .then(async () => {
+          await applyDirectoryMappings(existingAccount.user.id, 'login');
+        })
+        .catch((err: unknown) => {
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          console.warn(`[directory-sync] Sync failed: ${message}`);
+        });
     }
 
     return c.redirect(redirectPath, 302);
@@ -147,10 +152,14 @@ export const handleOAuthCallbackUrl = async (options: HandleOAuthCallbackUrlOpti
     await onAuthorize({ userId: userWithSameEmail.id }, c);
 
     if (clientOptions.id === 'google') {
-      void syncGoogleDirectory(userWithSameEmail.id, email).catch((err: unknown) => {
-        const message = err instanceof Error ? err.message : 'Unknown error';
-        console.warn(`[directory-sync] Sync failed: ${message}`);
-      });
+      void syncGoogleDirectory(userWithSameEmail.id, email)
+        .then(async () => {
+          await applyDirectoryMappings(userWithSameEmail.id, 'login');
+        })
+        .catch((err: unknown) => {
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          console.warn(`[directory-sync] Sync failed: ${message}`);
+        });
     }
 
     return c.redirect(redirectPath, 302);
@@ -208,10 +217,14 @@ export const handleOAuthCallbackUrl = async (options: HandleOAuthCallbackUrlOpti
   await onAuthorize({ userId: createdUser.id }, c);
 
   if (clientOptions.id === 'google') {
-    void syncGoogleDirectory(createdUser.id, email).catch((err: unknown) => {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      console.warn(`[directory-sync] Sync failed: ${message}`);
-    });
+    void syncGoogleDirectory(createdUser.id, email)
+      .then(async () => {
+        await applyDirectoryMappings(createdUser.id, 'login');
+      })
+      .catch((err: unknown) => {
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        console.warn(`[directory-sync] Sync failed: ${message}`);
+      });
   }
 
   return c.redirect(redirectPath, 302);
