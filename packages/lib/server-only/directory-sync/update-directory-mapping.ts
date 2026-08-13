@@ -31,10 +31,10 @@ export const updateDirectoryMapping = async (options: UpdateDirectoryMappingOpti
 
   const effectiveSourceField = data.sourceField ?? existing.sourceField;
 
-  const nextSourceValue =
-    data.sourceValue !== undefined
-      ? normalizeMappingSourceValue(effectiveSourceField, data.sourceValue)
-      : existing.sourceValue;
+  const nextSourceValue = normalizeMappingSourceValue(
+    effectiveSourceField,
+    data.sourceValue ?? existing.sourceValue,
+  );
 
   const changes: Record<string, { from: unknown; to: unknown }> = {};
 

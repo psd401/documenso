@@ -3,6 +3,7 @@
 import { prisma } from '@documenso/prisma';
 
 import { applyDirectoryMappings } from '../../../server-only/directory-sync/apply-directory-mappings';
+import type { SyncGoogleDirectoryStatus } from '../../../server-only/user/sync-google-directory';
 import { syncGoogleDirectory } from '../../../server-only/user/sync-google-directory';
 import { env } from '../../../utils/env';
 import type { JobRunIO } from '../../client/_internal/job';
@@ -49,7 +50,7 @@ export const run = async ({ io }: { payload: TDirectorySyncSweepJobDefinition; i
       batch.map(async (user) => {
         counters.processed += 1;
 
-        let syncStatus: string;
+        let syncStatus: SyncGoogleDirectoryStatus;
 
         try {
           syncStatus = await syncGoogleDirectory(user.id, user.email);

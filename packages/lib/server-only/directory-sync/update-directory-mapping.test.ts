@@ -83,6 +83,38 @@ describe('updateDirectoryMapping', () => {
     });
   });
 
+  it('renormalizes the existing sourceValue against a field-only update', async () => {
+    mockFindFirst.mockResolvedValue({
+      id: 'directory_mapping_1',
+      sourceField: 'DEPARTMENT',
+      sourceValue: 'Tech-Staff',
+      organisationGroupId: 'org_group_1',
+      active: true,
+    });
+    mockUpdate.mockResolvedValue({
+      id: 'directory_mapping_1',
+      sourceField: 'GROUP',
+      sourceValue: 'tech-staff',
+      organisationGroupId: 'org_group_1',
+      active: true,
+    });
+
+    const { updateDirectoryMapping } = await import('./update-directory-mapping');
+    await updateDirectoryMapping({
+      id: 'directory_mapping_1',
+      data: { sourceField: 'GROUP' },
+      actor: { userId: 1, name: 'Admin', email: 'admin@psd401.net' },
+    });
+
+    expect(mockUpdate).toHaveBeenCalledWith({
+      where: { id: 'directory_mapping_1' },
+      data: expect.objectContaining({
+        sourceField: 'GROUP',
+        sourceValue: 'tech-staff',
+      }),
+    });
+  });
+
   it('writes a diff containing only the changed fields', async () => {
     mockFindFirst.mockResolvedValue({
       id: 'directory_mapping_1',
