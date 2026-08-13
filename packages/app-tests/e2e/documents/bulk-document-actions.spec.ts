@@ -63,6 +63,7 @@ test('[BULK_ACTIONS]: header checkbox selects all documents on page', async ({ p
     redirectPath: `/t/${sender.team.url}/documents`,
   });
 
+  await expect(page.getByRole('link', { name: 'Bulk Test Doc 1' })).toBeVisible();
   await page.locator('thead').getByRole('checkbox').click();
 
   await expect(page.getByText(`${documents.length} selected`)).toBeVisible();
@@ -77,6 +78,7 @@ test('[BULK_ACTIONS]: can clear selection with X button', async ({ page }) => {
     redirectPath: `/t/${sender.team.url}/documents`,
   });
 
+  await expect(page.getByRole('link', { name: 'Bulk Test Doc 1' })).toBeVisible();
   await page.locator('thead').getByRole('checkbox').click();
   await expect(page.getByText(/\d+ selected/)).toBeVisible();
 
@@ -102,9 +104,10 @@ test('[BULK_ACTIONS]: can move multiple documents to a folder', async ({ page })
   await expect(page.getByText('Move Documents to Folder')).toBeVisible();
 
   await page.getByRole('button', { name: folder.name }).click();
+  const moveToast = expectToastTextToBeVisible(page, 'Selected items have been moved.');
   await page.getByRole('button', { name: 'Move' }).click();
 
-  await expectToastTextToBeVisible(page, 'Selected items have been moved.');
+  await moveToast;
 
   await page.goto(`/t/${sender.team.url}/documents/f/${folder.id}`);
   await expect(page.getByRole('link', { name: 'Bulk Test Doc 1' })).toBeVisible();
@@ -162,9 +165,10 @@ test('[BULK_ACTIONS]: selection clears after successful move', async ({ page }) 
 
   await page.getByRole('button', { name: 'Move to Folder' }).click();
   await page.getByRole('button', { name: folder.name }).click();
+  const moveToast = expectToastTextToBeVisible(page, 'Selected items have been moved.');
   await page.getByRole('button', { name: 'Move' }).click();
 
-  await expectToastTextToBeVisible(page, 'Selected items have been moved.');
+  await moveToast;
   await expect(page.getByText(/\d+ selected/)).not.toBeVisible();
 });
 
@@ -250,9 +254,10 @@ test('[BULK_ACTIONS]: can move documents from folder to home (root)', async ({ p
 
   await page.getByRole('button', { name: 'Home (No Folder)' }).click();
 
+  const moveToast = expectToastTextToBeVisible(page, 'Selected items have been moved.');
   await page.getByRole('button', { name: 'Move' }).click();
 
-  await expectToastTextToBeVisible(page, 'Selected items have been moved.');
+  await moveToast;
 
   await page.goto(`/t/${sender.team.url}/documents`);
   await expect(page.getByRole('link', { name: 'Bulk Test Doc 1' })).toBeVisible();

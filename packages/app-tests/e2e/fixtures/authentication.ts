@@ -45,18 +45,31 @@ export const apiSignout = async ({ page }: { page: Page }) => {
 
 const getCsrfToken = async (page: Page) => {
   const { request } = page.context();
+  let lastError: unknown = new Error('Invalid session');
 
-  const response = await request.fetch(`${NEXT_PUBLIC_WEBAPP_URL()}/api/auth/csrf`, {
-    method: 'get',
-  });
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      const response = await request.fetch(`${NEXT_PUBLIC_WEBAPP_URL()}/api/auth/csrf`, {
+        method: 'get',
+      });
 
-  const { csrfToken } = await response.json();
+      const { csrfToken } = await response.json();
 
-  if (!csrfToken) {
-    throw new Error('Invalid session');
+      if (csrfToken) {
+        return csrfToken;
+      }
+
+      lastError = new Error('Invalid session');
+    } catch (error) {
+      lastError = error;
+    }
+
+    if (attempt < 3) {
+      await page.waitForTimeout(attempt * 250);
+    }
   }
 
-  return csrfToken;
+  throw lastError;
 };
 
 export const checkSessionValid = async (page: Page): Promise<boolean> => {

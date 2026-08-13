@@ -21,7 +21,7 @@ import {
   getRecipientEmailInputs,
   openDocumentEnvelopeEditor,
 } from '../fixtures/envelope-editor';
-import { expectToastTextToBeVisible } from '../fixtures/generic';
+import { expectToastTextToBeVisible, openDropdownMenu } from '../fixtures/generic';
 
 const WEBAPP_BASE_URL = NEXT_PUBLIC_WEBAPP_URL();
 const V2_API_BASE_URL = `${WEBAPP_BASE_URL}/api/v2-beta`;
@@ -354,7 +354,7 @@ test.describe('documents table', () => {
     await expect(page.getByRole('heading', { name: 'Documents' })).toBeVisible();
 
     // Click the actions dropdown for the document row.
-    await page.getByTestId('document-table-action-btn').first().click();
+    await openDropdownMenu(page, page.getByTestId('document-table-action-btn').first());
 
     // Click "Save as Template" in the dropdown.
     await page.getByRole('menuitem', { name: 'Save as Template' }).click();
@@ -452,10 +452,7 @@ test.describe('document index page', () => {
 test.describe('legacy ID correctness', () => {
   test('save as template uses template counter, not document counter', async ({ page }) => {
     // Record the current counter values before the operation.
-    const [documentCounterBefore, templateCounterBefore] = await Promise.all([
-      prisma.counter.findUnique({ where: { id: 'document' } }),
-      prisma.counter.findUnique({ where: { id: 'template' } }),
-    ]);
+    const templateCounterBefore = await prisma.counter.findUnique({ where: { id: 'template' } });
 
     const surface = await openDocumentEnvelopeEditor(page);
 
@@ -469,16 +466,14 @@ test.describe('legacy ID correctness', () => {
     await expect(page).toHaveURL(/\/templates\/.*\/edit/);
 
     // Record the counter values after the operation.
-    const [documentCounterAfter, templateCounterAfter] = await Promise.all([
-      prisma.counter.findUnique({ where: { id: 'document' } }),
-      prisma.counter.findUnique({ where: { id: 'template' } }),
-    ]);
+    const templateCounterAfter = await prisma.counter.findUnique({ where: { id: 'template' } });
 
     // The template counter MUST have incremented (at least once - could be more due to
     // the seedBlankDocument call in openDocumentEnvelopeEditor seeding other templates).
     expect(templateCounterAfter!.value).toBeGreaterThan(templateCounterBefore!.value);
 
-    // Verify the created template's secondaryId matches the template counter.
+    // Verify the created template used a value from the template counter. Other
+    // parallel tests can increment the same counter before this assertion runs.
     const createdTemplate = await prisma.envelope.findFirst({
       where: {
         userId: surface.userId,
@@ -489,7 +484,11 @@ test.describe('legacy ID correctness', () => {
     });
 
     expect(createdTemplate).not.toBeNull();
-    expect(createdTemplate!.secondaryId).toBe(`template_${templateCounterAfter!.value}`);
     expect(createdTemplate!.secondaryId).not.toMatch(/^document_/);
+
+    const createdTemplateCounter = Number(createdTemplate!.secondaryId.replace('template_', ''));
+
+    expect(createdTemplateCounter).toBeGreaterThan(templateCounterBefore!.value);
+    expect(createdTemplateCounter).toBeLessThanOrEqual(templateCounterAfter!.value);
   });
 });

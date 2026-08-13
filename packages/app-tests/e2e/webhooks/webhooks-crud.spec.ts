@@ -62,8 +62,7 @@ test('[WEBHOOKS]: create webhook', async ({ page }) => {
   await page.waitForTimeout(200); // Wait for dropdown to open
   await page.getByText('document.created').click();
 
-  // Click outside the triggers field to close the dropdown
-  await page.getByText('The URL for Documenso to send webhook events to.').click();
+  await page.getByLabel('Webhook URL*').click();
 
   // Fill in the form
   await page.getByLabel('Secret').fill('secret');
@@ -240,8 +239,7 @@ test('[WEBHOOKS]: update webhook', async ({ page }) => {
   await page.getByText('document.completed').click();
   await page.waitForTimeout(200);
 
-  // Click outside to close the dropdown
-  await page.getByText('The URL for Documenso to send webhook events to.').click();
+  await page.getByLabel('Webhook URL*').click();
 
   // Submit the form
   await page.getByRole('button', { name: 'Update' }).click();
