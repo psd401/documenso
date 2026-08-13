@@ -3,8 +3,6 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { AppError, AppErrorCode } from '../../errors/app-error';
-
 const mockFindFirst = vi.fn();
 const mockUpdate = vi.fn();
 const mockAuditLogCreate = vi.fn();
@@ -34,6 +32,7 @@ describe('updateDirectoryMapping', () => {
     mockFindFirst.mockResolvedValue(null);
 
     const { updateDirectoryMapping } = await import('./update-directory-mapping');
+    const { AppError, AppErrorCode } = await import('../../errors/app-error');
 
     await expect(
       updateDirectoryMapping({
