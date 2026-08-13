@@ -81,11 +81,18 @@ export const handleOAuthCallbackUrl = async (options: HandleOAuthCallbackUrlOpti
     if (clientOptions.id === 'google') {
       void syncGoogleDirectory(existingAccount.user.id, email)
         .then(async () => {
-          await applyDirectoryMappings(existingAccount.user.id, 'login');
+          try {
+            await applyDirectoryMappings(existingAccount.user.id, 'login');
+          } catch (err) {
+            const message = err instanceof Error ? err.message : 'Unknown error';
+            throw new Error(`[apply] ${message}`);
+          }
         })
         .catch((err: unknown) => {
           const message = err instanceof Error ? err.message : 'Unknown error';
-          console.warn(`[directory-sync] Sync failed: ${message}`);
+          console.warn(
+            `[directory-sync] Login chain failed (existing-account, user ${existingAccount.user.id}): ${message}`,
+          );
         });
     }
 
@@ -154,11 +161,18 @@ export const handleOAuthCallbackUrl = async (options: HandleOAuthCallbackUrlOpti
     if (clientOptions.id === 'google') {
       void syncGoogleDirectory(userWithSameEmail.id, email)
         .then(async () => {
-          await applyDirectoryMappings(userWithSameEmail.id, 'login');
+          try {
+            await applyDirectoryMappings(userWithSameEmail.id, 'login');
+          } catch (err) {
+            const message = err instanceof Error ? err.message : 'Unknown error';
+            throw new Error(`[apply] ${message}`);
+          }
         })
         .catch((err: unknown) => {
           const message = err instanceof Error ? err.message : 'Unknown error';
-          console.warn(`[directory-sync] Sync failed: ${message}`);
+          console.warn(
+            `[directory-sync] Login chain failed (account-link, user ${userWithSameEmail.id}): ${message}`,
+          );
         });
     }
 
@@ -219,11 +233,18 @@ export const handleOAuthCallbackUrl = async (options: HandleOAuthCallbackUrlOpti
   if (clientOptions.id === 'google') {
     void syncGoogleDirectory(createdUser.id, email)
       .then(async () => {
-        await applyDirectoryMappings(createdUser.id, 'login');
+        try {
+          await applyDirectoryMappings(createdUser.id, 'login');
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          throw new Error(`[apply] ${message}`);
+        }
       })
       .catch((err: unknown) => {
         const message = err instanceof Error ? err.message : 'Unknown error';
-        console.warn(`[directory-sync] Sync failed: ${message}`);
+        console.warn(
+          `[directory-sync] Login chain failed (new-user, user ${createdUser.id}): ${message}`,
+        );
       });
   }
 
