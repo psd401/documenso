@@ -3,9 +3,12 @@
 import { prisma } from '@documenso/prisma';
 
 import { PSD401_ORG_ID } from '../../constants/psd401';
+import type { TDirectorySyncAuditLogType } from '../../types/directory-sync-audit-logs';
 import { generateDatabaseId } from '../../universal/id';
 import { env } from '../../utils/env';
 import { matchDirectoryMapping } from './mapping-matching';
+
+const MEMBERSHIP_GRANTED: TDirectorySyncAuditLogType = 'MEMBERSHIP_GRANTED';
 
 export type ApplyDirectoryMappingsSource = 'login' | 'sweep';
 
@@ -108,7 +111,7 @@ export const applyDirectoryMappings = async (
     if (inserted.length > 0) {
       await tx.directorySyncAuditLog.createMany({
         data: inserted.map((row) => ({
-          type: 'MEMBERSHIP_GRANTED',
+          type: MEMBERSHIP_GRANTED,
           userId: actor.userId,
           name: actor.name,
           email: actor.email,

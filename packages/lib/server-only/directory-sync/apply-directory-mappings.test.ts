@@ -85,6 +85,26 @@ describe('applyDirectoryMappings', () => {
     warnSpy.mockRestore();
   });
 
+  it('returns { granted: 0 } and does no further work when no mapping matches the user', async () => {
+    mockUserFindUnique.mockResolvedValue({
+      name: 'Jane Staff',
+      email: 'jane@psd401.net',
+      department: 'Technology',
+      orgUnitPath: '/Staff',
+      googleGroups: [],
+    });
+    mockMappingFindMany.mockResolvedValue([
+      { id: 'directory_mapping_1', sourceField: 'DEPARTMENT', sourceValue: 'Facilities', organisationGroupId: 'org_group_1' },
+    ]);
+
+    const { applyDirectoryMappings } = await import('./apply-directory-mappings');
+    const result = await applyDirectoryMappings(1, 'login');
+
+    expect(result).toEqual({ granted: 0 });
+    expect(mockMemberFindFirst).not.toHaveBeenCalled();
+    expect(mockTransaction).not.toHaveBeenCalled();
+  });
+
   it('inserts only missing groups and writes one audit row per inserted row', async () => {
     mockUserFindUnique.mockResolvedValue({
       name: 'Jane Staff',
