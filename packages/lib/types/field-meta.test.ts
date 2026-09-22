@@ -209,4 +209,19 @@ describe('resolveFieldMetaForCreate', () => {
   it('returns undefined for FREE_SIGNATURE when fieldMeta is absent', () => {
     expect(resolveFieldMetaForCreate(FieldType.FREE_SIGNATURE, undefined)).toBeUndefined();
   });
+
+  it('defaults required to true when fieldMeta is provided without a required key', () => {
+    const result = resolveFieldMetaForCreate(FieldType.TEXT, { type: 'text', label: 'Parent name' });
+
+    expect(result).toEqual({ type: 'text', label: 'Parent name', required: true });
+  });
+
+  it('leaves CALCULATED fieldMeta without a required key as not required', () => {
+    const result = resolveFieldMetaForCreate(FieldType.CALCULATED, {
+      type: 'calculated',
+      formula: '1+1',
+    });
+
+    expect(result?.required).toBeUndefined();
+  });
 });

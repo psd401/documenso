@@ -443,14 +443,25 @@ export const FIELD_META_DEFAULT_VALUES: Record<FieldType, TFieldMetaSchema> = {
 } as const;
 
 /**
- * Resolves the fieldMeta to persist for a newly created field: an explicitly
- * provided fieldMeta is used as-is (including an explicit `required: false`),
- * otherwise the field type's default is used.
+ * Resolves the fieldMeta to persist for a newly created field. Without a
+ * fieldMeta the field type's default is used. A provided fieldMeta that omits
+ * `required` gets the type's default `required` value; an explicit
+ * `required: false` is kept.
  */
 export const resolveFieldMetaForCreate = (
   type: FieldType,
   fieldMeta: TFieldMetaSchema,
-): TFieldMetaSchema => fieldMeta ?? FIELD_META_DEFAULT_VALUES[type];
+): TFieldMetaSchema => {
+  if (!fieldMeta) {
+    return FIELD_META_DEFAULT_VALUES[type];
+  }
+
+  if (fieldMeta.required !== undefined || type === FieldType.CALCULATED) {
+    return fieldMeta;
+  }
+
+  return { ...fieldMeta, required: true };
+};
 
 export const ZEnvelopeFieldAndMetaSchema = z.discriminatedUnion('type', [
   z.object({
