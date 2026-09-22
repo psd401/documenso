@@ -1,12 +1,25 @@
-import { msg } from '@lingui/core/macro';
-import { Trans } from '@lingui/react/macro';
-import { redirect } from 'react-router';
-
+import { authClient } from '@documenso/auth/client';
 import { getOptionalSession } from '@documenso/auth/server/lib/utils/get-session';
-import { IS_GOOGLE_SSO_ENABLED } from '@documenso/lib/constants/auth';
+import {
+  IS_GOOGLE_SSO_ENABLED,
+  IS_MICROSOFT_SSO_ENABLED,
+  IS_OIDC_AUTO_REDIRECT_DISABLED,
+  IS_OIDC_SSO_ENABLED,
+  isSigninEnabledForProvider,
+  isSignupEnabledForProvider,
+  OIDC_PROVIDER_LABEL,
+} from '@documenso/lib/constants/auth';
 import { isValidReturnTo, normalizeReturnTo } from '@documenso/lib/utils/is-valid-return-to';
+import { Alert, AlertDescription } from '@documenso/ui/primitives/alert';
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
+import { Loader2Icon } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Link, redirect, useSearchParams } from 'react-router';
 
 import { SignInForm } from '~/components/forms/signin';
+import { SIGNUP_ERROR_MESSAGES } from '~/components/forms/signup';
 import { appMetaTags } from '~/utils/meta';
 
 import type { Route } from './+types/signin';
@@ -18,6 +31,27 @@ export function meta() {
 export async function loader({ request }: Route.LoaderArgs) {
   const { isAuthenticated } = await getOptionalSession(request);
 
+  // SSR env variables.
+  const isEmailPasswordSigninEnabled = isSigninEnabledForProvider('email');
+  const isGoogleSSOEnabled = IS_GOOGLE_SSO_ENABLED && isSigninEnabledForProvider('google');
+  const isMicrosoftSSOEnabled = IS_MICROSOFT_SSO_ENABLED && isSigninEnabledForProvider('microsoft');
+  const isOIDCSSOEnabled = IS_OIDC_SSO_ENABLED && isSigninEnabledForProvider('oidc');
+
+  // Automatically redirect to OIDC when it is the only enabled signin transport,
+  // unless the redirect has been explicitly disabled via env.
+  const isOIDCOnlyTransport =
+    isOIDCSSOEnabled && !isEmailPasswordSigninEnabled && !isGoogleSSOEnabled && !isMicrosoftSSOEnabled;
+
+  const shouldAutoRedirectToOIDC = isOIDCOnlyTransport && !IS_OIDC_AUTO_REDIRECT_DISABLED;
+
+  const oidcProviderLabel = OIDC_PROVIDER_LABEL;
+
+  const isSignupEnabled =
+    isSignupEnabledForProvider('email') ||
+    (IS_GOOGLE_SSO_ENABLED && isSignupEnabledForProvider('google')) ||
+    (IS_MICROSOFT_SSO_ENABLED && isSignupEnabledForProvider('microsoft')) ||
+    (IS_OIDC_SSO_ENABLED && isSignupEnabledForProvider('oidc'));
+
   let returnTo = new URL(request.url).searchParams.get('returnTo') ?? undefined;
 
   returnTo = isValidReturnTo(returnTo) ? normalizeReturnTo(returnTo) : undefined;
@@ -26,28 +60,108 @@ export async function loader({ request }: Route.LoaderArgs) {
     throw redirect(returnTo || '/');
   }
 
-  return { returnTo, isGoogleSSOEnabled: IS_GOOGLE_SSO_ENABLED };
+  return {
+    isEmailPasswordSigninEnabled,
+    isGoogleSSOEnabled,
+    isMicrosoftSSOEnabled,
+    isOIDCSSOEnabled,
+    isSignupEnabled,
+    oidcProviderLabel,
+    returnTo,
+    shouldAutoRedirectToOIDC,
+  };
 }
 
 export default function SignIn({ loaderData }: Route.ComponentProps) {
-  const { returnTo, isGoogleSSOEnabled } = loaderData;
+  const {
+    isGoogleSSOEnabled,
+    isMicrosoftSSOEnabled,
+    isOIDCSSOEnabled,
+    isSignupEnabled,
+    oidcProviderLabel,
+    returnTo,
+    shouldAutoRedirectToOIDC,
+  } = loaderData;
+
+  const { _ } = useLingui();
+
+  const [searchParams] = useSearchParams();
+  const [isEmbeddedRedirect, setIsEmbeddedRedirect] = useState(false);
+
+  const errorParam = searchParams.get('error');
+  const signupError = errorParam ? SIGNUP_ERROR_MESSAGES[errorParam] : undefined;
+
+  useEffect(() => {
+    const hash = window.location.hash.slice(1);
+
+    const params = new URLSearchParams(hash);
+
+    setIsEmbeddedRedirect(params.get('embedded') === 'true');
+  }, []);
+
+  useEffect(() => {
+    if (!shouldAutoRedirectToOIDC) {
+      return;
+    }
+
+    void authClient.oidc.signIn({ redirectPath: returnTo ?? '/' });
+  }, [shouldAutoRedirectToOIDC, returnTo]);
+
+  if (shouldAutoRedirectToOIDC) {
+    return (
+      <div className="w-screen max-w-lg px-4">
+        <div className="flex flex-col items-center justify-center gap-y-4 py-12">
+          <Loader2Icon className="h-8 w-8 animate-spin text-muted-foreground" />
+          <p className="text-muted-foreground text-sm">
+            <Trans>Redirecting to {oidcProviderLabel || 'OIDC'}...</Trans>
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-screen max-w-lg px-4">
       <div className="z-10 rounded-xl border border-border bg-neutral-100 p-6 dark:bg-background">
-        <h1 className="text-2xl font-semibold">
+        {signupError && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>{_(signupError)}</AlertDescription>
+          </Alert>
+        )}
+
+        <h1 className="font-semibold text-2xl">
           <Trans>PSD Document Signing</Trans>
         </h1>
 
-        <p className="mt-2 text-sm text-muted-foreground">
+        <p className="mt-2 text-muted-foreground text-sm">
           <Trans>Sign in with your Peninsula School District Google account.</Trans>
         </p>
         <hr className="-mx-6 my-4" />
 
-        <SignInForm isGoogleSSOEnabled={isGoogleSSOEnabled} returnTo={returnTo} />
+        <SignInForm
+          isGoogleSSOEnabled={isGoogleSSOEnabled}
+          isMicrosoftSSOEnabled={isMicrosoftSSOEnabled}
+          isOIDCSSOEnabled={isOIDCSSOEnabled}
+          oidcProviderLabel={oidcProviderLabel}
+          returnTo={returnTo}
+        />
+
+        {!isEmbeddedRedirect && isSignupEnabled && (
+          <p className="mt-6 text-center text-muted-foreground text-sm">
+            <Trans>
+              Don't have an account?{' '}
+              <Link
+                to={returnTo ? `/signup?returnTo=${encodeURIComponent(returnTo)}` : '/signup'}
+                className="text-documenso-700 duration-200 hover:opacity-70"
+              >
+                Sign up
+              </Link>
+            </Trans>
+          </p>
+        )}
       </div>
 
-      <p className="mt-4 text-center text-xs text-muted-foreground">
+      <p className="mt-4 text-center text-muted-foreground text-xs">
         <a
           href="https://support.psd401.net"
           target="_blank"

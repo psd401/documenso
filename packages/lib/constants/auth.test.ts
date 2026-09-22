@@ -24,9 +24,7 @@ describe('isPasswordSignupDisabled', () => {
   });
 
   it('returns true when NEXT_PUBLIC_DISABLE_SIGNUP is true', async () => {
-    mockEnv.mockImplementation((key: string) =>
-      key === 'NEXT_PUBLIC_DISABLE_SIGNUP' ? 'true' : undefined,
-    );
+    mockEnv.mockImplementation((key: string) => (key === 'NEXT_PUBLIC_DISABLE_SIGNUP' ? 'true' : undefined));
 
     const { isPasswordSignupDisabled } = await import('./auth');
 
@@ -34,9 +32,7 @@ describe('isPasswordSignupDisabled', () => {
   });
 
   it('returns true when NEXT_PUBLIC_DISABLE_PASSWORD_SIGNUP is true', async () => {
-    mockEnv.mockImplementation((key: string) =>
-      key === 'NEXT_PUBLIC_DISABLE_PASSWORD_SIGNUP' ? 'true' : undefined,
-    );
+    mockEnv.mockImplementation((key: string) => (key === 'NEXT_PUBLIC_DISABLE_PASSWORD_SIGNUP' ? 'true' : undefined));
 
     const { isPasswordSignupDisabled } = await import('./auth');
 
@@ -49,5 +45,39 @@ describe('isPasswordSignupDisabled', () => {
     const { isPasswordSignupDisabled } = await import('./auth');
 
     expect(isPasswordSignupDisabled()).toBe(false);
+  });
+});
+
+describe('isSignupEnabledForProvider', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
+
+  it('disables email signup when NEXT_PUBLIC_DISABLE_PASSWORD_SIGNUP is true', async () => {
+    mockEnv.mockImplementation((key: string) => (key === 'NEXT_PUBLIC_DISABLE_PASSWORD_SIGNUP' ? 'true' : undefined));
+
+    const { isSignupEnabledForProvider } = await import('./auth');
+
+    expect(isSignupEnabledForProvider('email')).toBe(false);
+    expect(isSignupEnabledForProvider('google')).toBe(true);
+  });
+
+  it('disables email signup when NEXT_PUBLIC_DISABLE_EMAIL_PASSWORD_SIGNUP is true', async () => {
+    mockEnv.mockImplementation((key: string) =>
+      key === 'NEXT_PUBLIC_DISABLE_EMAIL_PASSWORD_SIGNUP' ? 'true' : undefined,
+    );
+
+    const { isSignupEnabledForProvider } = await import('./auth');
+
+    expect(isSignupEnabledForProvider('email')).toBe(false);
+  });
+
+  it('enables email signup when no flag is set', async () => {
+    mockEnv.mockReturnValue(undefined);
+
+    const { isSignupEnabledForProvider } = await import('./auth');
+
+    expect(isSignupEnabledForProvider('email')).toBe(true);
   });
 });

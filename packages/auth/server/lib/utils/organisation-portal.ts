@@ -48,11 +48,7 @@ export const getOrganisationAuthenticationPortalOptions = async (
     });
   }
 
-  const {
-    clientId,
-    clientSecret: encryptedClientSecret,
-    wellKnownUrl,
-  } = organisation.organisationAuthenticationPortal;
+  const { clientId, clientSecret: encryptedClientSecret, wellKnownUrl } = organisation.organisationAuthenticationPortal;
 
   if (!clientId || !encryptedClientSecret || !wellKnownUrl) {
     throw new AppError(AppErrorCode.NOT_SETUP, {

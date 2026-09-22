@@ -1,6 +1,3 @@
-import { Trans } from '@lingui/react/macro';
-import { DialogClose } from '@radix-ui/react-dialog';
-
 import type { TRecipientLite } from '@documenso/lib/types/recipient';
 import { Button } from '@documenso/ui/primitives/button';
 import {
@@ -11,6 +8,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@documenso/ui/primitives/dialog';
+import { Trans } from '@lingui/react/macro';
+import { DialogClose } from '@radix-ui/react-dialog';
 
 export type MissingSignatureFieldDialogProps = {
   isOpen: boolean;
@@ -33,27 +32,26 @@ export const MissingSignatureFieldDialog = ({
           <DialogDescription>
             <p className="mt-2">
               <Trans>
-                Some signers have not been assigned any fields. Please assign at least one field to
-                each signer before proceeding — a signature field if they need to sign, or any
-                other field type (e.g. Text) if they only need to fill in data.
+                Some signers have not been assigned any fields. Please assign at least one field to each signer before
+                proceeding — a signature field if they need to sign, or any other field type (e.g. Text) if they only
+                need to fill in data.
               </Trans>
             </p>
           </DialogDescription>
         </DialogHeader>
 
         {recipientsMissingFields.length > 0 && (
-          <ul className="-mt-2 list-inside list-disc text-sm text-muted-foreground">
+          <ul className="-mt-2 list-inside list-disc text-muted-foreground text-sm">
             {recipientsMissingFields.map((recipient) => (
               <li key={recipient.id}>{recipient.name || recipient.email}</li>
             ))}
           </ul>
         )}
 
-        <div className="rounded-md border bg-muted/50 p-3 text-sm text-muted-foreground">
+        <div className="rounded-md border bg-muted/50 p-3 text-muted-foreground text-sm">
           <Trans>
-            Only need someone to receive or view the document? Change their role to{' '}
-            <strong>Viewer</strong> or <strong>CC</strong> — those recipients don't need any
-            fields.
+            Only need someone to receive or view the document? Change their role to <strong>Viewer</strong> or{' '}
+            <strong>CC</strong> — those recipients don't need any fields.
           </Trans>
         </div>
 

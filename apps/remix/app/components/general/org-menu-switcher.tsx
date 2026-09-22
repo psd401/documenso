@@ -1,21 +1,7 @@
-import { useMemo, useState } from 'react';
-
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
-import {
-  Building2Icon,
-  ChevronsUpDown,
-  Plus,
-  Settings2Icon,
-  SettingsIcon,
-  UsersIcon,
-} from 'lucide-react';
-import { Link, useLocation } from 'react-router';
-
 import { authClient } from '@documenso/auth/client';
 import { useOptionalCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { useSession } from '@documenso/lib/client-only/providers/session';
+import { IS_BILLING_ENABLED } from '@documenso/lib/constants/app';
 import { EXTENDED_ORGANISATION_MEMBER_ROLE_MAP } from '@documenso/lib/constants/organisations-translations';
 import { EXTENDED_TEAM_MEMBER_ROLE_MAP } from '@documenso/lib/constants/teams-translations';
 import { formatAvatarUrl } from '@documenso/lib/utils/avatars';
@@ -34,6 +20,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@documenso/ui/primitives/dropdown-menu';
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
+import { Building2Icon, ChevronsUpDown, Plus, Settings2Icon, SettingsIcon, UsersIcon } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Link, useLocation } from 'react-router';
 
 import { useOptionalCurrentTeam } from '~/providers/team';
 
@@ -50,6 +42,7 @@ export const OrgMenuSwitcher = () => {
 
   const isUserAdmin = isAdmin(user);
 
+  // PSD401: personal orgs aren't meaningful in a single-org district deployment, hide them.
   const nonPersonalOrgs = organisations.filter((org) => org.name !== 'Personal Organisation');
 
   const isPathOrgUrl = (orgUrl: string) => {
@@ -61,12 +54,16 @@ export const OrgMenuSwitcher = () => {
   };
 
   const selectedOrg = nonPersonalOrgs.find((org) => isPathOrgUrl(org.url));
-  const hoveredOrg = nonPersonalOrgs.find(
-    (org) => org.id === hoveredOrgId || nonPersonalOrgs.length === 1,
-  );
+  const hoveredOrg = nonPersonalOrgs.find((org) => org.id === hoveredOrgId || nonPersonalOrgs.length === 1);
 
   const currentOrganisation = useOptionalCurrentOrganisation();
   const currentTeam = useOptionalCurrentTeam();
+
+  const canAccessOrganisationSettings =
+    currentOrganisation &&
+    canExecuteOrganisationAction('MANAGE_ORGANISATION', currentOrganisation.currentOrganisationRole);
+
+  const canAccessTeamSettings = currentTeam && canExecuteTeamAction('MANAGE_TEAM', currentTeam.currentTeamRole);
 
   // Use hovered org for teams display if available,
   // otherwise use current team's org if in a team,
@@ -96,9 +93,7 @@ export const OrgMenuSwitcher = () => {
         avatarSrc: formatAvatarUrl(currentOrganisation.avatarImageId),
         avatarFallback: formatAvatarFallback(currentOrganisation.name),
         primaryText: currentOrganisation.name,
-        secondaryText: _(
-          EXTENDED_ORGANISATION_MEMBER_ROLE_MAP[currentOrganisation.currentOrganisationRole],
-        ),
+        secondaryText: _(EXTENDED_ORGANISATION_MEMBER_ROLE_MAP[currentOrganisation.currentOrganisationRole]),
       };
     }
 
@@ -131,18 +126,14 @@ export const OrgMenuSwitcher = () => {
             avatarFallback={dropdownMenuAvatarText.avatarFallback}
             primaryText={dropdownMenuAvatarText.primaryText}
             secondaryText={dropdownMenuAvatarText.secondaryText}
-            rightSideComponent={
-              <ChevronsUpDown className="ml-auto h-4 w-4 text-muted-foreground" />
-            }
+            rightSideComponent={<ChevronsUpDown className="ml-auto h-4 w-4 text-muted-foreground" />}
             textSectionClassName="hidden lg:flex"
           />
         </Button>
       </DropdownMenuTrigger>
 
       <DropdownMenuContent
-        className={cn(
-          'z-[60] ml-6 flex w-full divide-x divide-border p-0 md:ml-0 md:min-w-[40rem]',
-        )}
+        className={cn('z-[60] ml-6 flex w-full divide-x divide-border p-0 md:ml-0 md:min-w-[40rem]')}
         align="end"
         forceMount
       >
@@ -150,18 +141,14 @@ export const OrgMenuSwitcher = () => {
           {/* Organisations column */}
           <div className="flex w-full flex-col md:w-1/3">
             <div className="flex h-12 items-center border-b p-2">
-              <h3 className="flex items-center px-2 text-sm font-medium text-muted-foreground">
+              <h3 className="flex items-center px-2 font-medium text-muted-foreground text-sm">
                 <Building2Icon className="mr-2 h-3.5 w-3.5" />
                 <Trans>Organisations</Trans>
               </h3>
             </div>
             <div className="flex-1 space-y-1 overflow-y-auto p-1.5">
               {nonPersonalOrgs.map((org) => (
-                <div
-                  className="group relative"
-                  key={org.id}
-                  onMouseEnter={() => setHoveredOrgId(org.id)}
-                >
+                <div className="group relative" key={org.id} onMouseEnter={() => setHoveredOrgId(org.id)}>
                   <DropdownMenuItem
                     className={cn(
                       'w-full px-4 py-2 text-muted-foreground',
@@ -181,13 +168,10 @@ export const OrgMenuSwitcher = () => {
                     </Link>
                   </DropdownMenuItem>
 
-                  {canExecuteOrganisationAction(
-                    'MANAGE_ORGANISATION',
-                    org.currentOrganisationRole,
-                  ) && (
-                    <div className="absolute bottom-0 right-0 top-0 flex items-center justify-center">
+                  {canExecuteOrganisationAction('MANAGE_ORGANISATION', org.currentOrganisationRole) && (
+                    <div className="absolute top-0 right-0 bottom-0 flex items-center justify-center">
                       <Link
-                        to={`/o/${org.url}/settings`}
+                        to={`/o/${org.url}/settings/general`}
                         className="mr-2 rounded-sm border p-1 text-muted-foreground transition-opacity duration-200 group-hover:opacity-100 md:opacity-0"
                       >
                         <Settings2Icon className="h-3.5 w-3.5" />
@@ -196,13 +180,21 @@ export const OrgMenuSwitcher = () => {
                   )}
                 </div>
               ))}
+
+              {/*
+                PSD401: "Create organisation" is intentionally omitted here for every user,
+                including admins — single-org district deployment has no use for creating
+                additional organisations from this quick switcher (see commit c6bb4a536,
+                "fix: remove Create Organisation from all menus"). Org creation itself is
+                still admin-gated server-side in create-organisation.ts.
+              */}
             </div>
           </div>
 
           {/* Teams column */}
           <div className="hidden w-1/3 flex-col md:flex">
             <div className="flex h-12 items-center border-b p-2">
-              <h3 className="flex items-center px-2 text-sm font-medium text-muted-foreground">
+              <h3 className="flex items-center px-2 font-medium text-muted-foreground text-sm">
                 <UsersIcon className="mr-2 h-3.5 w-3.5" />
                 <Trans>Teams</Trans>
               </h3>
@@ -222,10 +214,7 @@ export const OrgMenuSwitcher = () => {
                             )}
                             asChild
                           >
-                            <Link
-                              to={`/t/${team.url}`}
-                              className="flex items-center space-x-2 pr-8"
-                            >
+                            <Link to={`/t/${team.url}`} className="flex items-center space-x-2 pr-8">
                               <span
                                 className={cn('min-w-0 flex-1 truncate', {
                                   'font-semibold': team.id === currentTeam?.id,
@@ -237,9 +226,9 @@ export const OrgMenuSwitcher = () => {
                           </DropdownMenuItem>
 
                           {canExecuteTeamAction('MANAGE_TEAM', team.currentTeamRole) && (
-                            <div className="absolute bottom-0 right-0 top-0 flex items-center justify-center">
+                            <div className="absolute top-0 right-0 bottom-0 flex items-center justify-center">
                               <Link
-                                to={`/t/${team.url}/settings`}
+                                to={`/t/${team.url}/settings/general`}
                                 className="mr-2 rounded-sm border p-1 text-muted-foreground opacity-0 transition-opacity duration-200 group-hover:opacity-100"
                               >
                                 <Settings2Icon className="h-3.5 w-3.5" />
@@ -249,9 +238,7 @@ export const OrgMenuSwitcher = () => {
                         </div>
                       ))}
 
-                    {hoveredOrg.teams.some(
-                      (team) => team.isPersonal && team.url.endsWith(`-${user.id}`),
-                    ) && (
+                    {hoveredOrg.teams.some((team) => team.isPersonal && team.url.endsWith(`-${user.id}`)) && (
                       <>
                         <div className="my-1 border-t" />
                         {hoveredOrg.teams
@@ -266,10 +253,7 @@ export const OrgMenuSwitcher = () => {
                                 )}
                                 asChild
                               >
-                                <Link
-                                  to={`/t/${team.url}`}
-                                  className="flex items-center space-x-2 pr-8"
-                                >
+                                <Link to={`/t/${team.url}`} className="flex items-center space-x-2 pr-8">
                                   <span
                                     className={cn('min-w-0 flex-1 truncate', {
                                       'font-semibold': team.id === currentTeam?.id,
@@ -285,17 +269,14 @@ export const OrgMenuSwitcher = () => {
                     )}
                   </>
                 ) : (
-                  <div className="my-12 flex items-center justify-center px-2 text-center text-sm text-muted-foreground">
+                  <div className="my-12 flex items-center justify-center px-2 text-center text-muted-foreground text-sm">
                     <Trans>Select an organisation to view teams</Trans>
                   </div>
                 )}
 
                 {displayedOrg &&
                   currentOrganisation &&
-                  canExecuteOrganisationAction(
-                    'MANAGE_ORGANISATION',
-                    currentOrganisation.currentOrganisationRole,
-                  ) && (
+                  canExecuteOrganisationAction('MANAGE_ORGANISATION', currentOrganisation.currentOrganisationRole) && (
                     <Button variant="ghost" className="w-full justify-start" asChild>
                       <Link to={`/o/${displayedOrg.url}/settings/teams?action=add-team`}>
                         <Plus className="mr-2 h-4 w-4" />
@@ -310,7 +291,7 @@ export const OrgMenuSwitcher = () => {
           {/* Settings column */}
           <div className="hidden w-1/3 flex-col md:flex">
             <div className="flex h-12 items-center border-b p-2">
-              <h3 className="flex items-center px-2 text-sm font-medium text-muted-foreground">
+              <h3 className="flex items-center px-2 font-medium text-muted-foreground text-sm">
                 <SettingsIcon className="mr-2 h-3.5 w-3.5" />
                 <Trans>Settings</Trans>
               </h3>
@@ -324,29 +305,30 @@ export const OrgMenuSwitcher = () => {
                 </DropdownMenuItem>
               )}
 
-              {currentOrganisation &&
-                canExecuteOrganisationAction(
-                  'MANAGE_ORGANISATION',
-                  currentOrganisation.currentOrganisationRole,
-                ) && (
-                  <DropdownMenuItem className="px-4 py-2 text-muted-foreground" asChild>
-                    <Link to={`/o/${currentOrganisation.url}/settings`}>
-                      <Trans>Organisation settings</Trans>
-                    </Link>
-                  </DropdownMenuItem>
-                )}
-
-              {currentTeam && canExecuteTeamAction('MANAGE_TEAM', currentTeam.currentTeamRole) && (
-                <DropdownMenuItem className="px-4 py-2 text-muted-foreground" asChild>
-                  <Link to={`/t/${currentTeam.url}/settings`}>
-                    <Trans>Team settings</Trans>
-                  </Link>
-                </DropdownMenuItem>
-              )}
+              {/* PSD401: keep the Dashboard entry for teamless org members (fork commit 32ca1005d, do-74/#75). */}
+              <DropdownMenuItem className="px-4 py-2 text-muted-foreground" asChild>
+                <Link to="/dashboard">
+                  <Trans>Dashboard</Trans>
+                </Link>
+              </DropdownMenuItem>
 
               <DropdownMenuItem className="px-4 py-2 text-muted-foreground" asChild>
                 <Link to="/inbox">
-                  <Trans>Personal Inbox</Trans>
+                  <Trans>Inbox</Trans>
+                </Link>
+              </DropdownMenuItem>
+
+              <DropdownMenuItem className="px-4 py-2 text-muted-foreground" asChild>
+                <Link
+                  to={
+                    canAccessOrganisationSettings
+                      ? `/o/${currentOrganisation?.url}/settings/general`
+                      : canAccessTeamSettings
+                        ? `/t/${currentTeam?.url}/settings/general`
+                        : '/settings/profile'
+                  }
+                >
+                  <Trans>Settings</Trans>
                 </Link>
               </DropdownMenuItem>
 
@@ -355,6 +337,14 @@ export const OrgMenuSwitcher = () => {
                   <Trans>Account</Trans>
                 </Link>
               </DropdownMenuItem>
+
+              {IS_BILLING_ENABLED() && (
+                <DropdownMenuItem className="px-4 py-2 text-muted-foreground" asChild>
+                  <Link to="/settings/billing">
+                    <Trans>Billing</Trans>
+                  </Link>
+                </DropdownMenuItem>
+              )}
 
               <DropdownMenuItem
                 className="px-4 py-2 text-muted-foreground"
@@ -377,7 +367,7 @@ export const OrgMenuSwitcher = () => {
               )}
 
               <DropdownMenuItem
-                className="px-4 py-2 text-muted-foreground hover:!text-muted-foreground"
+                className="hover:!text-muted-foreground px-4 py-2 text-muted-foreground"
                 onSelect={async () => authClient.signOut()}
               >
                 <Trans>Sign Out</Trans>

@@ -1,10 +1,6 @@
+import { DEFAULT_RECT_BACKGROUND, getRecipientColorStyles } from '@documenso/ui/lib/recipient-colors';
 import { FieldType } from '@prisma/client';
 import Konva from 'konva';
-
-import {
-  DEFAULT_RECT_BACKGROUND,
-  getRecipientColorStyles,
-} from '@documenso/ui/lib/recipient-colors';
 
 import type { FieldToRender, RenderFieldElementOptions } from './field-renderer';
 import { calculateFieldPosition } from './field-renderer';
@@ -48,17 +44,10 @@ export const konvaTextFill = 'black';
 export const EXPORT_FIELD_OUTLINE_COLOR = '#9ca3af'; // tailwind grey-400
 export const EXPORT_FIELD_OUTLINE_WIDTH = 1;
 
-export const upsertFieldGroup = (
-  field: FieldToRender,
-  options: RenderFieldElementOptions,
-): Konva.Group => {
+export const upsertFieldGroup = (field: FieldToRender, options: RenderFieldElementOptions): Konva.Group => {
   const { pageWidth, pageHeight, pageLayer, editable, scale } = options;
 
-  const { fieldX, fieldY, fieldWidth, fieldHeight } = calculateFieldPosition(
-    field,
-    pageWidth,
-    pageHeight,
-  );
+  const { fieldX, fieldY, fieldWidth, fieldHeight } = calculateFieldPosition(field, pageWidth, pageHeight);
 
   const fieldGroup: Konva.Group =
     pageLayer.findOne(`#${field.renderId}`) ||
@@ -76,6 +65,7 @@ export const upsertFieldGroup = (
     x: fieldX,
     y: fieldY,
     draggable: editable,
+    opacity: options.fieldCanvasStyle?.opacity ?? 1,
     dragBoundFunc: (pos) => {
       const newX = Math.max(0, Math.min(maxXPosition, pos.x));
       const newY = Math.max(0, Math.min(maxYPosition, pos.y));
@@ -111,10 +101,7 @@ export const setFieldLinePoints = (line: Konva.Line, width: number, height: numb
  * `showLine` meta flag is enabled. Visible in every render mode, including
  * export, so it is sealed into the final PDF.
  */
-export const upsertFieldLine = (
-  field: FieldToRender,
-  options: RenderFieldElementOptions,
-): Konva.Line => {
+export const upsertFieldLine = (field: FieldToRender, options: RenderFieldElementOptions): Konva.Line => {
   const { pageWidth, pageHeight, pageLayer } = options;
 
   const { fieldWidth, fieldHeight } = calculateFieldPosition(field, pageWidth, pageHeight);
@@ -138,11 +125,9 @@ export const upsertFieldLine = (
   return fieldLine;
 };
 
-export const upsertFieldRect = (
-  field: FieldToRender,
-  options: RenderFieldElementOptions,
-): Konva.Rect => {
+export const upsertFieldRect = (field: FieldToRender, options: RenderFieldElementOptions): Konva.Rect => {
   const { pageWidth, pageHeight, mode, pageLayer, color } = options;
+  const { fieldCanvasStyle } = options;
 
   const { fieldWidth, fieldHeight } = calculateFieldPosition(field, pageWidth, pageHeight);
 
@@ -157,24 +142,26 @@ export const upsertFieldRect = (
 
   // Checkbox/radio fields in the signer view get a faded, thinner outline and a
   // transparent background so they do not obscure the document text they sit on.
-  const isFadedSignerField =
-    mode === 'sign' && (field.type === FieldType.CHECKBOX || field.type === FieldType.RADIO);
+  const isFadedSignerField = mode === 'sign' && (field.type === FieldType.CHECKBOX || field.type === FieldType.RADIO);
 
   fieldRect.setAttrs({
     width: fieldWidth,
     height: fieldHeight,
     // In export mode keep the fill transparent so the underlying PDF content
     // shows through, while still drawing the field outline below.
-    fill: isExport ? undefined : getFieldRestingFill(field, mode),
+    fill: isExport ? undefined : (fieldCanvasStyle?.backgroundColor ?? getFieldRestingFill(field, mode)),
     stroke: isExport
       ? EXPORT_FIELD_OUTLINE_COLOR
-      : color
-        ? isFadedSignerField
-          ? getRecipientColorStyles(color).baseRingFaded
-          : getRecipientColorStyles(color).baseRing
-        : '#e5e7eb',
-    strokeWidth: isExport ? EXPORT_FIELD_OUTLINE_WIDTH : isFadedSignerField ? 1 : 2,
-    cornerRadius: 2,
+      : (fieldCanvasStyle?.borderColor ??
+        (color
+          ? isFadedSignerField
+            ? getRecipientColorStyles(color).baseRingFaded
+            : getRecipientColorStyles(color).baseRing
+          : '#e5e7eb')),
+    strokeWidth: isExport
+      ? EXPORT_FIELD_OUTLINE_WIDTH
+      : (fieldCanvasStyle?.borderWidth ?? (isFadedSignerField ? 1 : 2)),
+    cornerRadius: fieldCanvasStyle?.borderRadius ?? 2,
     strokeScaleEnabled: false,
     // Previously the rectangle was hidden entirely when exporting; it is now
     // kept visible so the field outline is rendered on the final PDF.
@@ -184,15 +171,10 @@ export const upsertFieldRect = (
   return fieldRect;
 };
 
-export const createSpinner = ({
-  fieldWidth,
-  fieldHeight,
-}: {
-  fieldWidth: number;
-  fieldHeight: number;
-}) => {
+export const createSpinner = ({ fieldWidth, fieldHeight }: { fieldWidth: number; fieldHeight: number }) => {
   const loadingGroup = new Konva.Group({
     name: 'loading-spinner-group',
+    listening: false,
   });
 
   const rect = new Konva.Rect({
@@ -253,6 +235,10 @@ export const createFieldHoverInteraction = ({
   const { mode } = options;
 
   if (mode === 'export' || !options.color) {
+    return;
+  }
+
+  if (options.fieldCanvasStyle?.backgroundColor) {
     return;
   }
 

@@ -1,3 +1,5 @@
+import type { TDetectedField } from '@documenso/lib/types/detected-field';
+import { DEFAULT_SIGNATURE_OVERFLOW_MODE, type TFieldMetaNotOptionalSchema } from '@documenso/lib/types/field-meta';
 import {
   type CheckboxField,
   type DropdownField,
@@ -8,9 +10,6 @@ import {
   type TextField,
 } from '@libpdf/core';
 import { FieldType } from '@prisma/client';
-
-import type { TDetectedField } from '@documenso/lib/types/detected-field';
-import type { TFieldMetaNotOptionalSchema } from '@documenso/lib/types/field-meta';
 
 import { decryptPdf } from '../utils/decrypt-pdf';
 
@@ -76,10 +75,8 @@ export const widgetRectToPercentages = (
   const widthPercent = pageWidth > 0 ? (rectWidth / pageWidth) * 100 : 0;
   const heightPercent = pageHeight > 0 ? (rectHeight / pageHeight) * 100 : 0;
 
-  const finalWidth =
-    widthPercent > MIN_DIMENSION_PERCENT ? widthPercent : DEFAULT_FIELD_WIDTH_PERCENT;
-  const finalHeight =
-    heightPercent > MIN_DIMENSION_PERCENT ? heightPercent : DEFAULT_FIELD_HEIGHT_PERCENT;
+  const finalWidth = widthPercent > MIN_DIMENSION_PERCENT ? widthPercent : DEFAULT_FIELD_WIDTH_PERCENT;
+  const finalHeight = heightPercent > MIN_DIMENSION_PERCENT ? heightPercent : DEFAULT_FIELD_HEIGHT_PERCENT;
 
   const positionX = pageWidth > 0 ? (left / pageWidth) * 100 : 0;
   const positionY = pageHeight > 0 ? (top / pageHeight) * 100 : 0;
@@ -251,6 +248,7 @@ const buildFieldMeta = (
         label,
         required,
         readOnly,
+        overflow: DEFAULT_SIGNATURE_OVERFLOW_MODE,
       };
     }
 
@@ -381,9 +379,7 @@ export const detectAcroFormFields = async (pdf: Buffer): Promise<TDetectedField[
     return detectedFields;
   } catch (error) {
     // Detection is best-effort and must never block an upload.
-    console.error(
-      `AcroForm field detection failed: ${error instanceof Error ? error.message : 'unknown error'}`,
-    );
+    console.error(`AcroForm field detection failed: ${error instanceof Error ? error.message : 'unknown error'}`);
 
     return [];
   }

@@ -1,34 +1,19 @@
-import { useEffect } from 'react';
-
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Trans, useLingui } from '@lingui/react/macro';
-import { PlusIcon, Trash } from 'lucide-react';
-import { useForm, useWatch } from 'react-hook-form';
-import type { z } from 'zod';
-
 import {
   DEFAULT_FIELD_FONT_SIZE,
   type TRadioFieldMeta as RadioFieldMeta,
   ZRadioFieldMeta,
 } from '@documenso/lib/types/field-meta';
 import { Checkbox } from '@documenso/ui/primitives/checkbox';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@documenso/ui/primitives/form/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@documenso/ui/primitives/form/form';
 import { Input } from '@documenso/ui/primitives/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@documenso/ui/primitives/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@documenso/ui/primitives/select';
 import { Separator } from '@documenso/ui/primitives/separator';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Trans, useLingui } from '@lingui/react/macro';
+import { PlusIcon, Trash } from 'lucide-react';
+import { useEffect } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
+import type { z } from 'zod';
 
 import {
   EditorGenericFontSizeField,
@@ -93,8 +78,7 @@ export const EditorFieldRadioForm = ({
 
   const addValue = () => {
     const currentValues = form.getValues('values') || [];
-    const newId =
-      currentValues.length > 0 ? Math.max(...currentValues.map((val) => val.id)) + 1 : 1;
+    const newId = currentValues.length > 0 ? Math.max(...currentValues.map((val) => val.id)) + 1 : 1;
 
     const newValues = [...currentValues, { id: newId, checked: false, value: '' }];
     form.setValue('values', newValues);
@@ -183,12 +167,12 @@ export const EditorFieldRadioForm = ({
           <EditorGenericReadOnlyField formControl={form.control} />
 
           <section className="space-y-2">
-            <div className="-mx-4 mb-4 mt-2">
+            <div className="-mx-4 mt-2 mb-4">
               <Separator />
             </div>
 
             <div className="flex flex-row items-center justify-between gap-2">
-              <p className="text-sm font-medium">
+              <p className="font-medium text-sm">
                 <Trans>Radio values</Trans>
               </p>
 
@@ -237,11 +221,7 @@ export const EditorFieldRadioForm = ({
                     render={({ field }) => (
                       <FormItem className="flex-1">
                         <FormControl>
-                          <Input
-                            data-testid={`field-form-values-${index}-value`}
-                            className="w-full"
-                            {...field}
-                          />
+                          <Input data-testid={`field-form-values-${index}-value`} className="w-full" {...field} />
                         </FormControl>
                       </FormItem>
                     )}
@@ -261,8 +241,7 @@ export const EditorFieldRadioForm = ({
                             {...field}
                             value={field.value ?? ''}
                             onChange={(e) => {
-                              const val =
-                                e.target.value === '' ? undefined : Number(e.target.value);
+                              const val = e.target.value === '' ? undefined : Number(e.target.value);
                               field.onChange(val);
                               if (val !== undefined) {
                                 form.setValue('direction', 'custom');
@@ -288,8 +267,7 @@ export const EditorFieldRadioForm = ({
                             {...field}
                             value={field.value ?? ''}
                             onChange={(e) => {
-                              const val =
-                                e.target.value === '' ? undefined : Number(e.target.value);
+                              const val = e.target.value === '' ? undefined : Number(e.target.value);
                               field.onChange(val);
                               if (val !== undefined) {
                                 form.setValue('direction', 'custom');
