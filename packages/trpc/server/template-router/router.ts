@@ -4,7 +4,6 @@ import { jobs } from '@documenso/lib/jobs/client';
 import { captureServerEvent } from '@documenso/lib/server-only/analytics/capture-server-event';
 import { getDocumentWithDetailsById } from '@documenso/lib/server-only/document/get-document-with-details-by-id';
 import { sendDocument } from '@documenso/lib/server-only/document/send-document';
-import { convertToPdf } from '@documenso/lib/server-only/document-conversion';
 import { createDocumentData } from '@documenso/lib/server-only/document-data/create-document-data';
 import { createEnvelope } from '@documenso/lib/server-only/envelope/create-envelope';
 import { duplicateEnvelope } from '@documenso/lib/server-only/envelope/duplicate-envelope';
@@ -281,18 +280,9 @@ export const templateRouter = router({
         attachments,
       } = payload;
 
-      const pdf = await convertToPdf(file, ctx.logger);
-
-      const { id: templateDocumentDataId } = await putNormalizedPdfFileServerSide(
-        {
-          name: file.name,
-          type: 'application/pdf',
-          arrayBuffer: async () => Promise.resolve(pdf),
-        },
-        {
-          flattenForm: false,
-        },
-      );
+      const { id: templateDocumentDataId } = await putNormalizedPdfFileServerSide(file, {
+        flattenForm: false,
+      });
 
       ctx.logger.info({
         input: {
