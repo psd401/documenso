@@ -80,9 +80,9 @@ export const handleOAuthCallbackUrl = async (options: HandleOAuthCallbackUrlOpti
 
     if (clientOptions.id === 'google') {
       void syncGoogleDirectory(existingAccount.user.id, email)
-        .then(async () => {
+        .then(async (syncStatus) => {
           try {
-            await applyDirectoryMappings(existingAccount.user.id, 'login');
+            await applyDirectoryMappings(existingAccount.user.id, 'login', syncStatus);
           } catch (err) {
             const message = err instanceof Error ? err.message : 'Unknown error';
             throw new Error(`[apply] ${message}`);
@@ -160,9 +160,9 @@ export const handleOAuthCallbackUrl = async (options: HandleOAuthCallbackUrlOpti
 
     if (clientOptions.id === 'google') {
       void syncGoogleDirectory(userWithSameEmail.id, email)
-        .then(async () => {
+        .then(async (syncStatus) => {
           try {
-            await applyDirectoryMappings(userWithSameEmail.id, 'login');
+            await applyDirectoryMappings(userWithSameEmail.id, 'login', syncStatus);
           } catch (err) {
             const message = err instanceof Error ? err.message : 'Unknown error';
             throw new Error(`[apply] ${message}`);
@@ -232,9 +232,9 @@ export const handleOAuthCallbackUrl = async (options: HandleOAuthCallbackUrlOpti
 
   if (clientOptions.id === 'google') {
     void syncGoogleDirectory(createdUser.id, email)
-      .then(async () => {
+      .then(async (syncStatus) => {
         try {
-          await applyDirectoryMappings(createdUser.id, 'login');
+          await applyDirectoryMappings(createdUser.id, 'login', syncStatus);
         } catch (err) {
           const message = err instanceof Error ? err.message : 'Unknown error';
           throw new Error(`[apply] ${message}`);

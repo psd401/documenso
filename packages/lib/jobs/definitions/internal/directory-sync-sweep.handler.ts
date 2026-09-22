@@ -70,7 +70,7 @@ export const run = async ({ io }: { payload: TDirectorySyncSweepJobDefinition; i
         }
 
         try {
-          const result = await applyDirectoryMappings(user.id, 'sweep');
+          const result = await applyDirectoryMappings(user.id, 'sweep', syncStatus);
           counters.granted += result.granted;
         } catch (err) {
           counters.applyFailures += 1;

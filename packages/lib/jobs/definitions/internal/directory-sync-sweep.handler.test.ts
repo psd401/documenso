@@ -77,12 +77,12 @@ describe('directory-sync-sweep handler', () => {
 
     expect(mockSyncGoogleDirectory).toHaveBeenCalledWith(1, 'a@psd401.net');
     expect(mockSyncGoogleDirectory).toHaveBeenCalledWith(2, 'b@psd401.net');
-    expect(mockApplyDirectoryMappings).toHaveBeenCalledWith(1, 'sweep');
-    expect(mockApplyDirectoryMappings).toHaveBeenCalledWith(2, 'sweep');
+    expect(mockApplyDirectoryMappings).toHaveBeenCalledWith(1, 'sweep', 'synced');
+    expect(mockApplyDirectoryMappings).toHaveBeenCalledWith(2, 'sweep', 'synced');
     expect(mockLoggerInfo).toHaveBeenCalledWith(expect.stringContaining('granted=2'));
   });
 
-  it('still calls applyDirectoryMappings for a user whose sync failed', async () => {
+  it('still calls applyDirectoryMappings for a user whose sync failed, passing the failed status', async () => {
     mockFindMany.mockResolvedValue([{ id: 1, email: 'a@psd401.net' }]);
     mockSyncGoogleDirectory.mockResolvedValue('failed');
     mockApplyDirectoryMappings.mockResolvedValue({ granted: 0 });
@@ -90,7 +90,7 @@ describe('directory-sync-sweep handler', () => {
     const { run } = await import('./directory-sync-sweep.handler');
     await run({ payload: {}, io });
 
-    expect(mockApplyDirectoryMappings).toHaveBeenCalledWith(1, 'sweep');
+    expect(mockApplyDirectoryMappings).toHaveBeenCalledWith(1, 'sweep', 'failed');
   });
 
   it('isolates a per-user error: one failing user does not abort the batch', async () => {

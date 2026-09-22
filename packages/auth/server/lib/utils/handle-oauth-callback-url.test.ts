@@ -123,7 +123,7 @@ describe('handleOAuthCallbackUrl new user provisioning', () => {
 
     mockOnAuthorize.mockResolvedValue(undefined);
     mockOnCreateUserHook.mockResolvedValue(undefined);
-    mockSyncGoogleDirectory.mockResolvedValue(undefined);
+    mockSyncGoogleDirectory.mockResolvedValue('synced');
     mockApplyDirectoryMappings.mockResolvedValue({ granted: 0 });
   });
 
@@ -142,7 +142,7 @@ describe('handleOAuthCallbackUrl new user provisioning', () => {
     expect(mockOnAuthorize).toHaveBeenCalledWith({ userId: 42 }, expect.anything());
 
     await vi.waitFor(() => {
-      expect(mockApplyDirectoryMappings).toHaveBeenCalledWith(42, 'login');
+      expect(mockApplyDirectoryMappings).toHaveBeenCalledWith(42, 'login', 'synced');
     });
   });
 
@@ -177,7 +177,7 @@ describe('handleOAuthCallbackUrl directory sync chaining', () => {
     mockOnAuthorize.mockResolvedValue(undefined);
     mockAccountCreate.mockResolvedValue({});
     mockUserSecurityAuditLogCreate.mockResolvedValue({});
-    mockSyncGoogleDirectory.mockResolvedValue(undefined);
+    mockSyncGoogleDirectory.mockResolvedValue('synced');
     mockApplyDirectoryMappings.mockResolvedValue({ granted: 0 });
   });
 
@@ -190,7 +190,7 @@ describe('handleOAuthCallbackUrl directory sync chaining', () => {
     await requestCallback(app);
 
     await vi.waitFor(() => {
-      expect(mockApplyDirectoryMappings).toHaveBeenCalledWith(55, 'login');
+      expect(mockApplyDirectoryMappings).toHaveBeenCalledWith(55, 'login', 'synced');
     });
   });
 
@@ -206,7 +206,21 @@ describe('handleOAuthCallbackUrl directory sync chaining', () => {
     await requestCallback(app);
 
     await vi.waitFor(() => {
-      expect(mockApplyDirectoryMappings).toHaveBeenCalledWith(77, 'login');
+      expect(mockApplyDirectoryMappings).toHaveBeenCalledWith(77, 'login', 'synced');
+    });
+  });
+
+  it('threads a failed sync status into applyDirectoryMappings so it can skip revocations', async () => {
+    mockPrisma.account.findFirst.mockResolvedValue({
+      user: { id: 55, disabled: false },
+    });
+    mockSyncGoogleDirectory.mockResolvedValue('failed');
+
+    const app = await buildTestApp();
+    await requestCallback(app);
+
+    await vi.waitFor(() => {
+      expect(mockApplyDirectoryMappings).toHaveBeenCalledWith(55, 'login', 'failed');
     });
   });
 });
