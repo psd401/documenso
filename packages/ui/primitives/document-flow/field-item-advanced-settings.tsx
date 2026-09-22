@@ -92,30 +92,35 @@ const getDefaultState = (fieldType: FieldType): FieldMeta => {
       return {
         type: 'signature',
         showLine: false,
+        required: true,
       };
     case FieldType.INITIALS:
       return {
         type: 'initials',
         fontSize: 14,
         textAlign: 'left',
+        required: true,
       };
     case FieldType.NAME:
       return {
         type: 'name',
         fontSize: 14,
         textAlign: 'left',
+        required: true,
       };
     case FieldType.EMAIL:
       return {
         type: 'email',
         fontSize: 14,
         textAlign: 'left',
+        required: true,
       };
     case FieldType.DATE:
       return {
         type: 'date',
         fontSize: 14,
         textAlign: 'left',
+        required: true,
       };
     case FieldType.TEXT:
       return {
@@ -125,7 +130,7 @@ const getDefaultState = (fieldType: FieldType): FieldMeta => {
         text: '',
         characterLimit: 0,
         fontSize: 14,
-        required: false,
+        required: true,
         readOnly: false,
         textAlign: 'left',
       };
@@ -138,7 +143,7 @@ const getDefaultState = (fieldType: FieldType): FieldMeta => {
         value: '0',
         minValue: 0,
         maxValue: 0,
-        required: false,
+        required: true,
         readOnly: false,
         fontSize: 14,
         textAlign: 'left',
@@ -159,7 +164,7 @@ const getDefaultState = (fieldType: FieldType): FieldMeta => {
       return {
         type: 'radio',
         values: [],
-        required: false,
+        required: true,
         readOnly: false,
         direction: 'vertical',
       };
@@ -169,7 +174,7 @@ const getDefaultState = (fieldType: FieldType): FieldMeta => {
         values: [],
         validationRule: '',
         validationLength: 0,
-        required: false,
+        required: true,
         readOnly: false,
         direction: 'vertical',
       };
@@ -178,7 +183,7 @@ const getDefaultState = (fieldType: FieldType): FieldMeta => {
         type: 'dropdown',
         values: [],
         defaultValue: '',
-        required: false,
+        required: true,
         readOnly: false,
       };
     default:
