@@ -5,6 +5,7 @@ import {
   BarChart3,
   Building2Icon,
   FileStack,
+  FolderSyncIcon,
   MailIcon,
   Settings,
   Trophy,
@@ -131,6 +132,20 @@ export default function AdminLayout() {
             <Link to="/admin/email-domains">
               <MailIcon className="mr-2 h-5 w-5" />
               <Trans>Email Domains</Trans>
+            </Link>
+          </Button>
+
+          <Button
+            variant="ghost"
+            className={cn(
+              'justify-start md:w-full',
+              pathname?.startsWith('/admin/directory-mappings') && 'bg-secondary',
+            )}
+            asChild
+          >
+            <Link to="/admin/directory-mappings">
+              <FolderSyncIcon className="mr-2 h-5 w-5" />
+              <Trans>Directory Mappings</Trans>
             </Link>
           </Button>
 

@@ -14,6 +14,7 @@ import { SEND_TEAM_DELETED_EMAIL_JOB_DEFINITION } from './definitions/emails/sen
 import { BACKPORT_SUBSCRIPTION_CLAIM_JOB_DEFINITION } from './definitions/internal/backport-subscription-claims';
 import { BULK_SEND_TEMPLATE_JOB_DEFINITION } from './definitions/internal/bulk-send-template';
 import { CLEANUP_RATE_LIMITS_JOB_DEFINITION } from './definitions/internal/cleanup-rate-limits';
+import { DIRECTORY_SYNC_SWEEP_JOB_DEFINITION } from './definitions/internal/directory-sync-sweep';
 import { EXECUTE_WEBHOOK_JOB_DEFINITION } from './definitions/internal/execute-webhook';
 import { EXPIRE_RECIPIENTS_SWEEP_JOB_DEFINITION } from './definitions/internal/expire-recipients-sweep';
 import { PROCESS_RECIPIENT_EXPIRED_JOB_DEFINITION } from './definitions/internal/process-recipient-expired';
@@ -36,6 +37,7 @@ export const jobsClient = new JobClient([
   SEND_TEAM_DELETED_EMAIL_JOB_DEFINITION,
   SEAL_DOCUMENT_JOB_DEFINITION,
   SEAL_DOCUMENT_SWEEP_JOB_DEFINITION,
+  DIRECTORY_SYNC_SWEEP_JOB_DEFINITION,
   SEND_PASSWORD_RESET_SUCCESS_EMAIL_JOB_DEFINITION,
   SEND_SIGNING_REJECTION_EMAILS_JOB_DEFINITION,
   SEND_SENT_BACK_FOR_CORRECTION_EMAILS_JOB_DEFINITION,

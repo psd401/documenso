@@ -792,6 +792,8 @@ model OrganisationGroup {
 
   teamGroups TeamGroup[]
 
+  directoryGroupMappings DirectoryGroupMapping[]
+
   @@index([organisationId])
 }
 
@@ -825,10 +827,42 @@ model TeamGroup {
   @@index([organisationGroupId])
 }
 
+model DirectoryGroupMapping {
+  id                  String                      @id
+  sourceField         DirectoryMappingSourceField
+  sourceValue         String
+  organisationGroupId String
+  organisationGroup   OrganisationGroup           @relation(fields: [organisationGroupId], references: [id], onDelete: Cascade)
+  active              Boolean                     @default(true)
+  createdAt           DateTime                    @default(now())
+  updatedAt           DateTime                    @updatedAt
+
+  @@unique([sourceField, sourceValue, organisationGroupId])
+}
+
+model DirectorySyncAuditLog {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  type      String
+  data      Json
+  userId    Int?
+  name      String?
+  email     String?
+
+  @@index([createdAt])
+  @@index([type])
+}
+
 enum OrganisationGroupType {
   INTERNAL_ORGANISATION
   INTERNAL_TEAM
   CUSTOM
+}
+
+enum DirectoryMappingSourceField {
+  GROUP
+  DEPARTMENT
+  ORG_UNIT
 }
 
 enum OrganisationMemberRole {

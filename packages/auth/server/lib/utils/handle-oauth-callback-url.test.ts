@@ -14,8 +14,10 @@ const mockGetOpenIdConfiguration = vi.fn();
 const mockOnAuthorize = vi.fn();
 const mockOnCreateUserHook = vi.fn();
 const mockSyncGoogleDirectory = vi.fn();
+const mockApplyDirectoryMappings = vi.fn();
 const mockUserCreate = vi.fn();
 const mockAccountCreate = vi.fn();
+const mockUserSecurityAuditLogCreate = vi.fn();
 
 const mockPrisma = {
   account: { findFirst: vi.fn() },
@@ -24,6 +26,7 @@ const mockPrisma = {
     fn({
       user: { create: mockUserCreate },
       account: { create: mockAccountCreate },
+      userSecurityAuditLog: { create: mockUserSecurityAuditLogCreate },
     }),
   ),
 };
@@ -57,6 +60,10 @@ vi.mock('@documenso/lib/server-only/user/create-user', () => ({
 
 vi.mock('@documenso/lib/server-only/user/sync-google-directory', () => ({
   syncGoogleDirectory: mockSyncGoogleDirectory,
+}));
+
+vi.mock('@documenso/lib/server-only/directory-sync/apply-directory-mappings', () => ({
+  applyDirectoryMappings: mockApplyDirectoryMappings,
 }));
 
 const testClientOptions: OAuthClientOptions = {
@@ -117,6 +124,7 @@ describe('handleOAuthCallbackUrl new user provisioning', () => {
     mockOnAuthorize.mockResolvedValue(undefined);
     mockOnCreateUserHook.mockResolvedValue(undefined);
     mockSyncGoogleDirectory.mockResolvedValue(undefined);
+    mockApplyDirectoryMappings.mockResolvedValue({ granted: 0 });
   });
 
   it('still auto-provisions a new account when only NEXT_PUBLIC_DISABLE_PASSWORD_SIGNUP is set', async () => {
@@ -132,6 +140,10 @@ describe('handleOAuthCallbackUrl new user provisioning', () => {
     expect(mockUserCreate).toHaveBeenCalledTimes(1);
     expect(mockOnCreateUserHook).toHaveBeenCalledTimes(1);
     expect(mockOnAuthorize).toHaveBeenCalledWith({ userId: 42 }, expect.anything());
+
+    await vi.waitFor(() => {
+      expect(mockApplyDirectoryMappings).toHaveBeenCalledWith(42, 'login');
+    });
   });
 
   it('still blocks new OAuth signups when the blanket NEXT_PUBLIC_DISABLE_SIGNUP flag is set', async () => {
@@ -147,5 +159,54 @@ describe('handleOAuthCallbackUrl new user provisioning', () => {
       '/signin',
     );
     expect(mockUserCreate).not.toHaveBeenCalled();
+  });
+});
+
+describe('handleOAuthCallbackUrl directory sync chaining', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    mockGetOpenIdConfiguration.mockResolvedValue({ token_endpoint: 'https://example.com/token' });
+    mockValidateAuthorizationCode.mockResolvedValue({
+      accessToken: () => 'fake-access-token',
+      accessTokenExpiresAt: () => new Date(Date.now() + 3600_000),
+      idToken: () => 'fake-id-token',
+    });
+    mockDecodeIdToken.mockReturnValue(newUserClaims);
+
+    mockOnAuthorize.mockResolvedValue(undefined);
+    mockAccountCreate.mockResolvedValue({});
+    mockUserSecurityAuditLogCreate.mockResolvedValue({});
+    mockSyncGoogleDirectory.mockResolvedValue(undefined);
+    mockApplyDirectoryMappings.mockResolvedValue({ granted: 0 });
+  });
+
+  it('chains applyDirectoryMappings after sync when an account already exists', async () => {
+    mockPrisma.account.findFirst.mockResolvedValue({
+      user: { id: 55, disabled: false },
+    });
+
+    const app = await buildTestApp();
+    await requestCallback(app);
+
+    await vi.waitFor(() => {
+      expect(mockApplyDirectoryMappings).toHaveBeenCalledWith(55, 'login');
+    });
+  });
+
+  it('chains applyDirectoryMappings after sync when linking a new account to an existing user', async () => {
+    mockPrisma.account.findFirst.mockResolvedValue(null);
+    mockPrisma.user.findFirst.mockResolvedValue({
+      id: 77,
+      emailVerified: new Date(),
+      disabled: false,
+    });
+
+    const app = await buildTestApp();
+    await requestCallback(app);
+
+    await vi.waitFor(() => {
+      expect(mockApplyDirectoryMappings).toHaveBeenCalledWith(77, 'login');
+    });
   });
 });

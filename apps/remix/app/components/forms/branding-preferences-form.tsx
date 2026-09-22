@@ -9,6 +9,7 @@ import { z } from 'zod';
 
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
+import { parseBrandingLogoFile } from '@documenso/lib/utils/branding';
 import { cn } from '@documenso/ui/lib/utils';
 import { Button } from '@documenso/ui/primitives/button';
 import {
@@ -89,18 +90,16 @@ export function BrandingPreferencesForm({
   const isBrandingEnabled = form.watch('brandingEnabled');
 
   useEffect(() => {
-    if (settings.brandingLogo) {
-      const file = JSON.parse(settings.brandingLogo);
+    const file = parseBrandingLogoFile(settings.brandingLogo);
 
-      if ('type' in file && 'data' in file) {
-        const logoUrl =
-          context === 'Team'
-            ? `${NEXT_PUBLIC_WEBAPP_URL()}/api/branding/logo/team/${team?.id}`
-            : `${NEXT_PUBLIC_WEBAPP_URL()}/api/branding/logo/organisation/${organisation?.id}`;
+    if (file) {
+      const logoUrl =
+        context === 'Team'
+          ? `${NEXT_PUBLIC_WEBAPP_URL()}/api/branding/logo/team/${team?.id}`
+          : `${NEXT_PUBLIC_WEBAPP_URL()}/api/branding/logo/organisation/${organisation?.id}`;
 
-        setPreviewUrl(logoUrl + '?v=' + Date.now());
-        setHasLoadedPreview(true);
-      }
+      setPreviewUrl(logoUrl + '?v=' + Date.now());
+      setHasLoadedPreview(true);
     }
 
     setHasLoadedPreview(true);
