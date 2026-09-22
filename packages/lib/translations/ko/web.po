@@ -4397,10 +4397,6 @@ msgstr "개발자 모드"
 msgid "Device"
 msgstr "디바이스"
 
-#: packages/email/template-components/template-footer.tsx
-msgid "Did not expect this email? <0>Click here to report the sender</0>. Never sign a document you don't recognize or weren't expecting."
-msgstr "이 이메일을 예상하지 못하셨나요? <0>보낸 사람을 신고하려면 여기를 클릭하세요</0>. 잘 알지 못하거나 예상하지 못한 문서는 절대 서명하지 마세요."
-
 #: packages/email/templates/reset-password.tsx
 msgid "Didn't request a password change? We are here to help you secure your account, just <0>contact us</0>."
 msgstr "비밀번호 변경을 요청하지 않으셨나요? 계정을 안전하게 보호하실 수 있도록 도와드리겠습니다. <0>문의하기</0>만 해 주세요."

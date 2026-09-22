@@ -64,6 +64,12 @@ describe('email template branding', () => {
     expect(findBrandedLinesInFiles(files)).toEqual([]);
   });
 
+  it('email footer has no "report the sender" link', () => {
+    const footer = readFileSync(path.join(EMAIL_ROOT, 'template-components', 'template-footer.tsx'), 'utf8');
+
+    expect(footer).not.toContain('report the sender');
+  });
+
   it('recipient signing page title contains no "Documenso" text', () => {
     const layout = path.resolve(__dirname, '../../../apps/remix/app/routes/_recipient+/_layout.tsx');
 

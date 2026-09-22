@@ -4397,10 +4397,6 @@ msgstr "Entwicklermodus"
 msgid "Device"
 msgstr "Gerät"
 
-#: packages/email/template-components/template-footer.tsx
-msgid "Did not expect this email? <0>Click here to report the sender</0>. Never sign a document you don't recognize or weren't expecting."
-msgstr "Sie haben diese E-Mail nicht erwartet? <0>Klicken Sie hier, um den Absender zu melden</0>. Unterschreiben Sie niemals ein Dokument, das Sie nicht erkennen oder nicht erwartet haben."
-
 #: packages/email/templates/reset-password.tsx
 msgid "Didn't request a password change? We are here to help you secure your account, just <0>contact us</0>."
 msgstr "Du hast keine Passwortänderung angefordert? Wir helfen dir, dein Konto zu sichern, kontaktiere uns einfach <0>hier</0>."

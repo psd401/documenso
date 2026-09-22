@@ -7,28 +7,20 @@ import { getSafeBrandingUrl } from '../utils/branding-url';
 
 export type TemplateFooterProps = {
   isDocument?: boolean;
+  /**
+   * PSD401: accepted but not rendered. Upstream's report link only increments an
+   * organisation stat that nobody reviews in a self-hosted district deployment.
+   */
   reportUrl?: string;
 };
 
-export const TemplateFooter = ({ isDocument = true, reportUrl }: TemplateFooterProps) => {
+export const TemplateFooter = ({ isDocument = true }: TemplateFooterProps) => {
   const branding = useBranding();
 
   const safeBrandingUrl = branding.brandingEnabled ? getSafeBrandingUrl(branding.brandingUrl) : null;
 
   return (
     <Section>
-      {reportUrl && (
-        <Text className="my-4 text-base text-muted-foreground">
-          <Trans>
-            Did not expect this email?{' '}
-            <Link className="text-primary" href={reportUrl}>
-              Click here to report the sender
-            </Link>
-            . Never sign a document you don't recognize or weren't expecting.
-          </Trans>
-        </Text>
-      )}
-
       {isDocument && !branding.brandingHidePoweredBy && (
         <Text className="my-4 text-base text-muted-foreground">
           <Trans>
