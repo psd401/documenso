@@ -1855,8 +1855,8 @@ msgid "An admin has deleted your document \"{documentName}\"."
 msgstr "Un administrateur a supprimé votre document \"{documentName}\"."
 
 #: packages/email/template-components/template-admin-user-created.tsx
-msgid "An administrator has created a Documenso account for you."
-msgstr "Un administrateur a créé un compte Documenso pour vous."
+msgid "An administrator has created a PSD Document Signing account for you."
+msgstr ""
 
 #: apps/remix/app/routes/_unauthenticated+/articles.signature-disclosure.tsx
 msgid "An electronic signature provided by you on our platform, achieved through clicking through to a document and entering your name, or any other electronic signing method we provide, is legally binding. It carries the same weight and enforceability as a manual signature written with ink on paper."
@@ -2081,10 +2081,6 @@ msgstr "Une erreur est survenue lors de la mise à jour de votre profil."
 #: apps/remix/app/utils/toast-error-messages.ts
 msgid "An error occurred while uploading your document."
 msgstr "Une erreur est survenue lors de l'importation de votre document."
-
-#: packages/ui/lib/handle-upload-error.tsx
-msgid "An error occurred while uploading your document. Please try again."
-msgstr ""
 
 #: apps/remix/app/components/forms/support-ticket-form.tsx
 msgid "An error occurred. Please try again later."
@@ -5976,7 +5972,6 @@ msgstr "Enveloppe mise à jour"
 #: apps/remix/app/components/general/document/document-edit-form.tsx
 #: apps/remix/app/components/general/document/document-send-back-for-correction-dialog.tsx
 #: apps/remix/app/components/general/envelope-signing/envelope-signer-page-renderer.tsx
-#: apps/remix/app/components/general/envelope/envelope-upload-button.tsx
 #: apps/remix/app/components/general/pdf-viewer/pdf-viewer.tsx
 #: apps/remix/app/components/general/template/template-edit-form.tsx
 #: apps/remix/app/components/general/template/template-edit-form.tsx
@@ -5996,6 +5991,11 @@ msgstr "Enveloppe mise à jour"
 #: apps/remix/app/routes/embed+/v1+/authoring+/template.edit.$id.tsx
 #: apps/remix/app/routes/embed+/v2+/authoring+/envelope.create._index.tsx
 #: apps/remix/app/routes/embed+/v2+/authoring+/envelope.edit.$id.tsx
+#: apps/remix/app/utils/toast-error-messages.ts
+#: apps/remix/app/utils/toast-error-messages.ts
+#: apps/remix/app/utils/toast-error-messages.ts
+#: apps/remix/app/utils/toast-error-messages.ts
+#: apps/remix/app/utils/toast-error-messages.ts
 #: apps/remix/app/utils/toast-error-messages.ts
 #: apps/remix/app/utils/toast-error-messages.ts
 #: apps/remix/app/utils/toast-error-messages.ts
@@ -10871,8 +10871,8 @@ msgid "Set up your template properties and recipient information"
 msgstr "Configurez les propriétés de votre modèle et les informations du destinataire"
 
 #: packages/email/templates/admin-user-created.tsx
-msgid "Set your password for Documenso"
-msgstr "Définissez votre mot de passe pour Documenso"
+msgid "Set your password for PSD Document Signing"
+msgstr ""
 
 #: apps/remix/app/components/general/app-command-menu.tsx
 #: apps/remix/app/components/general/app-command-menu.tsx
@@ -12175,7 +12175,7 @@ msgstr "Le lien direct a été copié dans votre presse-papiers"
 msgid "The display name for this email address"
 msgstr "Le nom d'affichage pour cette adresse e-mail"
 
-#: packages/ui/lib/handle-upload-error.tsx
+#: apps/remix/app/utils/toast-error-messages.ts
 msgid "The document could not be converted to a PDF. It may be too large or in an unsupported format — try uploading a PDF instead."
 msgstr ""
 
@@ -12232,7 +12232,7 @@ msgstr "La propriété du document a été déléguée à {0} au nom de {1}"
 msgid "The document signing process will be stopped"
 msgstr "Le processus de signature du document sera arrêté"
 
-#: packages/ui/lib/handle-upload-error.tsx
+#: apps/remix/app/utils/toast-error-messages.ts
 msgid "The document took too long to convert. Please try a smaller file, or upload it as a PDF."
 msgstr ""
 
@@ -12298,7 +12298,7 @@ msgstr "La liste de blocage des e-mails a été mise à jour avec succès."
 msgid "The email domain you are looking for may have been removed, renamed or may have never existed."
 msgstr "Le domaine de messagerie que vous recherchez a peut-être été supprimé, renommé ou n'a jamais existé."
 
-#: packages/ui/lib/handle-upload-error.tsx
+#: apps/remix/app/utils/toast-error-messages.ts
 msgid "The encrypted PDF took too long to process. Please try a smaller file."
 msgstr ""
 
@@ -12585,7 +12585,7 @@ msgstr "La taille de la police de signature tapée"
 msgid "The types of signatures that recipients are allowed to use when signing the document."
 msgstr "Les types de signatures que les destinataires peuvent utiliser lors de la signature du document."
 
-#: packages/ui/lib/handle-upload-error.tsx
+#: apps/remix/app/utils/toast-error-messages.ts
 msgid "The uploaded file is not a valid document. Please upload a valid PDF or Word file."
 msgstr ""
 
@@ -12813,7 +12813,7 @@ msgstr ""
 msgid "This document is using legacy field insertion, we recommend using the new field insertion method for more accurate results."
 msgstr "Ce document utilise l'insertion de champ héritée, il est recommandé d'utiliser la nouvelle méthode d'insertion pour des résultats plus précis."
 
-#: packages/ui/lib/handle-upload-error.tsx
+#: apps/remix/app/utils/toast-error-messages.ts
 msgid "This document needs server-side processing that is currently unavailable. Please contact support or try a different file."
 msgstr ""
 
@@ -12935,7 +12935,7 @@ msgstr "Cette organisation, ainsi que toutes les données associées, seront dé
 msgid "This passkey has already been registered."
 msgstr "Cette clé d'accès a déjà été enregistrée."
 
-#: packages/ui/lib/handle-upload-error.tsx
+#: apps/remix/app/utils/toast-error-messages.ts
 msgid "This PDF is password-protected. Please remove the password and try uploading again."
 msgstr ""
 
@@ -14278,15 +14278,11 @@ msgstr "Nous ne pouvons pas mettre à jour cette clé de passkey pour le moment.
 msgid "We couldn’t complete the search. Try again."
 msgstr ""
 
-#: apps/remix/app/utils/toast-error-messages.ts
-msgid "We couldn't convert this file. Please check it's a valid Word document or upload a PDF instead."
-msgstr "Nous n’avons pas pu convertir ce fichier. Veuillez vérifier qu’il s’agit d’un document Word valide ou téléverser un fichier PDF à la place."
-
 #: apps/remix/app/components/dialogs/ai-features-enable-dialog.tsx
 msgid "We couldn't enable AI features right now. Please try again."
 msgstr "Nous n’avons pas pu activer les fonctionnalités d’IA pour le moment. Veuillez réessayer."
 
-#: packages/ui/lib/handle-upload-error.tsx
+#: apps/remix/app/utils/toast-error-messages.ts
 msgid "We couldn't process this PDF. It may be corrupted or use unsupported encryption — please try a different file, or contact support."
 msgstr ""
 
@@ -14728,9 +14724,6 @@ msgid "Welcome to Documenso"
 msgstr "Bienvenue sur Documenso"
 
 #: packages/email/template-components/template-admin-user-created.tsx
-msgid "Welcome to Documenso!"
-msgstr "Bienvenue sur Documenso !"
-
 #: packages/email/template-components/template-confirmation-email.tsx
 msgid "Welcome to PSD Document Signing!"
 msgstr ""
@@ -15150,10 +15143,6 @@ msgstr "Vous ne pouvez pas retirer le propriétaire de l’organisation de l’�
 msgid "You cannot upload documents at this time."
 msgstr "Vous ne pouvez pas importer de documents pour le moment."
 
-#: apps/remix/app/utils/toast-error-messages.ts
-msgid "You cannot upload encrypted PDFs."
-msgstr "Vous ne pouvez pas importer de PDF chiffrés."
-
 #: packages/lib/utils/document-audit-logs.ts
 msgid "You CC'd the document"
 msgstr "Vous avez mis le document en copie"
@@ -15287,7 +15276,6 @@ msgid "You have not yet created or received any documents. To create a document 
 msgstr "Vous n'avez pas encore créé ou reçu de documents. Pour créer un document, veuillez en importer un."
 
 #: apps/remix/app/utils/toast-error-messages.ts
-#: packages/ui/lib/handle-upload-error.tsx
 msgid "You have reached the limit of the number of files per envelope."
 msgstr "Vous avez atteint la limite du nombre de fichiers par enveloppe."
 
@@ -15300,13 +15288,9 @@ msgstr "Vous avez atteint la limite maximale de {0} modèles directs. <0>Mettez 
 msgid "You have reached the maximum number of teams for your plan. Please contact sales at <0>{SUPPORT_EMAIL}</0> if you would like to adjust your plan."
 msgstr "Vous avez atteint le nombre maximum d'équipes pour votre abonnement. Veuillez contacter le service commercial à <0>{SUPPORT_EMAIL}</0> si vous souhaitez ajuster votre plan."
 
-#: packages/ui/lib/handle-upload-error.tsx
+#: apps/remix/app/utils/toast-error-messages.ts
 msgid "You have reached your document limit for this month."
 msgstr ""
-
-#: apps/remix/app/utils/toast-error-messages.ts
-msgid "You have reached your document limit for this month. Please upgrade your plan."
-msgstr "Vous avez atteint votre limite de documents pour ce mois. Veuillez passer à l'abonnement supérieur."
 
 #: apps/remix/app/utils/toast-error-messages.ts
 msgid "You have reached your document limit for this plan. Please upgrade your plan."

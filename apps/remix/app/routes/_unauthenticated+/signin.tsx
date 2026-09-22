@@ -6,7 +6,7 @@ import {
   IS_OIDC_AUTO_REDIRECT_DISABLED,
   IS_OIDC_SSO_ENABLED,
   isSigninEnabledForProvider,
-  isSignupEnabledForProvider,
+  isSignupPageEnabled,
   OIDC_PROVIDER_LABEL,
 } from '@documenso/lib/constants/auth';
 import { isValidReturnTo, normalizeReturnTo } from '@documenso/lib/utils/is-valid-return-to';
@@ -46,11 +46,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 
   const oidcProviderLabel = OIDC_PROVIDER_LABEL;
 
-  const isSignupEnabled =
-    isSignupEnabledForProvider('email') ||
-    (IS_GOOGLE_SSO_ENABLED && isSignupEnabledForProvider('google')) ||
-    (IS_MICROSOFT_SSO_ENABLED && isSignupEnabledForProvider('microsoft')) ||
-    (IS_OIDC_SSO_ENABLED && isSignupEnabledForProvider('oidc'));
+  const isSignupEnabled = isSignupPageEnabled();
 
   let returnTo = new URL(request.url).searchParams.get('returnTo') ?? undefined;
 

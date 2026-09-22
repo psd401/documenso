@@ -12,7 +12,7 @@ export const AdminUserCreatedTemplate = ({
 }: TemplateAdminUserCreatedProps) => {
   const { _ } = useLingui();
 
-  const previewText = msg`Set your password for Documenso`;
+  const previewText = msg`Set your password for PSD Document Signing`;
 
   const getAssetUrl = (path: string) => {
     return new URL(path, assetBaseUrl).toString();
@@ -27,7 +27,7 @@ export const AdminUserCreatedTemplate = ({
         <Section>
           <Container className="mx-auto mt-8 mb-2 max-w-xl rounded-lg border border-border border-solid p-4 backdrop-blur-sm">
             <Section>
-              <Img src={getAssetUrl('/static/logo.png')} alt="Documenso Logo" className="mb-4 h-6" />
+              <Img src={getAssetUrl('/static/logo.png')} alt="PSD Document Signing" className="mb-4 h-6" />
 
               <TemplateAdminUserCreated resetPasswordLink={resetPasswordLink} assetBaseUrl={assetBaseUrl} />
             </Section>

@@ -11,7 +11,6 @@ import { formatDocumentsPath, formatTemplatesPath } from '@documenso/lib/utils/t
 import { trpc } from '@documenso/trpc/react';
 import type { TCreateEnvelopePayload } from '@documenso/trpc/server/envelope-router/create-envelope.types';
 import { buildDropzoneRejectionDescription } from '@documenso/ui/lib/handle-dropzone-rejection';
-import { buildUploadErrorMessage } from '@documenso/ui/lib/handle-upload-error';
 import { cn } from '@documenso/ui/lib/utils';
 import { DocumentUploadButton } from '@documenso/ui/primitives/document-upload-button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@documenso/ui/primitives/tooltip';
@@ -25,6 +24,7 @@ import { useNavigate } from 'react-router';
 
 import { DefaultTeamUploadDialog } from '~/components/dialogs/default-team-upload-dialog';
 import { useCurrentTeam } from '~/providers/team';
+import { getUploadErrorMessage } from '~/utils/toast-error-messages';
 
 export type EnvelopeUploadButtonProps = {
   className?: string;
@@ -123,11 +123,11 @@ export const EnvelopeUploadButton = ({ className, type, folderId }: EnvelopeUplo
         location: 'upload_document',
       });
 
-      const errorMessage = buildUploadErrorMessage(error.code);
+      const errorMessage = getUploadErrorMessage(error.code);
 
       toast({
-        title: t`Error`,
-        description: i18n._(errorMessage),
+        title: i18n._(errorMessage.title),
+        description: i18n._(errorMessage.description),
         variant: 'destructive',
         duration: 7500,
       });

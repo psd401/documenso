@@ -1855,8 +1855,8 @@ msgid "An admin has deleted your document \"{documentName}\"."
 msgstr "管理员已删除您的文档“{documentName}”。"
 
 #: packages/email/template-components/template-admin-user-created.tsx
-msgid "An administrator has created a Documenso account for you."
-msgstr "管理员已为你创建了一个 Documenso 账户。"
+msgid "An administrator has created a PSD Document Signing account for you."
+msgstr ""
 
 #: apps/remix/app/routes/_unauthenticated+/articles.signature-disclosure.tsx
 msgid "An electronic signature provided by you on our platform, achieved through clicking through to a document and entering your name, or any other electronic signing method we provide, is legally binding. It carries the same weight and enforceability as a manual signature written with ink on paper."
@@ -2081,10 +2081,6 @@ msgstr "更新你的资料时发生错误。"
 #: apps/remix/app/utils/toast-error-messages.ts
 msgid "An error occurred while uploading your document."
 msgstr "上传文档时发生错误。"
-
-#: packages/ui/lib/handle-upload-error.tsx
-msgid "An error occurred while uploading your document. Please try again."
-msgstr ""
 
 #: apps/remix/app/components/forms/support-ticket-form.tsx
 msgid "An error occurred. Please try again later."
@@ -5976,7 +5972,6 @@ msgstr "信封已更新"
 #: apps/remix/app/components/general/document/document-edit-form.tsx
 #: apps/remix/app/components/general/document/document-send-back-for-correction-dialog.tsx
 #: apps/remix/app/components/general/envelope-signing/envelope-signer-page-renderer.tsx
-#: apps/remix/app/components/general/envelope/envelope-upload-button.tsx
 #: apps/remix/app/components/general/pdf-viewer/pdf-viewer.tsx
 #: apps/remix/app/components/general/template/template-edit-form.tsx
 #: apps/remix/app/components/general/template/template-edit-form.tsx
@@ -5996,6 +5991,11 @@ msgstr "信封已更新"
 #: apps/remix/app/routes/embed+/v1+/authoring+/template.edit.$id.tsx
 #: apps/remix/app/routes/embed+/v2+/authoring+/envelope.create._index.tsx
 #: apps/remix/app/routes/embed+/v2+/authoring+/envelope.edit.$id.tsx
+#: apps/remix/app/utils/toast-error-messages.ts
+#: apps/remix/app/utils/toast-error-messages.ts
+#: apps/remix/app/utils/toast-error-messages.ts
+#: apps/remix/app/utils/toast-error-messages.ts
+#: apps/remix/app/utils/toast-error-messages.ts
 #: apps/remix/app/utils/toast-error-messages.ts
 #: apps/remix/app/utils/toast-error-messages.ts
 #: apps/remix/app/utils/toast-error-messages.ts
@@ -10871,8 +10871,8 @@ msgid "Set up your template properties and recipient information"
 msgstr "设置模板属性和收件人信息"
 
 #: packages/email/templates/admin-user-created.tsx
-msgid "Set your password for Documenso"
-msgstr "为 Documenso 设置您的密码"
+msgid "Set your password for PSD Document Signing"
+msgstr ""
 
 #: apps/remix/app/components/general/app-command-menu.tsx
 #: apps/remix/app/components/general/app-command-menu.tsx
@@ -12175,7 +12175,7 @@ msgstr "直接链接已复制到剪贴板"
 msgid "The display name for this email address"
 msgstr "此邮箱地址的显示名称"
 
-#: packages/ui/lib/handle-upload-error.tsx
+#: apps/remix/app/utils/toast-error-messages.ts
 msgid "The document could not be converted to a PDF. It may be too large or in an unsupported format — try uploading a PDF instead."
 msgstr ""
 
@@ -12232,7 +12232,7 @@ msgstr "此文档的所有权已代表 {1} 委派给 {0}"
 msgid "The document signing process will be stopped"
 msgstr "文档签署流程将被终止"
 
-#: packages/ui/lib/handle-upload-error.tsx
+#: apps/remix/app/utils/toast-error-messages.ts
 msgid "The document took too long to convert. Please try a smaller file, or upload it as a PDF."
 msgstr ""
 
@@ -12298,7 +12298,7 @@ msgstr "邮箱拦截列表已成功更新。"
 msgid "The email domain you are looking for may have been removed, renamed or may have never existed."
 msgstr "您要查找的邮箱域名可能已被删除、重命名，或从未存在。"
 
-#: packages/ui/lib/handle-upload-error.tsx
+#: apps/remix/app/utils/toast-error-messages.ts
 msgid "The encrypted PDF took too long to process. Please try a smaller file."
 msgstr ""
 
@@ -12585,7 +12585,7 @@ msgstr "键入签名的字体大小"
 msgid "The types of signatures that recipients are allowed to use when signing the document."
 msgstr "收件人在签署文档时允许使用的签名类型。"
 
-#: packages/ui/lib/handle-upload-error.tsx
+#: apps/remix/app/utils/toast-error-messages.ts
 msgid "The uploaded file is not a valid document. Please upload a valid PDF or Word file."
 msgstr ""
 
@@ -12813,7 +12813,7 @@ msgstr ""
 msgid "This document is using legacy field insertion, we recommend using the new field insertion method for more accurate results."
 msgstr "此文档正在使用旧版字段插入方式，我们建议使用新的字段插入方式以获得更精确的结果。"
 
-#: packages/ui/lib/handle-upload-error.tsx
+#: apps/remix/app/utils/toast-error-messages.ts
 msgid "This document needs server-side processing that is currently unavailable. Please contact support or try a different file."
 msgstr ""
 
@@ -12935,7 +12935,7 @@ msgstr "此组织及其所有相关数据将被永久删除。"
 msgid "This passkey has already been registered."
 msgstr "此通行密钥已注册。"
 
-#: packages/ui/lib/handle-upload-error.tsx
+#: apps/remix/app/utils/toast-error-messages.ts
 msgid "This PDF is password-protected. Please remove the password and try uploading again."
 msgstr ""
 
@@ -14278,15 +14278,11 @@ msgstr "目前无法更新此通行密钥。请稍后再试。"
 msgid "We couldn’t complete the search. Try again."
 msgstr ""
 
-#: apps/remix/app/utils/toast-error-messages.ts
-msgid "We couldn't convert this file. Please check it's a valid Word document or upload a PDF instead."
-msgstr "我们无法转换此文件。请检查它是否为有效的 Word 文档，或改为上传 PDF。"
-
 #: apps/remix/app/components/dialogs/ai-features-enable-dialog.tsx
 msgid "We couldn't enable AI features right now. Please try again."
 msgstr "我们现在无法启用 AI 功能。请重试。"
 
-#: packages/ui/lib/handle-upload-error.tsx
+#: apps/remix/app/utils/toast-error-messages.ts
 msgid "We couldn't process this PDF. It may be corrupted or use unsupported encryption — please try a different file, or contact support."
 msgstr ""
 
@@ -14728,9 +14724,6 @@ msgid "Welcome to Documenso"
 msgstr "欢迎使用 Documenso"
 
 #: packages/email/template-components/template-admin-user-created.tsx
-msgid "Welcome to Documenso!"
-msgstr "欢迎来到 Documenso！"
-
 #: packages/email/template-components/template-confirmation-email.tsx
 msgid "Welcome to PSD Document Signing!"
 msgstr ""
@@ -15150,10 +15143,6 @@ msgstr "你无法将组织所有者从团队中移除。"
 msgid "You cannot upload documents at this time."
 msgstr "您目前无法上传文档。"
 
-#: apps/remix/app/utils/toast-error-messages.ts
-msgid "You cannot upload encrypted PDFs."
-msgstr "你无法上传已加密的 PDF。"
-
 #: packages/lib/utils/document-audit-logs.ts
 msgid "You CC'd the document"
 msgstr "你已将此文档加入抄送"
@@ -15287,7 +15276,6 @@ msgid "You have not yet created or received any documents. To create a document 
 msgstr "你还没有创建或接收任何文档。要创建文档，请先上传一个。"
 
 #: apps/remix/app/utils/toast-error-messages.ts
-#: packages/ui/lib/handle-upload-error.tsx
 msgid "You have reached the limit of the number of files per envelope."
 msgstr "您已达到每个信封允许上传的文件数量上限。"
 
@@ -15300,13 +15288,9 @@ msgstr "你已达到 {0} 个直接模板的最大限制。<0>升级账号以继�
 msgid "You have reached the maximum number of teams for your plan. Please contact sales at <0>{SUPPORT_EMAIL}</0> if you would like to adjust your plan."
 msgstr "您的团队数量已达到当前套餐上限。如需调整套餐，请通过 <0>{SUPPORT_EMAIL}</0> 联系销售。"
 
-#: packages/ui/lib/handle-upload-error.tsx
+#: apps/remix/app/utils/toast-error-messages.ts
 msgid "You have reached your document limit for this month."
 msgstr ""
-
-#: apps/remix/app/utils/toast-error-messages.ts
-msgid "You have reached your document limit for this month. Please upgrade your plan."
-msgstr "您本月的文档数量已达到上限。请升级您的套餐。"
 
 #: apps/remix/app/utils/toast-error-messages.ts
 msgid "You have reached your document limit for this plan. Please upgrade your plan."

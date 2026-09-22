@@ -3,6 +3,7 @@ import {
   IS_MICROSOFT_SSO_ENABLED,
   IS_OIDC_SSO_ENABLED,
   isSignupEnabledForProvider,
+  isSignupPageEnabled,
 } from '@documenso/lib/constants/auth';
 import { isValidReturnTo, normalizeReturnTo } from '@documenso/lib/utils/is-valid-return-to';
 import { msg } from '@lingui/core/macro';
@@ -23,10 +24,7 @@ export function loader({ request }: Route.LoaderArgs) {
   const isMicrosoftSignupEnabled = IS_MICROSOFT_SSO_ENABLED && isSignupEnabledForProvider('microsoft');
   const isOidcSignupEnabled = IS_OIDC_SSO_ENABLED && isSignupEnabledForProvider('oidc');
 
-  const isAnySignupEnabled =
-    isEmailPasswordSignupEnabled || isGoogleSignupEnabled || isMicrosoftSignupEnabled || isOidcSignupEnabled;
-
-  if (!isAnySignupEnabled) {
+  if (!isSignupPageEnabled()) {
     throw redirect('/signin');
   }
 

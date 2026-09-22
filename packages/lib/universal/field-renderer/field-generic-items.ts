@@ -1,5 +1,7 @@
+import { FIELD_ROOT_CONTAINER_DEFAULT_BACKGROUND } from '@documenso/ui/lib/field-root-container-classes';
 import { DEFAULT_RECT_BACKGROUND, getRecipientColorStyles } from '@documenso/ui/lib/recipient-colors';
 import { FieldType } from '@prisma/client';
+import { colord } from 'colord';
 import Konva from 'konva';
 
 import type { FieldToRender, RenderFieldElementOptions } from './field-renderer';
@@ -28,6 +30,34 @@ export const getFieldRestingFill = (
   }
 
   return DEFAULT_RECT_BACKGROUND;
+};
+
+/**
+ * The background from the field style probe that should override the renderer's
+ * resting fill, or `undefined` to use {@link getFieldRestingFill}.
+ *
+ * The probe resolves the shared container's default `bg-white/90` for every
+ * field type, so for checkbox/radio fields in the signer view that default is
+ * ignored to keep them transparent. Any other (custom embed) background applies.
+ */
+export const getFieldCustomBackground = (
+  field: Pick<FieldToRender, 'type'>,
+  mode: RenderFieldElementOptions['mode'],
+  fieldCanvasStyle: RenderFieldElementOptions['fieldCanvasStyle'],
+): string | undefined => {
+  const backgroundColor = fieldCanvasStyle?.backgroundColor;
+
+  if (!backgroundColor) {
+    return undefined;
+  }
+
+  const hasTransparentRestingFill = getFieldRestingFill(field, mode) === TRANSPARENT_RECT_BACKGROUND;
+
+  if (hasTransparentRestingFill && colord(backgroundColor).isEqual(FIELD_ROOT_CONTAINER_DEFAULT_BACKGROUND)) {
+    return undefined;
+  }
+
+  return backgroundColor;
 };
 
 export const konvaTextFontFamily =
@@ -149,7 +179,9 @@ export const upsertFieldRect = (field: FieldToRender, options: RenderFieldElemen
     height: fieldHeight,
     // In export mode keep the fill transparent so the underlying PDF content
     // shows through, while still drawing the field outline below.
-    fill: isExport ? undefined : (fieldCanvasStyle?.backgroundColor ?? getFieldRestingFill(field, mode)),
+    fill: isExport
+      ? undefined
+      : (getFieldCustomBackground(field, mode, fieldCanvasStyle) ?? getFieldRestingFill(field, mode)),
     stroke: isExport
       ? EXPORT_FIELD_OUTLINE_COLOR
       : (fieldCanvasStyle?.borderColor ??
@@ -238,7 +270,7 @@ export const createFieldHoverInteraction = ({
     return;
   }
 
-  if (options.fieldCanvasStyle?.backgroundColor) {
+  if (getFieldCustomBackground(field, mode, options.fieldCanvasStyle)) {
     return;
   }
 

@@ -92,11 +92,11 @@ export const getUploadErrorMessage = (code: string): ToastMessageDescriptor => {
     .with(AppErrorCode.TOO_MANY_REQUESTS, () => FAIR_USE_LIMIT_EXCEEDED_ERROR_MESSAGE)
     .with('INVALID_DOCUMENT_FILE', () => ({
       title: msg`Error`,
-      description: msg`You cannot upload encrypted PDFs.`,
+      description: msg`The uploaded file is not a valid document. Please upload a valid PDF or Word file.`,
     }))
     .with(AppErrorCode.LIMIT_EXCEEDED, () => ({
       title: msg`Error`,
-      description: msg`You have reached your document limit for this month. Please upgrade your plan.`,
+      description: msg`You have reached your document limit for this month.`,
     }))
     .with('ENVELOPE_ITEM_LIMIT_EXCEEDED', () => ({
       title: msg`Error`,
@@ -110,9 +110,29 @@ export const getUploadErrorMessage = (code: string): ToastMessageDescriptor => {
       title: msg`Error`,
       description: msg`Document conversion is temporarily unavailable. Please try again shortly or upload a PDF.`,
     }))
-    .with('CONVERSION_FAILED', () => ({
+    .with(AppErrorCode.CONVERSION_FAILED, () => ({
       title: msg`Error`,
-      description: msg`We couldn't convert this file. Please check it's a valid Word document or upload a PDF instead.`,
+      description: msg`The document could not be converted to a PDF. It may be too large or in an unsupported format — try uploading a PDF instead.`,
+    }))
+    .with(AppErrorCode.CONVERSION_TIMEOUT, () => ({
+      title: msg`Error`,
+      description: msg`The document took too long to convert. Please try a smaller file, or upload it as a PDF.`,
+    }))
+    .with(AppErrorCode.ENCRYPTED_DOCUMENT_REQUIRES_PASSWORD, () => ({
+      title: msg`Error`,
+      description: msg`This PDF is password-protected. Please remove the password and try uploading again.`,
+    }))
+    .with(AppErrorCode.DECRYPTION_FAILED, () => ({
+      title: msg`Error`,
+      description: msg`We couldn't process this PDF. It may be corrupted or use unsupported encryption — please try a different file, or contact support.`,
+    }))
+    .with(AppErrorCode.DECRYPTION_TIMEOUT, () => ({
+      title: msg`Error`,
+      description: msg`The encrypted PDF took too long to process. Please try a smaller file.`,
+    }))
+    .with(AppErrorCode.DEPENDENCY_MISSING, () => ({
+      title: msg`Error`,
+      description: msg`This document needs server-side processing that is currently unavailable. Please contact support or try a different file.`,
     }))
     .otherwise(() => ({
       title: msg`Error`,

@@ -194,6 +194,12 @@ export const isSignupEnabledForProvider = (provider: 'email' | 'google' | 'micro
 };
 
 /**
+ * Check if the /signup page and the "Sign up" link are available.
+ * SSO users are provisioned on first sign-in, so the page only exists for email/password signup.
+ */
+export const isSignupPageEnabled = (): boolean => isSignupEnabledForProvider('email');
+
+/**
  * Check if signin is enabled for the given provider.
  * The master switch takes precedence over the per-provider flags.
  */
