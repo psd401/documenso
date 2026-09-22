@@ -10992,7 +10992,7 @@ msgid "Sign Document"
 msgstr "Assinar Documento"
 
 #: apps/remix/app/routes/_recipient+/_layout.tsx
-msgid "Sign Document - Documenso"
+msgid "Sign Document - PSD Document Signing"
 msgstr ""
 
 #: apps/remix/app/components/embed/multisign/multi-sign-document-list.tsx
@@ -14715,7 +14715,7 @@ msgid "Welcome to {organisationName}"
 msgstr "Bem-vindo à {organisationName}"
 
 #: packages/lib/jobs/definitions/emails/send-admin-user-created-email.handler.ts
-msgid "Welcome to Documenso"
+msgid "Welcome to PSD Document Signing"
 msgstr ""
 
 #: packages/email/template-components/template-admin-user-created.tsx
