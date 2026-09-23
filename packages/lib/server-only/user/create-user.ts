@@ -76,7 +76,18 @@ const addUserToPsd401Org = async (userId: number) => {
     where: { userId, organisationId: PSD401_ORG_ID },
   });
 
+  // The trg_auto_add_psd401 DB trigger on "Account" creates the member (org group only)
+  // before this hook runs for SSO users, so top up any missing groups instead of returning.
   if (existing) {
+    await prisma.organisationGroupMember.createMany({
+      data: [PSD401_MEMBER_GROUP_ID, PSD401_DEFAULT_TEAM_GROUP_ID].map((groupId) => ({
+        id: generateDatabaseId('group_member'),
+        groupId,
+        organisationMemberId: existing.id,
+      })),
+      skipDuplicates: true,
+    });
+
     return;
   }
 
