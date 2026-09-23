@@ -139,5 +139,13 @@ declare namespace NodeJS {
     GOOGLE_VERTEX_PROJECT_ID?: string;
     GOOGLE_VERTEX_LOCATION?: string;
     GOOGLE_VERTEX_API_KEY?: string;
+
+    /**
+     * Directory sync environment variables
+     *
+     * DIRECTORY_SYNC_REVOKE_MODE: 'enforce' removes directory-managed group memberships the user no
+     * longer matches; 'off' skips revocation; anything else (including unset) is 'log' (audit only).
+     */
+    DIRECTORY_SYNC_REVOKE_MODE?: string;
   }
 }

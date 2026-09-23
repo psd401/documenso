@@ -69,7 +69,12 @@ const ZFieldMetaVerticalAlign = z.enum(['top', 'middle', 'bottom']).describe('Th
 export const ZBaseFieldMeta = z.object({
   label: z.string().optional(),
   placeholder: z.string().optional(),
-  required: z.boolean().optional(),
+  required: z
+    .boolean()
+    .optional()
+    .describe(
+      'Whether the recipient must fill in or interact with this field before the document can be completed. Newly placed fields default to true; pass false explicitly to make the field optional.',
+    ),
   readOnly: z.boolean().optional(),
   fontSize: z.number().min(8).max(96).default(DEFAULT_FIELD_FONT_SIZE).optional(),
   /**
@@ -351,6 +356,7 @@ export const FIELD_DATE_META_DEFAULT_VALUES: TDateFieldMeta = {
   type: 'date',
   fontSize: DEFAULT_FIELD_FONT_SIZE,
   textAlign: 'left',
+  required: true,
   overflow: DEFAULT_DATE_OVERFLOW_MODE,
 };
 
@@ -361,7 +367,7 @@ export const FIELD_TEXT_META_DEFAULT_VALUES: TTextFieldMeta = {
   label: '',
   placeholder: '',
   text: '',
-  required: false,
+  required: true,
   readOnly: false,
 };
 
@@ -371,7 +377,7 @@ export const FIELD_NUMBER_META_DEFAULT_VALUES: TNumberFieldMeta = {
   textAlign: 'left',
   label: '',
   placeholder: '',
-  required: false,
+  required: true,
   readOnly: false,
 };
 
@@ -391,18 +397,21 @@ export const FIELD_INITIALS_META_DEFAULT_VALUES: TInitialsFieldMeta = {
   type: 'initials',
   fontSize: DEFAULT_FIELD_FONT_SIZE,
   textAlign: 'left',
+  required: true,
 };
 
 export const FIELD_NAME_META_DEFAULT_VALUES: TNameFieldMeta = {
   type: 'name',
   fontSize: DEFAULT_FIELD_FONT_SIZE,
   textAlign: 'left',
+  required: true,
 };
 
 export const FIELD_EMAIL_META_DEFAULT_VALUES: TEmailFieldMeta = {
   type: 'email',
   fontSize: DEFAULT_FIELD_FONT_SIZE,
   textAlign: 'left',
+  required: true,
   overflow: DEFAULT_EMAIL_OVERFLOW_MODE,
 };
 
@@ -410,7 +419,7 @@ export const FIELD_RADIO_META_DEFAULT_VALUES: TRadioFieldMeta = {
   type: 'radio',
   fontSize: DEFAULT_FIELD_FONT_SIZE,
   values: [{ id: 1, checked: false, value: '' }],
-  required: false,
+  required: true,
   readOnly: false,
   direction: 'vertical',
 };
@@ -421,7 +430,7 @@ export const FIELD_CHECKBOX_META_DEFAULT_VALUES: TCheckboxFieldMeta = {
   values: [{ id: 1, checked: false, value: '' }],
   validationRule: '',
   validationLength: 0,
-  required: false,
+  required: true,
   readOnly: false,
   direction: 'vertical',
 };
@@ -431,13 +440,14 @@ export const FIELD_DROPDOWN_META_DEFAULT_VALUES: TDropdownFieldMeta = {
   fontSize: DEFAULT_FIELD_FONT_SIZE,
   values: [{ value: 'Option 1' }],
   defaultValue: '',
-  required: false,
+  required: true,
   readOnly: false,
 };
 
 export const FIELD_SIGNATURE_META_DEFAULT_VALUES: TSignatureFieldMeta = {
   type: 'signature',
   fontSize: DEFAULT_SIGNATURE_TEXT_FONT_SIZE,
+  required: true,
   overflow: DEFAULT_SIGNATURE_OVERFLOW_MODE,
 };
 
@@ -455,6 +465,24 @@ export const FIELD_META_DEFAULT_VALUES: Record<FieldType, TFieldMetaSchema> = {
   [FieldType.DROPDOWN]: FIELD_DROPDOWN_META_DEFAULT_VALUES,
   [FieldType.CALCULATED]: FIELD_CALCULATED_META_DEFAULT_VALUES,
 } as const;
+
+/**
+ * Resolves the fieldMeta to persist for a newly created field. Without a
+ * fieldMeta the field type's default is used. A provided fieldMeta that omits
+ * `required` gets the type's default `required` value; an explicit
+ * `required: false` is kept.
+ */
+export const resolveFieldMetaForCreate = (type: FieldType, fieldMeta: TFieldMetaSchema): TFieldMetaSchema => {
+  if (!fieldMeta) {
+    return FIELD_META_DEFAULT_VALUES[type];
+  }
+
+  if (fieldMeta.required !== undefined || type === FieldType.CALCULATED) {
+    return fieldMeta;
+  }
+
+  return { ...fieldMeta, required: true };
+};
 
 export const ZEnvelopeFieldAndMetaSchema = z.discriminatedUnion('type', [
   z.object({

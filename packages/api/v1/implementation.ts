@@ -1419,6 +1419,13 @@ export const ApiContractV1Implementation = tsr.router(ApiContractV1, {
               throw new Error('Field meta parsing failed');
             }
 
+            // Newly placed advanced fields default to required unless the caller
+            // explicitly set required: false.
+            const resolvedFieldMeta =
+              advancedField && result.data && result.data.required === undefined
+                ? { ...result.data, required: true }
+                : result.data;
+
             const field = await tx.field.create({
               data: {
                 envelopeId: envelope.id,
@@ -1432,7 +1439,7 @@ export const ApiContractV1Implementation = tsr.router(ApiContractV1, {
                 height: pageHeight,
                 customText: '',
                 inserted: false,
-                fieldMeta: result.data,
+                fieldMeta: resolvedFieldMeta,
               },
               include: {
                 recipient: true,

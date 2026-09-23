@@ -1,8 +1,18 @@
 // ABOUTME: Unit tests for field-meta Zod schema changes.
-// ABOUTME: Covers offsetX/offsetY bounds, custom direction, groupId constraints.
+// ABOUTME: Covers offsetX/offsetY bounds, custom direction, groupId constraints, required defaults.
+import { FieldType } from '@prisma/client';
 import { describe, expect, it } from 'vitest';
 
-import { ZBaseFieldMeta, ZCheckboxFieldMeta, ZRadioFieldMeta } from './field-meta';
+import {
+  FIELD_META_DEFAULT_VALUES,
+  resolveFieldMetaForCreate,
+  ZBaseFieldMeta,
+  ZCheckboxFieldMeta,
+  ZDateFieldMeta,
+  ZFieldMetaSchema,
+  ZRadioFieldMeta,
+  ZTextFieldMeta,
+} from './field-meta';
 
 describe('ZBaseFieldMeta groupId', () => {
   it('accepts a valid groupId', () => {
@@ -108,5 +118,110 @@ describe('ZRadioFieldMeta offsets', () => {
       direction: 'custom',
     });
     expect(result.success).toBe(true);
+  });
+});
+
+describe('FIELD_META_DEFAULT_VALUES required defaults', () => {
+  const typesRequiredByDefault: FieldType[] = [
+    FieldType.SIGNATURE,
+    FieldType.INITIALS,
+    FieldType.NAME,
+    FieldType.EMAIL,
+    FieldType.DATE,
+    FieldType.TEXT,
+    FieldType.NUMBER,
+    FieldType.RADIO,
+    FieldType.CHECKBOX,
+    FieldType.DROPDOWN,
+  ];
+
+  it.each(typesRequiredByDefault)('defaults newly placed %s fields to required true', (type) => {
+    expect(FIELD_META_DEFAULT_VALUES[type]?.required).toBe(true);
+  });
+
+  it('defaults CALCULATED fields to required false (never required of the signer)', () => {
+    expect(FIELD_META_DEFAULT_VALUES[FieldType.CALCULATED]?.required).toBe(false);
+  });
+
+  it('has no fieldMeta default for FREE_SIGNATURE', () => {
+    expect(FIELD_META_DEFAULT_VALUES[FieldType.FREE_SIGNATURE]).toBeUndefined();
+  });
+});
+
+describe('explicit required: false is preserved through schema parsing', () => {
+  it('ZTextFieldMeta parse preserves an explicit required false', () => {
+    const result = ZTextFieldMeta.parse({ type: 'text', required: false });
+    expect(result.required).toBe(false);
+  });
+
+  it('ZDateFieldMeta parse preserves an explicit required false', () => {
+    const result = ZDateFieldMeta.parse({ type: 'date', required: false });
+    expect(result.required).toBe(false);
+  });
+
+  it('ZCheckboxFieldMeta parse preserves an explicit required false', () => {
+    const result = ZCheckboxFieldMeta.parse({ type: 'checkbox', required: false });
+    expect(result.required).toBe(false);
+  });
+
+  it('ZRadioFieldMeta parse preserves an explicit required false', () => {
+    const result = ZRadioFieldMeta.parse({ type: 'radio', required: false });
+    expect(result.required).toBe(false);
+  });
+});
+
+describe('fieldMeta missing the required key is not reinterpreted as required', () => {
+  it('ZFieldMetaSchema leaves required undefined when absent, it is not schema-defaulted to true', () => {
+    const result = ZFieldMetaSchema.safeParse({ type: 'text', label: 'Existing field' });
+
+    expect(result.success).toBe(true);
+    expect(result.success && result.data?.required).toBeUndefined();
+  });
+
+  it('ZBaseFieldMeta leaves required undefined when absent', () => {
+    const result = ZBaseFieldMeta.safeParse({});
+
+    expect(result.success).toBe(true);
+    expect(result.success && result.data.required).toBeUndefined();
+  });
+});
+
+describe('resolveFieldMetaForCreate', () => {
+  it('returns the provided fieldMeta unchanged, including an explicit required false', () => {
+    const provided = { type: 'text' as const, required: false };
+
+    expect(resolveFieldMetaForCreate(FieldType.TEXT, provided)).toEqual(provided);
+  });
+
+  it('falls back to the type default (required true) when fieldMeta is absent', () => {
+    const result = resolveFieldMetaForCreate(FieldType.TEXT, undefined);
+
+    expect(result).toEqual(FIELD_META_DEFAULT_VALUES[FieldType.TEXT]);
+    expect(result?.required).toBe(true);
+  });
+
+  it('falls back to required false for CALCULATED when fieldMeta is absent', () => {
+    const result = resolveFieldMetaForCreate(FieldType.CALCULATED, undefined);
+
+    expect(result?.required).toBe(false);
+  });
+
+  it('returns undefined for FREE_SIGNATURE when fieldMeta is absent', () => {
+    expect(resolveFieldMetaForCreate(FieldType.FREE_SIGNATURE, undefined)).toBeUndefined();
+  });
+
+  it('defaults required to true when fieldMeta is provided without a required key', () => {
+    const result = resolveFieldMetaForCreate(FieldType.TEXT, { type: 'text', label: 'Parent name' });
+
+    expect(result).toEqual({ type: 'text', label: 'Parent name', required: true });
+  });
+
+  it('leaves CALCULATED fieldMeta without a required key as not required', () => {
+    const result = resolveFieldMetaForCreate(FieldType.CALCULATED, {
+      type: 'calculated',
+      formula: '1+1',
+    });
+
+    expect(result?.required).toBeUndefined();
   });
 });

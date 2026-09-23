@@ -3,14 +3,14 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const mockMemberFindFirst = vi.fn();
+const mockMemberFindMany = vi.fn();
 const mockMemberCreate = vi.fn();
 const mockGroupMemberCreateMany = vi.fn();
 
 vi.mock('@documenso/prisma', () => ({
   prisma: {
     organisationMember: {
-      findFirst: mockMemberFindFirst,
+      findMany: mockMemberFindMany,
       create: mockMemberCreate,
     },
     organisationGroupMember: {
@@ -27,7 +27,7 @@ describe('onCreateUserHook', () => {
   });
 
   it('creates the org member with the member and Default team groups when none exists', async () => {
-    mockMemberFindFirst.mockResolvedValue(null);
+    mockMemberFindMany.mockResolvedValue([]);
 
     const { onCreateUserHook } = await import('./create-user');
     await onCreateUserHook(user);
@@ -39,8 +39,20 @@ describe('onCreateUserHook', () => {
     expect(groupIds).toEqual(['org_group_psd401_member', 'org_group_default_member']);
   });
 
-  it('adds missing groups to a member already created by the DB trigger', async () => {
-    mockMemberFindFirst.mockResolvedValue({ id: 'org_member_auto_abc' });
+  it('adds the missing Default team group to a member already created by the DB trigger', async () => {
+    mockMemberFindMany.mockResolvedValue([
+      {
+        id: 'org_member_auto_abc',
+        createdAt: new Date('2026-01-01'),
+        organisationGroupMembers: [
+          {
+            id: 'group_member_auto_abc',
+            organisationMemberId: 'org_member_auto_abc',
+            groupId: 'org_group_psd401_member',
+          },
+        ],
+      },
+    ]);
 
     const { onCreateUserHook } = await import('./create-user');
     await onCreateUserHook(user);
@@ -50,10 +62,7 @@ describe('onCreateUserHook', () => {
 
     const { data, skipDuplicates } = mockGroupMemberCreateMany.mock.calls[0][0];
     expect(skipDuplicates).toBe(true);
-    expect(data.map((g: { groupId: string }) => g.groupId)).toEqual([
-      'org_group_psd401_member',
-      'org_group_default_member',
-    ]);
+    expect(data.map((g: { groupId: string }) => g.groupId)).toEqual(['org_group_default_member']);
     expect(data.every((g: { organisationMemberId: string }) => g.organisationMemberId === 'org_member_auto_abc')).toBe(
       true,
     );

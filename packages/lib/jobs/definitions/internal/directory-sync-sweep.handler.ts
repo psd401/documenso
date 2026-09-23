@@ -1,15 +1,35 @@
-// ABOUTME: Nightly sweep handler. Re-syncs directory data and re-applies group mapping rules
-// ABOUTME: for every user with a linked Google account, walked in small concurrent batches.
+// ABOUTME: Nightly sweep handler. Re-syncs directory data, ensures baseline groups, and re-applies group mapping rules
+// ABOUTME: for every user with a linked Google account; revocations are applied only if they pass a circuit breaker.
 import { prisma } from '@documenso/prisma';
 
-import { applyDirectoryMappings } from '../../../server-only/directory-sync/apply-directory-mappings';
+import {
+  applyDirectoryMappings,
+  applyDirectoryRevocations,
+  DIRECTORY_SYNC_SYSTEM_ACTOR,
+  getDirectorySyncRevokeMode,
+} from '../../../server-only/directory-sync/apply-directory-mappings';
+import {
+  exceedsRevokeCircuitBreaker,
+  findGroupsExceedingRevokeCircuitBreaker,
+  type PlannedRevocation,
+  REVOKE_CIRCUIT_BREAKER_MINIMUM,
+  REVOKE_CIRCUIT_BREAKER_PERCENT,
+} from '../../../server-only/directory-sync/plan-directory-membership';
 import type { SyncGoogleDirectoryStatus } from '../../../server-only/user/sync-google-directory';
 import { syncGoogleDirectory } from '../../../server-only/user/sync-google-directory';
+import type { TDirectorySyncAuditLogType } from '../../../types/directory-sync-audit-logs';
 import { env } from '../../../utils/env';
 import type { JobRunIO } from '../../client/_internal/job';
 import type { TDirectorySyncSweepJobDefinition } from './directory-sync-sweep';
 
 const CHUNK_SIZE = 5;
+
+const REVOKE_CIRCUIT_BREAKER: TDirectorySyncAuditLogType = 'REVOKE_CIRCUIT_BREAKER';
+
+type UserRevocations = {
+  userId: number;
+  revocations: PlannedRevocation[];
+};
 
 const chunk = <T>(items: T[], size: number): T[][] => {
   const chunks: T[][] = [];
@@ -23,8 +43,7 @@ const chunk = <T>(items: T[], size: number): T[][] => {
 
 export const run = async ({ io }: { payload: TDirectorySyncSweepJobDefinition; io: JobRunIO }) => {
   if (env('GOOGLE_DIRECTORY_SYNC_ENABLED') !== 'true') {
-    io.logger.info('[directory-sync-sweep] Feature disabled, exiting');
-    return;
+    io.logger.info('[directory-sync-sweep] Directory sync disabled; ensuring baseline membership only');
   }
 
   const users = await prisma.user.findMany({
@@ -43,7 +62,13 @@ export const run = async ({ io }: { payload: TDirectorySyncSweepJobDefinition; i
     syncFailures: 0,
     applyFailures: 0,
     granted: 0,
+    plannedRevocations: 0,
+    revoked: 0,
+    revokeDryRun: 0,
+    revokeFailures: 0,
   };
+
+  const deferredRevocations: UserRevocations[] = [];
 
   for (const batch of chunk(users, CHUNK_SIZE)) {
     await Promise.all(
@@ -70,8 +95,14 @@ export const run = async ({ io }: { payload: TDirectorySyncSweepJobDefinition; i
         }
 
         try {
-          const result = await applyDirectoryMappings(user.id, 'sweep');
+          const result = await applyDirectoryMappings(user.id, 'sweep', syncStatus, {
+            deferRevocations: true,
+          });
           counters.granted += result.granted;
+
+          if (result.deferredRevocations.length > 0) {
+            deferredRevocations.push({ userId: user.id, revocations: result.deferredRevocations });
+          }
         } catch (err) {
           counters.applyFailures += 1;
           io.logger.info(
@@ -82,7 +113,81 @@ export const run = async ({ io }: { payload: TDirectorySyncSweepJobDefinition; i
     );
   }
 
+  counters.plannedRevocations = deferredRevocations.reduce((sum, entry) => sum + entry.revocations.length, 0);
+
+  if (counters.plannedRevocations > 0) {
+    const managedMembershipCount = await prisma.organisationGroupMember.count({
+      where: { group: { directoryGroupMappings: { some: { active: true } } } },
+    });
+
+    const plannedRevocationsByGroup = new Map<string, number>();
+
+    for (const { revocations } of deferredRevocations) {
+      for (const { organisationGroupId } of revocations) {
+        plannedRevocationsByGroup.set(
+          organisationGroupId,
+          (plannedRevocationsByGroup.get(organisationGroupId) ?? 0) + 1,
+        );
+      }
+    }
+
+    const groupMembershipCounts = await prisma.organisationGroupMember.groupBy({
+      by: ['groupId'],
+      where: { groupId: { in: [...plannedRevocationsByGroup.keys()] } },
+      _count: { _all: true },
+    });
+
+    const trippedGroupIds = findGroupsExceedingRevokeCircuitBreaker(
+      plannedRevocationsByGroup,
+      new Map(groupMembershipCounts.map((row) => [row.groupId, row._count._all])),
+    );
+
+    if (
+      exceedsRevokeCircuitBreaker(counters.plannedRevocations, managedMembershipCount) ||
+      trippedGroupIds.length > 0
+    ) {
+      io.logger.error(
+        `[directory-sync-sweep] Revocation circuit breaker tripped: ${counters.plannedRevocations} planned revocations of ${managedMembershipCount} memberships in managed groups (limit: more than ${REVOKE_CIRCUIT_BREAKER_MINIMUM} and ${REVOKE_CIRCUIT_BREAKER_PERCENT}% org-wide or within one group); groups over the limit: ${trippedGroupIds.join(', ') || 'none'}; no revocations applied`,
+      );
+
+      await prisma.directorySyncAuditLog.create({
+        data: {
+          type: REVOKE_CIRCUIT_BREAKER,
+          userId: DIRECTORY_SYNC_SYSTEM_ACTOR.userId,
+          name: DIRECTORY_SYNC_SYSTEM_ACTOR.name,
+          email: DIRECTORY_SYNC_SYSTEM_ACTOR.email,
+          data: {
+            plannedRevocations: counters.plannedRevocations,
+            affectedUsers: deferredRevocations.length,
+            managedMembershipCount,
+            thresholdPercent: REVOKE_CIRCUIT_BREAKER_PERCENT,
+            thresholdMinimum: REVOKE_CIRCUIT_BREAKER_MINIMUM,
+            trippedGroupIds,
+            revokeMode: getDirectorySyncRevokeMode(),
+          },
+        },
+      });
+    } else {
+      for (const { userId, revocations } of deferredRevocations) {
+        try {
+          const result = await applyDirectoryRevocations({
+            targetUserId: userId,
+            revocations,
+            actor: DIRECTORY_SYNC_SYSTEM_ACTOR,
+          });
+          counters.revoked += result.revoked;
+          counters.revokeDryRun += result.dryRun;
+        } catch (err) {
+          counters.revokeFailures += 1;
+          io.logger.info(
+            `[directory-sync-sweep] revoke failed for user ${userId}: ${err instanceof Error ? err.message : 'Unknown error'}`,
+          );
+        }
+      }
+    }
+  }
+
   io.logger.info(
-    `[directory-sync-sweep] processed=${counters.processed} synced=${counters.synced} throttled=${counters.throttled} syncFailures=${counters.syncFailures} applyFailures=${counters.applyFailures} granted=${counters.granted}`,
+    `[directory-sync-sweep] processed=${counters.processed} synced=${counters.synced} throttled=${counters.throttled} syncFailures=${counters.syncFailures} applyFailures=${counters.applyFailures} granted=${counters.granted} plannedRevocations=${counters.plannedRevocations} revoked=${counters.revoked} revokeDryRun=${counters.revokeDryRun} revokeFailures=${counters.revokeFailures}`,
   );
 };
