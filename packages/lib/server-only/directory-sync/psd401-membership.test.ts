@@ -1,5 +1,5 @@
 // ABOUTME: Unit tests for PSD401 baseline membership (org member group + Default team group),
-// ABOUTME: covering no-op when present and deterministic row choice when a user has several member rows.
+// ABOUTME: covering no-op when present, deterministic row choice across several member rows, and a concurrent-create race.
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -31,7 +31,34 @@ const memberRow = (id: string, createdAt: string, groupIds: string[]) => ({
 
 describe('ensurePsd401BaselineMembership', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
+  });
+
+  it('tops up the row a concurrent caller created when its own create hits the unique constraint', async () => {
+    mockMemberFindMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([memberRow('member_racer', '2026-01-01', ['org_group_psd401_member'])]);
+    mockMemberCreate.mockRejectedValueOnce(Object.assign(new Error('Unique constraint failed'), { code: 'P2002' }));
+
+    const { ensurePsd401BaselineMembership } = await import('./psd401-membership');
+    await ensurePsd401BaselineMembership(42);
+
+    expect(mockGroupMemberCreateMany).toHaveBeenCalledTimes(1);
+    const { data, skipDuplicates } = mockGroupMemberCreateMany.mock.calls[0][0];
+    expect(skipDuplicates).toBe(true);
+    expect(data).toEqual([
+      expect.objectContaining({ groupId: 'org_group_default_member', organisationMemberId: 'member_racer' }),
+    ]);
+  });
+
+  it('rethrows create errors other than the unique constraint', async () => {
+    mockMemberFindMany.mockResolvedValue([]);
+    mockMemberCreate.mockRejectedValueOnce(Object.assign(new Error('connection lost'), { code: 'P1001' }));
+
+    const { ensurePsd401BaselineMembership } = await import('./psd401-membership');
+
+    await expect(ensurePsd401BaselineMembership(42)).rejects.toThrow('connection lost');
+    expect(mockGroupMemberCreateMany).not.toHaveBeenCalled();
   });
 
   it('writes nothing when the user already holds both baseline groups', async () => {

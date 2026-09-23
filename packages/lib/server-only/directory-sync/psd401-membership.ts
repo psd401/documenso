@@ -2,11 +2,7 @@
 // ABOUTME: and ensures the baseline groups (org member + Default team) are held on at least one row.
 import { prisma } from '@documenso/prisma';
 
-import {
-  PSD401_BASELINE_GROUP_IDS,
-  PSD401_DEFAULT_TEAM_GROUP_ID,
-  PSD401_ORG_ID,
-} from '../../constants/psd401';
+import { PSD401_BASELINE_GROUP_IDS, PSD401_DEFAULT_TEAM_GROUP_ID, PSD401_ORG_ID } from '../../constants/psd401';
 import { generateDatabaseId } from '../../universal/id';
 
 export type Psd401MemberRow = {
@@ -39,39 +35,45 @@ export const pickPrimaryMemberRow = <T extends Psd401MemberRow>(rows: T[]): T | 
 
   return (
     oldestFirst.find((row) =>
-      row.organisationGroupMembers.some(
-        (groupMember) => groupMember.groupId === PSD401_DEFAULT_TEAM_GROUP_ID,
-      ),
+      row.organisationGroupMembers.some((groupMember) => groupMember.groupId === PSD401_DEFAULT_TEAM_GROUP_ID),
     ) ?? oldestFirst[0]
   );
 };
 
-export const ensurePsd401BaselineMembership = async (userId: number) => {
+export const ensurePsd401BaselineMembership = async (userId: number, isRetry = false): Promise<void> => {
   const memberRows = await findPsd401MemberRows(userId);
   const primaryRow = pickPrimaryMemberRow(memberRows);
 
   if (!primaryRow) {
-    await prisma.organisationMember.create({
-      data: {
-        id: generateDatabaseId('member'),
-        userId,
-        organisationId: PSD401_ORG_ID,
-        organisationGroupMembers: {
-          create: PSD401_BASELINE_GROUP_IDS.map((groupId) => ({
-            id: generateDatabaseId('group_member'),
-            groupId,
-          })),
+    // A concurrent caller (second OAuth callback, sweep) can create the member row between the read
+    // and this insert. On the unique violation, re-read once and top up the row that caller created.
+    try {
+      await prisma.organisationMember.create({
+        data: {
+          id: generateDatabaseId('member'),
+          userId,
+          organisationId: PSD401_ORG_ID,
+          organisationGroupMembers: {
+            create: PSD401_BASELINE_GROUP_IDS.map((groupId) => ({
+              id: generateDatabaseId('group_member'),
+              groupId,
+            })),
+          },
         },
-      },
-    });
+      });
+    } catch (err) {
+      if (isRetry || (err as { code?: string } | null)?.code !== 'P2002') {
+        throw err;
+      }
+
+      await ensurePsd401BaselineMembership(userId, true);
+    }
 
     return;
   }
 
   const heldGroupIds = new Set(
-    memberRows.flatMap((row) =>
-      row.organisationGroupMembers.map((groupMember) => groupMember.groupId),
-    ),
+    memberRows.flatMap((row) => row.organisationGroupMembers.map((groupMember) => groupMember.groupId)),
   );
 
   const missingGroupIds = PSD401_BASELINE_GROUP_IDS.filter((groupId) => !heldGroupIds.has(groupId));
