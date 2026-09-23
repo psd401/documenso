@@ -32,14 +32,22 @@ export class JobClient<T extends ReadonlyArray<JobDefinition> = []> {
    * Call this once at application startup after the instance is ready to
    * process requests. No-op for providers that handle cron externally
    * (e.g. Inngest).
+   *
+   * A provider-initialization failure here must not be swallowed: this fork
+   * relies on cron sweeps (e.g. the seal-document and directory-sync sweeps)
+   * to correct state, so a server silently running without them is worse
+   * than one that fails to start. Callers intentionally leave the returned
+   * promise unawaited, so a rejection surfaces as an unhandled rejection and
+   * crashes the process.
    */
-  public startCron() {
-    void this._provider
+  public startCron(): Promise<void> {
+    return this._provider
       .then((provider) => {
         provider.startCron();
       })
-      .catch((error) => {
-        console.error('[JOBS]: Failed to start cron scheduler', error);
+      .catch((error: unknown) => {
+        console.error('[jobs] cron startup failed', error);
+        throw error;
       });
   }
 
