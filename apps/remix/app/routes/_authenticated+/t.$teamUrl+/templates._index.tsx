@@ -1,12 +1,3 @@
-import { useMemo, useState } from 'react';
-
-import { msg } from '@lingui/core/macro';
-import { Trans } from '@lingui/react/macro';
-import { EnvelopeType, OrganisationType } from '@prisma/client';
-import { Bird } from 'lucide-react';
-import { parseAsStringLiteral, useQueryState } from 'nuqs';
-import { useParams, useSearchParams } from 'react-router';
-
 import { useSessionStorage } from '@documenso/lib/client-only/hooks/use-session-storage';
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { FolderType } from '@documenso/lib/types/folder-type';
@@ -16,6 +7,13 @@ import { trpc } from '@documenso/trpc/react';
 import { Avatar, AvatarFallback, AvatarImage } from '@documenso/ui/primitives/avatar';
 import type { RowSelectionState } from '@documenso/ui/primitives/data-table';
 import { Tabs, TabsList, TabsTrigger } from '@documenso/ui/primitives/tabs';
+import { msg } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
+import { EnvelopeType, OrganisationType } from '@prisma/client';
+import { Bird } from 'lucide-react';
+import { parseAsStringLiteral, useQueryState } from 'nuqs';
+import { useMemo, useState } from 'react';
+import { useParams, useSearchParams } from 'react-router';
 
 import { EnvelopesBulkDeleteDialog } from '~/components/dialogs/envelopes-bulk-delete-dialog';
 import { EnvelopesBulkMoveDialog } from '~/components/dialogs/envelopes-bulk-move-dialog';
@@ -29,11 +27,13 @@ import { appMetaTags } from '~/utils/meta';
 
 const TEMPLATE_VIEWS = ['team', 'organisation'] as const;
 
-type TemplateView = (typeof TEMPLATE_VIEWS)[number];
-
 export function meta() {
   return appMetaTags(msg`Templates`);
 }
+
+// Stable initial value: `useSessionStorage` keeps its setter identity stable
+// only while the initial value reference is stable.
+const EMPTY_ROW_SELECTION: RowSelectionState = {};
 
 export default function TemplatesPage() {
   const team = useCurrentTeam();
@@ -46,17 +46,15 @@ export default function TemplatesPage() {
   const perPage = Number(searchParams.get('perPage')) || 10;
   const query = searchParams.get('query')?.trim() || undefined;
 
-  const [view, setView] = useQueryState(
-    'view',
-    parseAsStringLiteral(TEMPLATE_VIEWS).withDefault('team'),
-  );
+  const [view, setView] = useQueryState('view', parseAsStringLiteral(TEMPLATE_VIEWS).withDefault('team'));
 
   const isOrgView = view === 'organisation';
   const showOrgTab = organisation.type !== OrganisationType.PERSONAL;
 
+  // Scoped by team so selections made in one team never leak into another.
   const [rowSelection, setRowSelection] = useSessionStorage<RowSelectionState>(
-    'templates-bulk-selection',
-    {},
+    `templates-bulk-selection-${team.id}`,
+    EMPTY_ROW_SELECTION,
   );
   const [isBulkMoveDialogOpen, setIsBulkMoveDialogOpen] = useState(false);
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
@@ -109,14 +107,12 @@ export default function TemplatesPage() {
         <div className="mt-8">
           <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-4">
             <div className="flex flex-row items-center">
-              <Avatar className="mr-3 h-12 w-12 border-2 border-solid border-white dark:border-border">
+              <Avatar className="mr-3 h-12 w-12 border-2 border-white border-solid dark:border-border">
                 {team.avatarImageId && <AvatarImage src={formatAvatarUrl(team.avatarImageId)} />}
-                <AvatarFallback className="text-xs text-muted-foreground">
-                  {team.name.slice(0, 1)}
-                </AvatarFallback>
+                <AvatarFallback className="text-muted-foreground text-xs">{team.name.slice(0, 1)}</AvatarFallback>
               </Avatar>
 
-              <h1 className="truncate text-2xl font-semibold md:text-3xl">
+              <h1 className="truncate font-semibold text-2xl md:text-3xl">
                 <Trans>Templates</Trans>
               </h1>
             </div>
@@ -155,7 +151,7 @@ export default function TemplatesPage() {
                 <Bird className="h-12 w-12" strokeWidth={1.5} />
 
                 <div className="text-center">
-                  <h3 className="text-lg font-semibold">
+                  <h3 className="font-semibold text-lg">
                     {query ? <Trans>No results found</Trans> : <Trans>We're all empty</Trans>}
                   </h3>
 
@@ -165,10 +161,7 @@ export default function TemplatesPage() {
                     ) : isOrgView ? (
                       <Trans>No organisation templates are shared with your team yet.</Trans>
                     ) : (
-                      <Trans>
-                        You have not yet created any templates. To create a template please upload
-                        one.
-                      </Trans>
+                      <Trans>You have not yet created any templates. To create a template please upload one.</Trans>
                     )}
                   </p>
                 </div>

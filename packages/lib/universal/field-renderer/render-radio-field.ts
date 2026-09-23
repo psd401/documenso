@@ -13,8 +13,8 @@ import {
   upsertFieldGroup,
   upsertFieldRect,
 } from './field-generic-items';
-import { calculateFieldPosition, calculateMultiItemPosition } from './field-renderer';
 import type { FieldToRender, RenderFieldElementOptions } from './field-renderer';
+import { calculateFieldPosition, calculateMultiItemPosition } from './field-renderer';
 
 // Do not change any of these values without consulting with the team.
 const radioFieldPadding = 8;
@@ -31,8 +31,7 @@ export const renderRadioFieldElement = (
 ) => {
   const { pageWidth, pageHeight, pageLayer, mode, color } = options;
 
-  const radioMeta: TRadioFieldMeta | null =
-    field.fieldMeta?.type === 'radio' ? field.fieldMeta : null;
+  const radioMeta: TRadioFieldMeta | null = field.fieldMeta?.type === 'radio' ? field.fieldMeta : null;
   const radioValues = radioMeta?.values || [];
 
   const isFirstRender = !pageLayer.findOne(`#${field.renderId}`);
@@ -72,19 +71,18 @@ export const renderRadioFieldElement = (
     itemGroups.forEach((itemGroup, i) => {
       const radioValue = radioValues[i];
 
-      const { itemInputX, itemInputY, textX, textY, textWidth, textHeight } =
-        calculateMultiItemPosition({
-          fieldWidth: rectWidth,
-          fieldHeight: rectHeight,
-          itemCount: radioValues.length,
-          itemIndex: i,
-          itemSize: calculateRadioSize(fontSize),
-          spacingBetweenItemAndText: spacingBetweenRadioAndText,
-          fieldPadding: radioFieldPadding,
-          type: 'radio',
-          direction: radioMeta?.direction || 'vertical',
-          item: radioValue,
-        });
+      const { itemInputX, itemInputY, textX, textY, textWidth, textHeight } = calculateMultiItemPosition({
+        fieldWidth: rectWidth,
+        fieldHeight: rectHeight,
+        itemCount: radioValues.length,
+        itemIndex: i,
+        itemSize: calculateRadioSize(fontSize),
+        spacingBetweenItemAndText: spacingBetweenRadioAndText,
+        fieldPadding: radioFieldPadding,
+        type: 'radio',
+        direction: radioMeta?.direction || 'vertical',
+        item: radioValue,
+      });
 
       const circleElement = itemGroup.findOne('.radio-circle');
       const dotElement = itemGroup.findOne('.radio-dot');
@@ -143,19 +141,18 @@ export const renderRadioFieldElement = (
       })
       .exhaustive();
 
-    const { itemInputX, itemInputY, textX, textY, textWidth, textHeight } =
-      calculateMultiItemPosition({
-        fieldWidth,
-        fieldHeight,
-        itemCount: radioValues.length,
-        itemIndex: index,
-        itemSize: calculateRadioSize(fontSize),
-        spacingBetweenItemAndText: spacingBetweenRadioAndText,
-        fieldPadding: radioFieldPadding,
-        type: 'radio',
-        direction: radioMeta?.direction || 'vertical',
-        item: radioValue,
-      });
+    const { itemInputX, itemInputY, textX, textY, textWidth, textHeight } = calculateMultiItemPosition({
+      fieldWidth,
+      fieldHeight,
+      itemCount: radioValues.length,
+      itemIndex: index,
+      itemSize: calculateRadioSize(fontSize),
+      spacingBetweenItemAndText: spacingBetweenRadioAndText,
+      fieldPadding: radioFieldPadding,
+      type: 'radio',
+      direction: radioMeta?.direction || 'vertical',
+      item: radioValue,
+    });
 
     // Wrap each item's elements in a named group to support individual drag.
     const itemGroup = new Konva.Group({
@@ -221,14 +218,8 @@ export const renderRadioFieldElement = (
         currentOffsetX: currentOX,
         currentOffsetY: currentOY,
         clampOffset: (rawOffsetX, rawOffsetY) => ({
-          offsetX: Math.max(
-            -(baseX - radioRadius),
-            Math.min(fieldWidth - baseX - radioRadius, rawOffsetX),
-          ),
-          offsetY: Math.max(
-            -(baseY - radioRadius),
-            Math.min(fieldHeight - baseY - radioRadius, rawOffsetY),
-          ),
+          offsetX: Math.max(-(baseX - radioRadius), Math.min(fieldWidth - baseX - radioRadius, rawOffsetX)),
+          offsetY: Math.max(-(baseY - radioRadius), Math.min(fieldHeight - baseY - radioRadius, rawOffsetY)),
         }),
         onItemDragEnd,
       });

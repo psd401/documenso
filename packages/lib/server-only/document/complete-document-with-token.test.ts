@@ -16,6 +16,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mockTx = {
   recipient: {
     update: vi.fn().mockResolvedValue({}),
+    updateMany: vi.fn().mockResolvedValue({ count: 1 }),
   },
   documentAuditLog: {
     create: vi.fn().mockResolvedValue({}),
@@ -213,12 +214,13 @@ describe('completeDocumentWithToken — sequential next-slot notification', () =
     vi.clearAllMocks();
 
     // $transaction: execute the callback with mockTx
-    mockPrisma.$transaction.mockImplementation(
-      async (callback: (tx: typeof mockTx) => Promise<unknown>) => callback(mockTx),
+    mockPrisma.$transaction.mockImplementation(async (callback: (tx: typeof mockTx) => Promise<unknown>) =>
+      callback(mockTx),
     );
 
     // Re-arm default mocks that clearAllMocks reset
     mockTx.recipient.update.mockResolvedValue({});
+    mockTx.recipient.updateMany.mockResolvedValue({ count: 1 });
     mockTx.documentAuditLog.create.mockResolvedValue({});
     mockTx.documentAuditLog.createMany.mockResolvedValue({});
     mockTx.field.update.mockResolvedValue({});
@@ -232,7 +234,7 @@ describe('completeDocumentWithToken — sequential next-slot notification', () =
     const nextRecipients = buildNextRecipients();
 
     // First call: find the envelope + current recipient (from token)
-    mockPrisma.envelope.findFirstOrThrow.mockResolvedValueOnce(envelope);
+    mockPrisma.envelope.findFirst.mockResolvedValueOnce(envelope);
 
     // Fields: empty (no required unsigned fields, no calculated fields, no date fields)
     mockPrisma.field.findMany.mockResolvedValue([]);
@@ -242,7 +244,15 @@ describe('completeDocumentWithToken — sequential next-slot notification', () =
       ...envelope,
       recipients: [
         { ...envelope.recipients[0], signingStatus: SigningStatus.SIGNED },
-        ...nextRecipients.map((r) => ({ ...r, signingStatus: SigningStatus.NOT_SIGNED, sendStatus: SendStatus.NOT_SENT, sentAt: null, expiresAt: null, authOptions: null, token: `token-${r.id}` })),
+        ...nextRecipients.map((r) => ({
+          ...r,
+          signingStatus: SigningStatus.NOT_SIGNED,
+          sendStatus: SendStatus.NOT_SENT,
+          sentAt: null,
+          expiresAt: null,
+          authOptions: null,
+          token: `token-${r.id}`,
+        })),
       ],
     };
     mockPrisma.envelope.findUniqueOrThrow.mockResolvedValue(envelopeWithRelations);
@@ -264,7 +274,7 @@ describe('completeDocumentWithToken — sequential next-slot notification', () =
     });
 
     // Collect every call to tx.recipient.update (used inside $transaction)
-    const txUpdateCalls = mockTx.recipient.update.mock.calls;
+    const txUpdateCalls = [...mockTx.recipient.update.mock.calls, ...mockTx.recipient.updateMany.mock.calls];
 
     // Also check prisma.recipient.update (direct, non-tx calls)
     const directUpdateCalls = mockPrisma.recipient.update.mock.calls;

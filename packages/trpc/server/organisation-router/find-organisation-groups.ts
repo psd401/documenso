@@ -1,10 +1,9 @@
-import type { OrganisationGroupType, OrganisationMemberRole } from '@prisma/client';
-import { Prisma } from '@prisma/client';
-
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import type { FindResultResponse } from '@documenso/lib/types/search-params';
 import { buildOrganisationWhereQuery } from '@documenso/lib/utils/organisations';
 import { prisma } from '@documenso/prisma';
+import type { OrganisationGroupType, OrganisationMemberRole } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 
 import { authenticatedProcedure } from '../trpc';
 import {
@@ -25,7 +24,7 @@ export const findOrganisationGroupsRoute = authenticatedProcedure
   .input(ZFindOrganisationGroupsRequestSchema)
   .output(ZFindOrganisationGroupsResponseSchema)
   .query(async ({ input, ctx }) => {
-    const { organisationId, types, query, page, perPage, organisationGroupId, organisationRoles } =
+    const { organisationId, types, query, page, perPage, organisationGroupId, organisationRoles, excludeTeamId } =
       input;
     const { user } = ctx;
 
@@ -44,6 +43,7 @@ export const findOrganisationGroupsRoute = authenticatedProcedure
       query,
       page,
       perPage,
+      excludeTeamId,
     });
   });
 
@@ -56,6 +56,7 @@ type FindOrganisationGroupsOptions = {
   query?: string;
   page?: number;
   perPage?: number;
+  excludeTeamId?: number;
 };
 
 export const findOrganisationGroups = async ({
@@ -67,6 +68,7 @@ export const findOrganisationGroups = async ({
   query,
   page = 1,
   perPage = 10,
+  excludeTeamId,
 }: FindOrganisationGroupsOptions) => {
   const organisation = await prisma.organisation.findFirst({
     where: buildOrganisationWhereQuery({ organisationId, userId }),
@@ -97,6 +99,14 @@ export const findOrganisationGroups = async ({
     whereClause.name = {
       contains: query,
       mode: Prisma.QueryMode.insensitive,
+    };
+  }
+
+  // Exclude organisation groups that already have a team-group entry pointing
+  // at the given team — i.e. they're already attached.
+  if (excludeTeamId !== undefined) {
+    whereClause.teamGroups = {
+      none: { teamId: excludeTeamId },
     };
   }
 

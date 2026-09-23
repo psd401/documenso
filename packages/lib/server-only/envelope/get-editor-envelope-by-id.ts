@@ -1,7 +1,6 @@
-import type { EnvelopeType } from '@prisma/client';
-
 import { getEnvelopeWhereInput } from '@documenso/lib/server-only/envelope/get-envelope-by-id';
 import { prisma } from '@documenso/prisma';
+import type { EnvelopeType } from '@prisma/client';
 
 import { AppError, AppErrorCode } from '../../errors/app-error';
 import { ZDetectedFieldsSchema } from '../../types/detected-field';
@@ -28,12 +27,7 @@ export type GetEditorEnvelopeByIdOptions = {
   type: EnvelopeType | null;
 };
 
-export const getEditorEnvelopeById = async ({
-  id,
-  userId,
-  teamId,
-  type,
-}: GetEditorEnvelopeByIdOptions) => {
+export const getEditorEnvelopeById = async ({ id, userId, teamId, type }: GetEditorEnvelopeByIdOptions) => {
   const { envelopeWhereInput } = await getEnvelopeWhereInput({
     id,
     userId,
