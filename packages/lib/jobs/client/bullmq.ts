@@ -1,10 +1,6 @@
 import { createRequire } from 'node:module';
 import path from 'node:path';
-import { createBullBoard } from '@bull-board/api';
-import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
-import { HonoAdapter } from '@bull-board/hono';
 import { prisma } from '@documenso/prisma';
-import { serveStatic } from '@hono/node-server/serve-static';
 import { sha256 } from '@noble/hashes/sha2';
 import { BackgroundJobStatus, Prisma } from '@prisma/client';
 import type { Job } from 'bullmq';
@@ -194,12 +190,18 @@ export class BullMQJobProvider extends BaseJobProvider {
 
   private createBoardApp(): Hono {
     const _require = createRequire(import.meta.url);
+    const bullBoardApi: typeof import('@bull-board/api') = _require('@bull-board/api');
+    const bullBoardBullMqAdapter: typeof import('@bull-board/api/bullMQAdapter') = _require(
+      '@bull-board/api/bullMQAdapter',
+    );
+    const bullBoardHono: typeof import('@bull-board/hono') = _require('@bull-board/hono');
+    const honoServeStatic: typeof import('@hono/node-server/serve-static') = _require('@hono/node-server/serve-static');
     const uiPackagePath = path.dirname(_require.resolve('@bull-board/ui/package.json'));
 
-    const serverAdapter = new HonoAdapter(serveStatic);
+    const serverAdapter = new bullBoardHono.HonoAdapter(honoServeStatic.serveStatic);
 
-    createBullBoard({
-      queues: [new BullMQAdapter(this._queue)],
+    bullBoardApi.createBullBoard({
+      queues: [new bullBoardBullMqAdapter.BullMQAdapter(this._queue)],
       serverAdapter,
       options: { uiBasePath: uiPackagePath },
     });

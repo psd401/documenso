@@ -1,9 +1,5 @@
 // ABOUTME: Form for creating and editing a directory mapping rule. Shared by the create and
 // ABOUTME: update dialogs, following the pattern in subscription-claim-form.tsx.
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Trans, useLingui } from '@lingui/react/macro';
-import { useForm, useWatch } from 'react-hook-form';
-import type { z } from 'zod';
 
 import { ZCreateDirectoryMappingRequestSchema } from '@documenso/trpc/server/admin-router/create-directory-mapping.types';
 import type { TListDirectoryMappingGroupsResponse } from '@documenso/trpc/server/admin-router/list-directory-mapping-groups.types';
@@ -19,13 +15,11 @@ import {
   FormMessage,
 } from '@documenso/ui/primitives/form/form';
 import { Input } from '@documenso/ui/primitives/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@documenso/ui/primitives/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@documenso/ui/primitives/select';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Trans, useLingui } from '@lingui/react/macro';
+import { useForm, useWatch } from 'react-hook-form';
+import type { z } from 'zod';
 
 export type DirectoryMappingFormValues = z.infer<typeof ZCreateDirectoryMappingRequestSchema>;
 
@@ -101,9 +95,7 @@ export const DirectoryMappingForm = ({
                   {sourceField === 'ORG_UNIT' ? (
                     <Trans>a rule value of / matches every user with a non-null org unit</Trans>
                   ) : (
-                    <Trans>
-                      The Google group email, department name, or org unit path to match.
-                    </Trans>
+                    <Trans>The Google group email, department name, or org unit path to match.</Trans>
                   )}
                 </FormDescription>
                 <FormMessage />
@@ -135,11 +127,9 @@ export const DirectoryMappingForm = ({
                               </Badge>
                             </div>
                             {group.teamGroups.length > 0 && (
-                              <span className="text-xs text-muted-foreground">
+                              <span className="text-muted-foreground text-xs">
                                 {group.teamGroups
-                                  .map(
-                                    (teamGroup) => `${teamGroup.team.name} (${teamGroup.teamRole})`,
-                                  )
+                                  .map((teamGroup) => `${teamGroup.team.name} (${teamGroup.teamRole})`)
                                   .join(', ')}
                               </span>
                             )}
@@ -161,12 +151,8 @@ export const DirectoryMappingForm = ({
               <FormItem className="flex items-center space-x-2">
                 <FormControl>
                   <div className="flex items-center">
-                    <Checkbox
-                      id="mapping-active"
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                    <label className="ml-2 text-sm text-muted-foreground" htmlFor="mapping-active">
+                    <Checkbox id="mapping-active" checked={field.value} onCheckedChange={field.onChange} />
+                    <label className="ml-2 text-muted-foreground text-sm" htmlFor="mapping-active">
                       <Trans>Active</Trans>
                     </label>
                   </div>

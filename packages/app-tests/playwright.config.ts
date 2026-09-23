@@ -12,8 +12,8 @@ function calculateWorkers() {
   // 1 worker per 2 cores, minimum 1
   const workers = Math.max(Math.floor(usable / 2), 1);
 
-  // Max 6 workers
-  return Math.min(workers, 6);
+  // Keep the local Remix server responsive during the full browser suite.
+  return Math.min(workers, 3);
 }
 
 const ENV_FILES = ['.env', '.env.local', `.env.${process.env.NODE_ENV || 'development'}`];
@@ -30,7 +30,7 @@ ENV_FILES.forEach((file) => {
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
-  workers: 10, // See Projects where 10 is utilized for API tests. We're not running 10 workers for UI tests.
+  workers: calculateWorkers(),
   maxFailures: process.env.CI ? 1 : undefined,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,

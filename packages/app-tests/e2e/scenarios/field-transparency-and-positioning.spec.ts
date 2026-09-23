@@ -3,193 +3,139 @@
 import { expect, test } from '@playwright/test';
 import { FieldType } from '@prisma/client';
 
-import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
-import { prisma } from '@documenso/prisma';
-import { EnvelopeStatus } from '@documenso/prisma/client';
+import { seedPendingDocumentWithFullFields } from '@documenso/prisma/seed/documents';
 import { seedUser } from '@documenso/prisma/seed/users';
 
-import { apiSignin } from '../fixtures/authentication';
+import {
+  clickAddMyselfButton,
+  clickEnvelopeEditorStep,
+  openDocumentEnvelopeEditor,
+} from '../fixtures/envelope-editor';
 
-const WEBAPP_BASE_URL = NEXT_PUBLIC_WEBAPP_URL();
+const seedSigningEnvelope = async (fields: FieldType[]) => {
+  const { user, team } = await seedUser();
+  const { recipients } = await seedPendingDocumentWithFullFields({
+    owner: user,
+    recipients: [`field-positioning-${user.id}@example.com`],
+    fields,
+    teamId: team.id,
+  });
+
+  const recipient = recipients[0];
+
+  if (!recipient) {
+    throw new Error('Expected the field-positioning envelope to have a recipient');
+  }
+
+  return recipient;
+};
+
+const openCheckboxEditor = async (page: Parameters<typeof openDocumentEnvelopeEditor>[0]) => {
+  const surface = await openDocumentEnvelopeEditor(page);
+
+  await clickAddMyselfButton(surface.root);
+  await clickEnvelopeEditorStep(surface.root, 'addFields');
+  await surface.root.getByRole('button', { name: 'Checkbox', exact: true }).click();
+
+  const canvas = surface.root.locator('.konva-container canvas').first();
+  await expect(canvas).toBeVisible();
+  await canvas.click({ position: { x: 150, y: 150 } });
+
+  return surface.root;
+};
+
+const assertFieldHasNoOffsets = (fieldMeta: unknown) => {
+  expect(fieldMeta).toEqual(
+    expect.objectContaining({
+      values: expect.arrayContaining([
+        expect.not.objectContaining({
+          offsetX: expect.anything(),
+          offsetY: expect.anything(),
+        }),
+      ]),
+    }),
+  );
+};
 
 test.describe('Field Transparency', () => {
   test('checkbox fields in signing view have transparent background', async ({ page }) => {
-    const user = await seedUser();
+    const recipient = await seedSigningEnvelope([FieldType.CHECKBOX]);
 
-    const envelope = await prisma.envelope.findFirst({
-      where: {
-        userId: user.id,
-        status: EnvelopeStatus.DRAFT,
-      },
-      include: {
-        recipients: true,
-        fields: true,
-      },
-    });
+    await page.goto(`/sign/${recipient.token}`);
 
-    test.skip(!envelope, 'No draft envelope found for seeded user');
+    const checkboxField = page.locator('[data-field-type="CHECKBOX"]').first();
+    await expect(checkboxField).toBeVisible();
 
-    const checkboxField = envelope!.fields.find((f) => f.type === FieldType.CHECKBOX);
-    test.skip(!checkboxField, 'No checkbox field found on envelope');
+    const backgroundColor = await checkboxField.evaluate(
+      (element) => window.getComputedStyle(element).backgroundColor,
+    );
 
-    const recipient = envelope!.recipients[0];
-    test.skip(!recipient, 'No recipient found on envelope');
-
-    await page.goto(`${WEBAPP_BASE_URL}/sign/${recipient.token}`);
-    await page.waitForSelector('[data-field-type="CHECKBOX"]', { timeout: 10000 });
-
-    const fieldEl = page.locator('[data-field-type="CHECKBOX"]').first();
-    const bgColor = await fieldEl.evaluate((el) => {
-      return window.getComputedStyle(el).backgroundColor;
-    });
-
-    expect(bgColor).toBe('rgba(0, 0, 0, 0)');
+    expect(backgroundColor).toBe('rgba(0, 0, 0, 0)');
   });
 
   test('signature fields still have opaque background', async ({ page }) => {
-    const user = await seedUser();
+    const recipient = await seedSigningEnvelope([FieldType.SIGNATURE]);
 
-    const envelope = await prisma.envelope.findFirst({
-      where: {
-        userId: user.id,
-        status: EnvelopeStatus.DRAFT,
-      },
-      include: {
-        recipients: true,
-        fields: true,
-      },
-    });
+    await page.goto(`/sign/${recipient.token}`);
 
-    test.skip(!envelope, 'No draft envelope found');
+    const signatureField = page.locator('[data-field-type="SIGNATURE"]').first();
+    await expect(signatureField).toBeVisible();
 
-    const sigField = envelope!.fields.find((f) => f.type === FieldType.SIGNATURE);
-    test.skip(!sigField, 'No signature field found');
+    const backgroundColor = await signatureField.evaluate(
+      (element) => window.getComputedStyle(element).backgroundColor,
+    );
 
-    const recipient = envelope!.recipients[0];
-    test.skip(!recipient, 'No recipient');
-
-    await page.goto(`${WEBAPP_BASE_URL}/sign/${recipient.token}`);
-    await page.waitForSelector('[data-field-type="SIGNATURE"]', { timeout: 10000 });
-
-    const fieldEl = page.locator('[data-field-type="SIGNATURE"]').first();
-    const bgColor = await fieldEl.evaluate((el) => {
-      return window.getComputedStyle(el).backgroundColor;
-    });
-
-    expect(bgColor).not.toBe('rgba(0, 0, 0, 0)');
+    expect(backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
   });
 });
 
 test.describe('Checkbox Editor Offset Inputs', () => {
   test('offset inputs appear in checkbox editor form', async ({ page }) => {
-    await apiSignin({
-      page,
-      email: 'playwright@psd401.net',
-      password: 'TestDev2026!',
-    });
+    const root = await openCheckboxEditor(page);
 
-    await page.goto(`${WEBAPP_BASE_URL}/documents`);
-
-    const firstTemplate = page.locator('table tbody tr').first();
-    await firstTemplate.click();
-    await page.waitForTimeout(1000);
-
-    const checkboxField = page.locator('[data-field-type="CHECKBOX"]').first();
-    if (await checkboxField.isVisible()) {
-      await checkboxField.click();
-      await page.waitForTimeout(500);
-
-      const offsetXInput = page.locator('[data-testid="field-form-values-0-offsetX"]');
-      const offsetYInput = page.locator('[data-testid="field-form-values-0-offsetY"]');
-
-      await expect(offsetXInput).toBeVisible();
-      await expect(offsetYInput).toBeVisible();
-    }
+    await expect(root.getByTestId('field-form-values-0-offsetX')).toBeVisible();
+    await expect(root.getByTestId('field-form-values-0-offsetY')).toBeVisible();
   });
 
   test('editing offset switches direction to custom', async ({ page }) => {
-    await apiSignin({
-      page,
-      email: 'playwright@psd401.net',
-      password: 'TestDev2026!',
-    });
+    const root = await openCheckboxEditor(page);
 
-    await page.goto(`${WEBAPP_BASE_URL}/documents`);
+    await root.getByTestId('field-form-values-0-offsetX').fill('10');
 
-    const firstTemplate = page.locator('table tbody tr').first();
-    await firstTemplate.click();
-    await page.waitForTimeout(1000);
-
-    const checkboxField = page.locator('[data-field-type="CHECKBOX"]').first();
-    if (await checkboxField.isVisible()) {
-      await checkboxField.click();
-      await page.waitForTimeout(500);
-
-      const offsetXInput = page.locator('[data-testid="field-form-values-0-offsetX"]');
-      if (await offsetXInput.isVisible()) {
-        await offsetXInput.fill('10');
-        await page.waitForTimeout(300);
-
-        const directionSelect = page.locator('[data-testid="field-form-direction"]');
-        const directionValue = await directionSelect.textContent();
-        expect(directionValue).toContain('Custom');
-      }
-    }
+    await expect(root.getByTestId('field-form-direction')).toContainText('Custom');
   });
 });
 
 test.describe('Schema Backward Compatibility', () => {
   test('existing checkbox fields without offsets render normally', async ({ page }) => {
-    const field = await prisma.field.findFirst({
-      where: {
-        type: FieldType.CHECKBOX,
-        fieldMeta: {
-          path: ['type'],
-          equals: 'checkbox',
-        },
-      },
-      include: {
-        Recipient: true,
-      },
-    });
+    const recipient = await seedSigningEnvelope([FieldType.CHECKBOX]);
+    const checkboxField = recipient.fields.find((field) => field.type === FieldType.CHECKBOX);
 
-    test.skip(!field || !field.Recipient, 'No checkbox field with recipient found');
+    if (!checkboxField) {
+      throw new Error('Expected the field-positioning envelope to have a checkbox field');
+    }
 
-    await page.goto(`${WEBAPP_BASE_URL}/sign/${field!.Recipient!.token}`);
-    await page.waitForSelector(`#field-${field!.id}`, { timeout: 10000 });
+    assertFieldHasNoOffsets(checkboxField.fieldMeta);
+    await page.goto(`/sign/${recipient.token}`);
 
-    const fieldEl = page.locator(`#field-${field!.id}`);
-    await expect(fieldEl).toBeVisible();
-
-    const checkboxes = fieldEl.locator('input[type="checkbox"], [role="checkbox"]');
-    const count = await checkboxes.count();
-    expect(count).toBeGreaterThan(0);
+    const field = page.locator(`#field-${checkboxField.id}`);
+    await expect(field).toBeVisible();
+    await expect(field.locator('input[type="checkbox"], [role="checkbox"]')).not.toHaveCount(0);
   });
 
   test('existing radio fields without offsets render normally', async ({ page }) => {
-    const field = await prisma.field.findFirst({
-      where: {
-        type: FieldType.RADIO,
-        fieldMeta: {
-          path: ['type'],
-          equals: 'radio',
-        },
-      },
-      include: {
-        Recipient: true,
-      },
-    });
+    const recipient = await seedSigningEnvelope([FieldType.RADIO]);
+    const radioField = recipient.fields.find((field) => field.type === FieldType.RADIO);
 
-    test.skip(!field || !field.Recipient, 'No radio field with recipient found');
+    if (!radioField) {
+      throw new Error('Expected the field-positioning envelope to have a radio field');
+    }
 
-    await page.goto(`${WEBAPP_BASE_URL}/sign/${field!.Recipient!.token}`);
-    await page.waitForSelector(`#field-${field!.id}`, { timeout: 10000 });
+    assertFieldHasNoOffsets(radioField.fieldMeta);
+    await page.goto(`/sign/${recipient.token}`);
 
-    const fieldEl = page.locator(`#field-${field!.id}`);
-    await expect(fieldEl).toBeVisible();
-
-    const radios = fieldEl.locator('input[type="radio"], [role="radio"]');
-    const count = await radios.count();
-    expect(count).toBeGreaterThan(0);
+    const field = page.locator(`#field-${radioField.id}`);
+    await expect(field).toBeVisible();
+    await expect(field.locator('input[type="radio"], [role="radio"]')).not.toHaveCount(0);
   });
 });

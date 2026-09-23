@@ -8,10 +8,7 @@ export const normalizeOrgUnitPath = (value: string): string => {
   return trimmed === '' ? '/' : trimmed;
 };
 
-export const normalizeMappingSourceValue = (
-  sourceField: DirectoryMappingSourceField,
-  value: string,
-): string => {
+export const normalizeMappingSourceValue = (sourceField: DirectoryMappingSourceField, value: string): string => {
   const trimmed = value.trim();
 
   return sourceField === 'GROUP' ? trimmed.toLowerCase() : trimmed;

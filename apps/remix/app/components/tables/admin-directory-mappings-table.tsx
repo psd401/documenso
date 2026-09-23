@@ -1,10 +1,5 @@
 // ABOUTME: Admin table listing directory mappings, with an inline active toggle and a row
 // ABOUTME: menu for update/delete, mirroring admin-claims-table.tsx.
-import { useMemo } from 'react';
-
-import { Trans, useLingui } from '@lingui/react/macro';
-import { EditIcon, MoreHorizontalIcon, Trash2Icon } from 'lucide-react';
-import { useSearchParams } from 'react-router';
 
 import { useUpdateSearchParams } from '@documenso/lib/client-only/hooks/use-update-search-params';
 import { ZUrlSearchParamsSchema } from '@documenso/lib/types/search-params';
@@ -24,6 +19,10 @@ import { Skeleton } from '@documenso/ui/primitives/skeleton';
 import { Switch } from '@documenso/ui/primitives/switch';
 import { TableCell } from '@documenso/ui/primitives/table';
 import { useToast } from '@documenso/ui/primitives/use-toast';
+import { Trans, useLingui } from '@lingui/react/macro';
+import { EditIcon, MoreHorizontalIcon, Trash2Icon } from 'lucide-react';
+import { useMemo } from 'react';
+import { useSearchParams } from 'react-router';
 
 import { DirectoryMappingDeleteDialog } from '../dialogs/directory-mapping-delete-dialog';
 import { DirectoryMappingUpdateDialog } from '../dialogs/directory-mapping-update-dialog';
@@ -89,10 +88,8 @@ export const AdminDirectoryMappingsTable = () => {
                 </Badge>
               </div>
               {group.teamGroups.length > 0 && (
-                <span className="text-xs text-muted-foreground">
-                  {group.teamGroups
-                    .map((teamGroup) => `${teamGroup.team.name} (${teamGroup.teamRole})`)
-                    .join(', ')}
+                <span className="text-muted-foreground text-xs">
+                  {group.teamGroups.map((teamGroup) => `${teamGroup.team.name} (${teamGroup.teamRole})`).join(', ')}
                 </span>
               )}
             </div>

@@ -3,11 +3,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import {
-  matchDirectoryMapping,
-  normalizeMappingSourceValue,
-  normalizeOrgUnitPath,
-} from './mapping-matching';
+import { matchDirectoryMapping, normalizeMappingSourceValue, normalizeOrgUnitPath } from './mapping-matching';
 
 describe('normalizeOrgUnitPath', () => {
   it('strips a single trailing slash', () => {
@@ -33,9 +29,7 @@ describe('normalizeOrgUnitPath', () => {
 
 describe('normalizeMappingSourceValue', () => {
   it('trims and lowercases GROUP values', () => {
-    expect(normalizeMappingSourceValue('GROUP', '  Tech-Staff@PSD401.net  ')).toBe(
-      'tech-staff@psd401.net',
-    );
+    expect(normalizeMappingSourceValue('GROUP', '  Tech-Staff@PSD401.net  ')).toBe('tech-staff@psd401.net');
   });
 
   it('trims but preserves case for DEPARTMENT values', () => {

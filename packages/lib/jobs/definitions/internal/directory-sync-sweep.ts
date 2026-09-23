@@ -2,15 +2,13 @@
 // ABOUTME: Cron-triggered; the handler re-syncs directory data and re-applies mapping rules for every Google SSO user.
 import { z } from 'zod';
 
-import { type JobDefinition } from '../../client/_internal/job';
+import type { JobDefinition } from '../../client/_internal/job';
 
 const DIRECTORY_SYNC_SWEEP_JOB_DEFINITION_ID = 'internal.directory-sync-sweep';
 
 const DIRECTORY_SYNC_SWEEP_JOB_DEFINITION_SCHEMA = z.object({});
 
-export type TDirectorySyncSweepJobDefinition = z.infer<
-  typeof DIRECTORY_SYNC_SWEEP_JOB_DEFINITION_SCHEMA
->;
+export type TDirectorySyncSweepJobDefinition = z.infer<typeof DIRECTORY_SYNC_SWEEP_JOB_DEFINITION_SCHEMA>;
 
 export const DIRECTORY_SYNC_SWEEP_JOB_DEFINITION = {
   id: DIRECTORY_SYNC_SWEEP_JOB_DEFINITION_ID,
@@ -26,7 +24,4 @@ export const DIRECTORY_SYNC_SWEEP_JOB_DEFINITION = {
 
     await handler.run({ payload, io });
   },
-} as const satisfies JobDefinition<
-  typeof DIRECTORY_SYNC_SWEEP_JOB_DEFINITION_ID,
-  TDirectorySyncSweepJobDefinition
->;
+} as const satisfies JobDefinition<typeof DIRECTORY_SYNC_SWEEP_JOB_DEFINITION_ID, TDirectorySyncSweepJobDefinition>;

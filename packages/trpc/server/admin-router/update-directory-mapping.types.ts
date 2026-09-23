@@ -1,7 +1,7 @@
 // ABOUTME: Zod input/output types for admin.directoryMappings.update.
-import { z } from 'zod';
 
 import DirectoryGroupMappingSchema from '@documenso/prisma/generated/zod/modelSchema/DirectoryGroupMappingSchema';
+import { z } from 'zod';
 
 export const ZUpdateDirectoryMappingRequestSchema = z.object({
   id: z.string().min(1),

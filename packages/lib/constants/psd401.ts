@@ -7,7 +7,4 @@ export const PSD401_MEMBER_GROUP_ID = 'org_group_psd401_member';
 
 export const PSD401_DEFAULT_TEAM_GROUP_ID = 'org_group_default_member';
 
-export const PSD401_BASELINE_GROUP_IDS: readonly string[] = [
-  PSD401_MEMBER_GROUP_ID,
-  PSD401_DEFAULT_TEAM_GROUP_ID,
-];
+export const PSD401_BASELINE_GROUP_IDS: readonly string[] = [PSD401_MEMBER_GROUP_ID, PSD401_DEFAULT_TEAM_GROUP_ID];

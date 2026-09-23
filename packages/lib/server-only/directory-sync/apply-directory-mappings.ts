@@ -7,11 +7,7 @@ import { generateDatabaseId } from '../../universal/id';
 import { env } from '../../utils/env';
 import type { SyncGoogleDirectoryStatus } from '../user/sync-google-directory';
 import { type PlannedRevocation, planDirectoryMembership } from './plan-directory-membership';
-import {
-  ensurePsd401BaselineMembership,
-  findPsd401MemberRows,
-  pickPrimaryMemberRow,
-} from './psd401-membership';
+import { ensurePsd401BaselineMembership, findPsd401MemberRows, pickPrimaryMemberRow } from './psd401-membership';
 
 const MEMBERSHIP_GRANTED: TDirectorySyncAuditLogType = 'MEMBERSHIP_GRANTED';
 const MEMBERSHIP_REVOKED: TDirectorySyncAuditLogType = 'MEMBERSHIP_REVOKED';
@@ -22,10 +18,7 @@ const REVOKE_REASON_NO_MATCHING_MAPPING = 'no_matching_mapping';
 /**
  * Only these statuses mean the user's directory fields reflect Google as of this run.
  */
-const REVOCATION_TRUSTED_SYNC_STATUSES: readonly SyncGoogleDirectoryStatus[] = [
-  'synced',
-  'throttled',
-];
+const REVOCATION_TRUSTED_SYNC_STATUSES: readonly SyncGoogleDirectoryStatus[] = ['synced', 'throttled'];
 
 export type DirectorySyncRevokeMode = 'enforce' | 'log' | 'off';
 
@@ -103,9 +96,7 @@ export const applyDirectoryMappings = async (
   const primaryMemberRow = pickPrimaryMemberRow(memberRows);
 
   if (!primaryMemberRow) {
-    console.warn(
-      `[directory-sync] applyDirectoryMappings: user ${userId} has no PSD401 member row`,
-    );
+    console.warn(`[directory-sync] applyDirectoryMappings: user ${userId} has no PSD401 member row`);
     return noChanges;
   }
 
@@ -120,16 +111,12 @@ export const applyDirectoryMappings = async (
   });
 
   const actor: DirectorySyncActor =
-    source === 'login'
-      ? { userId, name: user.name, email: user.email }
-      : DIRECTORY_SYNC_SYSTEM_ACTOR;
+    source === 'login' ? { userId, name: user.name, email: user.email } : DIRECTORY_SYNC_SYSTEM_ACTOR;
 
   let granted = 0;
 
   if (plan.grants.length > 0) {
-    const mappingIdsByGroup = new Map(
-      plan.grants.map((grant) => [grant.organisationGroupId, grant.mappingIds]),
-    );
+    const mappingIdsByGroup = new Map(plan.grants.map((grant) => [grant.organisationGroupId, grant.mappingIds]));
 
     granted = await prisma.$transaction(async (tx) => {
       const inserted = await tx.organisationGroupMember.createManyAndReturn({
@@ -235,8 +222,6 @@ export const applyDirectoryRevocations = async ({
       });
     }
 
-    return mode === 'enforce'
-      ? { revoked: actioned.length, dryRun: 0 }
-      : { revoked: 0, dryRun: actioned.length };
+    return mode === 'enforce' ? { revoked: actioned.length, dryRun: 0 } : { revoked: 0, dryRun: actioned.length };
   });
 };

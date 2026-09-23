@@ -522,7 +522,12 @@ export const EnvelopeEditorProvider = ({
   };
 
   const flushAutosave = async (): Promise<TEditorEnvelope> => {
-    await Promise.all([flushSetFields(), flushSetRecipients(), flushUpdateEnvelope()]);
+    // Recipient updates can remove fields as part of their cascade. Flush field
+    // changes first so a slower field save cannot restore fields belonging to a
+    // recipient that has just been removed.
+    await flushSetFields();
+    await flushSetRecipients();
+    await flushUpdateEnvelope();
 
     // Flush all registered external flushes (e.g., upload page's debounced item updates).
     const externalFlushes = Array.from(externalFlushCallbacksRef.current.values());

@@ -1,7 +1,4 @@
 // ABOUTME: Dialog for editing an existing directory mapping rule, opened from the table row menu.
-import { useState } from 'react';
-
-import { Trans, useLingui } from '@lingui/react/macro';
 
 import { trpc } from '@documenso/trpc/react';
 import type { TFindDirectoryMappingsResponse } from '@documenso/trpc/server/admin-router/find-directory-mappings.types';
@@ -16,6 +13,8 @@ import {
   DialogTrigger,
 } from '@documenso/ui/primitives/dialog';
 import { useToast } from '@documenso/ui/primitives/use-toast';
+import { Trans, useLingui } from '@lingui/react/macro';
+import { useState } from 'react';
 
 import { DirectoryMappingForm } from '../forms/directory-mapping-form';
 
@@ -24,10 +23,7 @@ export type DirectoryMappingUpdateDialogProps = {
   trigger: React.ReactNode;
 };
 
-export const DirectoryMappingUpdateDialog = ({
-  mapping,
-  trigger,
-}: DirectoryMappingUpdateDialogProps) => {
+export const DirectoryMappingUpdateDialog = ({ mapping, trigger }: DirectoryMappingUpdateDialogProps) => {
   const { t } = useLingui();
   const { toast } = useToast();
 
@@ -37,20 +33,18 @@ export const DirectoryMappingUpdateDialog = ({
     enabled: open,
   });
 
-  const { mutateAsync: updateMapping, isPending } = trpc.admin.directoryMappings.update.useMutation(
-    {
-      onSuccess: () => {
-        toast({ title: t`Directory mapping updated successfully.` });
-        setOpen(false);
-      },
-      onError: () => {
-        toast({
-          title: t`Failed to update directory mapping.`,
-          variant: 'destructive',
-        });
-      },
+  const { mutateAsync: updateMapping, isPending } = trpc.admin.directoryMappings.update.useMutation({
+    onSuccess: () => {
+      toast({ title: t`Directory mapping updated successfully.` });
+      setOpen(false);
     },
-  );
+    onError: () => {
+      toast({
+        title: t`Failed to update directory mapping.`,
+        variant: 'destructive',
+      });
+    },
+  });
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -84,12 +78,7 @@ export const DirectoryMappingUpdateDialog = ({
           }}
           formSubmitTrigger={
             <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setOpen(false)}
-                disabled={isPending}
-              >
+              <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isPending}>
                 <Trans>Cancel</Trans>
               </Button>
 

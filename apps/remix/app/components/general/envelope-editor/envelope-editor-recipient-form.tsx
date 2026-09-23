@@ -1,6 +1,9 @@
 import { useLimits } from '@documenso/ee/server-only/limits/provider/client';
 import { useDebouncedValue } from '@documenso/lib/client-only/hooks/use-debounced-value';
-import { ZEditorRecipientsFormSchema } from '@documenso/lib/client-only/hooks/use-editor-recipients';
+import {
+  validateEditorRecipientsForm,
+  ZEditorRecipientsFormSchema,
+} from '@documenso/lib/client-only/hooks/use-editor-recipients';
 import { useCurrentEnvelopeEditor } from '@documenso/lib/client-only/providers/envelope-editor-provider';
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { useOptionalSession } from '@documenso/lib/client-only/providers/session';
@@ -333,11 +336,24 @@ export const EnvelopeEditorRecipientForm = () => {
       removeSigner(formStateIndex);
 
       const updatedSigners = form.getValues('signers').filter((s) => s.formId !== signer.formId);
+      const normalizedSigners = normalizeSigningOrders(updatedSigners);
 
-      form.setValue('signers', normalizeSigningOrders(updatedSigners), {
+      form.setValue('signers', normalizedSigners, {
         shouldValidate: true,
         shouldDirty: true,
       });
+
+      const validatedFormValues = validateEditorRecipientsForm({
+        signers: normalizedSigners,
+        signingOrder: form.getValues('signingOrder'),
+        allowDictateNextSigner: form.getValues('allowDictateNextSigner'),
+      });
+
+      if (validatedFormValues) {
+        // Enqueue the removal immediately so rapid step navigation cannot flush
+        // before the form-change effect has observed the updated recipients.
+        setRecipientsDebounced(validatedFormValues.signers);
+      }
     }
   };
 

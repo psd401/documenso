@@ -10,9 +10,7 @@ const ZBrandingLogoFileSchema = z.object({
 
 export type TBrandingLogoFile = z.infer<typeof ZBrandingLogoFileSchema>;
 
-export const parseBrandingLogoFile = (
-  value: string | null | undefined,
-): TBrandingLogoFile | null => {
+export const parseBrandingLogoFile = (value: string | null | undefined): TBrandingLogoFile | null => {
   if (!value) {
     return null;
   }

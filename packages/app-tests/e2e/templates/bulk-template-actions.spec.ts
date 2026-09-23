@@ -64,13 +64,14 @@ test('[BULK_ACTIONS]: header checkbox selects all templates on page', async ({ p
     redirectPath: `/t/${sender.team.url}/templates`,
   });
 
+  await expect(page.getByRole('link', { name: templates[0].title })).toBeVisible();
   await page.locator('thead').getByRole('checkbox').click();
 
   await expect(page.getByText(new RegExp(`${templates.length}\\s*selected`))).toBeVisible();
 });
 
 test('[BULK_ACTIONS]: can clear selection with X button', async ({ page }) => {
-  const { sender } = await seedBulkActionsTestRequirements();
+  const { sender, templates } = await seedBulkActionsTestRequirements();
 
   await apiSignin({
     page,
@@ -78,6 +79,7 @@ test('[BULK_ACTIONS]: can clear selection with X button', async ({ page }) => {
     redirectPath: `/t/${sender.team.url}/templates`,
   });
 
+  await expect(page.getByRole('link', { name: templates[0].title })).toBeVisible();
   await page.locator('thead').getByRole('checkbox').click();
   await expect(page.getByText(/\d+\s*selected/)).toBeVisible();
 
@@ -103,9 +105,10 @@ test('[BULK_ACTIONS]: can move multiple templates to a folder', async ({ page })
   await expect(page.getByText('Move Templates to Folder')).toBeVisible();
 
   await page.getByRole('button', { name: folder.name }).click();
+  const moveToast = expectToastTextToBeVisible(page, 'Selected items have been moved.');
   await page.getByRole('dialog').getByRole('button', { name: 'Move' }).click();
 
-  await expectToastTextToBeVisible(page, 'Selected items have been moved.');
+  await moveToast;
 
   await page.goto(`/t/${sender.team.url}/templates/f/${folder.id}`);
   await expect(page.getByRole('link', { name: 'Bulk Test Template 1' })).toBeVisible();
@@ -163,9 +166,10 @@ test('[BULK_ACTIONS]: selection clears after successful move', async ({ page }) 
 
   await page.getByRole('button', { name: 'Move', exact: true }).click();
   await page.getByRole('button', { name: folder.name }).click();
+  const moveToast = expectToastTextToBeVisible(page, 'Selected items have been moved.');
   await page.getByRole('dialog').getByRole('button', { name: 'Move' }).click();
 
-  await expectToastTextToBeVisible(page, 'Selected items have been moved.');
+  await moveToast;
   await expect(page.getByText(/\d+\s*selected/)).not.toBeVisible();
 });
 
@@ -252,9 +256,10 @@ test('[BULK_ACTIONS]: can move templates from folder to home (root)', async ({ p
 
   await page.getByRole('button', { name: 'Home (No Folder)' }).click();
 
+  const moveToast = expectToastTextToBeVisible(page, 'Selected items have been moved.');
   await page.getByRole('dialog').getByRole('button', { name: 'Move' }).click();
 
-  await expectToastTextToBeVisible(page, 'Selected items have been moved.');
+  await moveToast;
 
   await page.goto(`/t/${sender.team.url}/templates`);
   await expect(page.getByRole('link', { name: 'Bulk Test Template 1' })).toBeVisible();

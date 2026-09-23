@@ -1,8 +1,8 @@
 // ABOUTME: Updates a directory mapping rule and writes a field-level MAPPING_UPDATED audit row,
 // ABOUTME: in one transaction. Normalizes sourceValue against the effective post-update sourceField.
-import type { DirectoryMappingSourceField } from '@prisma/client';
 
 import { prisma } from '@documenso/prisma';
+import type { DirectoryMappingSourceField } from '@prisma/client';
 
 import { AppError, AppErrorCode } from '../../errors/app-error';
 import { normalizeMappingSourceValue } from './mapping-matching';
@@ -31,10 +31,7 @@ export const updateDirectoryMapping = async (options: UpdateDirectoryMappingOpti
 
   const effectiveSourceField = data.sourceField ?? existing.sourceField;
 
-  const nextSourceValue = normalizeMappingSourceValue(
-    effectiveSourceField,
-    data.sourceValue ?? existing.sourceValue,
-  );
+  const nextSourceValue = normalizeMappingSourceValue(effectiveSourceField, data.sourceValue ?? existing.sourceValue);
 
   const changes: Record<string, { from: unknown; to: unknown }> = {};
 
@@ -46,10 +43,7 @@ export const updateDirectoryMapping = async (options: UpdateDirectoryMappingOpti
     changes.sourceValue = { from: existing.sourceValue, to: nextSourceValue };
   }
 
-  if (
-    data.organisationGroupId !== undefined &&
-    data.organisationGroupId !== existing.organisationGroupId
-  ) {
+  if (data.organisationGroupId !== undefined && data.organisationGroupId !== existing.organisationGroupId) {
     changes.organisationGroupId = {
       from: existing.organisationGroupId,
       to: data.organisationGroupId,

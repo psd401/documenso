@@ -9,10 +9,7 @@ const ONE_HOUR_MS = 60 * 60 * 1000;
 
 export type SyncGoogleDirectoryStatus = 'synced' | 'throttled' | 'failed' | 'disabled';
 
-export const syncGoogleDirectory = async (
-  userId: number,
-  email: string,
-): Promise<SyncGoogleDirectoryStatus> => {
+export const syncGoogleDirectory = async (userId: number, email: string): Promise<SyncGoogleDirectoryStatus> => {
   try {
     if (env('GOOGLE_DIRECTORY_SYNC_ENABLED') !== 'true') {
       return 'disabled';
@@ -30,10 +27,7 @@ export const syncGoogleDirectory = async (
       }
     }
 
-    const [directoryUser, directoryGroups] = await Promise.all([
-      getDirectoryUser(email),
-      getDirectoryGroups(email),
-    ]);
+    const [directoryUser, directoryGroups] = await Promise.all([getDirectoryUser(email), getDirectoryGroups(email)]);
 
     if (directoryUser === null && directoryGroups === null) {
       console.warn(`[directory-sync] Both API calls returned null for ${email}; skipping update`);

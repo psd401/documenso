@@ -1,12 +1,12 @@
 // ABOUTME: Zod input/output types for admin.directoryMappings.find, mirroring
 // ABOUTME: find-admin-organisations.types.ts for the nested-relation response shape.
-import { z } from 'zod';
 
 import { ZFindSearchParamsSchema } from '@documenso/lib/types/search-params';
 import DirectoryGroupMappingSchema from '@documenso/prisma/generated/zod/modelSchema/DirectoryGroupMappingSchema';
 import OrganisationGroupSchema from '@documenso/prisma/generated/zod/modelSchema/OrganisationGroupSchema';
 import TeamGroupSchema from '@documenso/prisma/generated/zod/modelSchema/TeamGroupSchema';
 import TeamSchema from '@documenso/prisma/generated/zod/modelSchema/TeamSchema';
+import { z } from 'zod';
 
 export const ZFindDirectoryMappingsRequestSchema = ZFindSearchParamsSchema.extend({});
 

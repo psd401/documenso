@@ -69,6 +69,19 @@ export const ZEditorRecipientsFormSchema = z
 
 export type TEditorRecipientsFormSchema = z.infer<typeof ZEditorRecipientsFormSchema>;
 
+/**
+ * Validates a candidate recipients form state against the same schema the
+ * autosave effect gates on, so callers that need to persist outside that
+ * effect (e.g. an immediate removal) apply the identical rules, including
+ * the CSC-mode constraints above. Returns null when the state should not be
+ * sent to the server.
+ */
+export const validateEditorRecipientsForm = (formValues: unknown): TEditorRecipientsFormSchema | null => {
+  const result = ZEditorRecipientsFormSchema.safeParse(formValues);
+
+  return result.success ? result.data : null;
+};
+
 type EditorRecipientsProps = {
   envelope: TEditorEnvelope;
 };

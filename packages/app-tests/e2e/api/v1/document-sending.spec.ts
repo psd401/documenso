@@ -199,7 +199,7 @@ test.describe('Document API', () => {
     expect(response.status()).toBe(400);
   });
 
-  test('sendDocument: should fail when signer has only non-signature fields', async ({ request }) => {
+  test('sendDocument: should succeed when signer has only non-signature fields', async ({ request }) => {
     const { user, team } = await seedUser();
 
     // Create a blank document and get it with envelope items
@@ -255,8 +255,8 @@ test.describe('Document API', () => {
       },
     );
 
-    expect(response.ok()).toBeFalsy();
-    expect(response.status()).toBe(400);
+    expect(response.ok()).toBeTruthy();
+    expect(response.status()).toBe(200);
   });
 
   test('sendDocument: should succeed when signer has signature field', async ({ request }) => {

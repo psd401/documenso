@@ -1,9 +1,9 @@
 // ABOUTME: Zod output type for admin.directoryMappings.listGroups, the group picker source.
-import type { z } from 'zod';
 
 import OrganisationGroupSchema from '@documenso/prisma/generated/zod/modelSchema/OrganisationGroupSchema';
 import TeamGroupSchema from '@documenso/prisma/generated/zod/modelSchema/TeamGroupSchema';
 import TeamSchema from '@documenso/prisma/generated/zod/modelSchema/TeamSchema';
+import type { z } from 'zod';
 
 export const ZListDirectoryMappingGroupsResponseSchema = OrganisationGroupSchema.pick({
   id: true,
@@ -20,6 +20,4 @@ export const ZListDirectoryMappingGroupsResponseSchema = OrganisationGroupSchema
   })
   .array();
 
-export type TListDirectoryMappingGroupsResponse = z.infer<
-  typeof ZListDirectoryMappingGroupsResponseSchema
->;
+export type TListDirectoryMappingGroupsResponse = z.infer<typeof ZListDirectoryMappingGroupsResponseSchema>;

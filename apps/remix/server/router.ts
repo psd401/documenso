@@ -153,8 +153,10 @@ if (env('NODE_ENV') !== 'development') {
 void LicenseClient.start();
 
 // Start cron scheduler for background jobs (e.g. envelope expiration sweep).
-// No-op for Inngest provider which handles cron externally.
-jobsClient.startCron();
+// No-op for Inngest provider which handles cron externally. A startup
+// failure here rethrows as an unhandled rejection and crashes the process
+// (see JobClient.startCron) rather than running silently without crons.
+void jobsClient.startCron();
 
 void migrateDeletedAccountServiceAccount();
 void migrateLegacyServiceAccount();

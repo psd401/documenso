@@ -1,11 +1,10 @@
 // ABOUTME: Admin page listing and managing directory sync mapping rules.
-import { useEffect, useState } from 'react';
-
-import { useLingui } from '@lingui/react/macro';
-import { useLocation, useSearchParams } from 'react-router';
 
 import { useDebouncedValue } from '@documenso/lib/client-only/hooks/use-debounced-value';
 import { Input } from '@documenso/ui/primitives/input';
+import { useLingui } from '@lingui/react/macro';
+import { useEffect, useState } from 'react';
+import { useLocation, useSearchParams } from 'react-router';
 
 import { DirectoryMappingCreateDialog } from '~/components/dialogs/directory-mapping-create-dialog';
 import { SettingsHeader } from '~/components/general/settings-header';

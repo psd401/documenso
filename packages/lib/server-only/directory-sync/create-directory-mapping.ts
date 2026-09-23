@@ -1,7 +1,7 @@
 // ABOUTME: Creates a directory mapping rule and writes a MAPPING_CREATED audit row, in one transaction.
-import type { DirectoryMappingSourceField } from '@prisma/client';
 
 import { prisma } from '@documenso/prisma';
+import type { DirectoryMappingSourceField } from '@prisma/client';
 
 import { generateDatabaseId } from '../../universal/id';
 import { normalizeMappingSourceValue } from './mapping-matching';

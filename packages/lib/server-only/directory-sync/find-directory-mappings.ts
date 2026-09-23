@@ -13,9 +13,7 @@ export type FindDirectoryMappingsOptions = {
 export const findDirectoryMappings = async (options: FindDirectoryMappingsOptions) => {
   const { query, page = 1, perPage = 20 } = options;
 
-  const whereClause = query
-    ? { sourceValue: { contains: query, mode: 'insensitive' as const } }
-    : {};
+  const whereClause = query ? { sourceValue: { contains: query, mode: 'insensitive' as const } } : {};
 
   const [data, count] = await Promise.all([
     prisma.directoryGroupMapping.findMany({

@@ -1,8 +1,5 @@
 // ABOUTME: Confirmation dialog for deleting a directory mapping rule. Deleting a mapping does
 // ABOUTME: not remove any group memberships it already granted; the invariant is additive-only.
-import { useState } from 'react';
-
-import { Trans, useLingui } from '@lingui/react/macro';
 
 import { trpc } from '@documenso/trpc/react';
 import { Alert, AlertDescription } from '@documenso/ui/primitives/alert';
@@ -17,6 +14,8 @@ import {
   DialogTrigger,
 } from '@documenso/ui/primitives/dialog';
 import { useToast } from '@documenso/ui/primitives/use-toast';
+import { Trans, useLingui } from '@lingui/react/macro';
+import { useState } from 'react';
 
 export type DirectoryMappingDeleteDialogProps = {
   mappingId: string;
@@ -34,22 +33,20 @@ export const DirectoryMappingDeleteDialog = ({
 
   const [open, setOpen] = useState(false);
 
-  const { mutateAsync: deleteMapping, isPending } = trpc.admin.directoryMappings.delete.useMutation(
-    {
-      onSuccess: () => {
-        toast({ title: t`Directory mapping deleted successfully.` });
-        setOpen(false);
-      },
-      onError: (err) => {
-        console.error(err);
-
-        toast({
-          title: t`Failed to delete directory mapping.`,
-          variant: 'destructive',
-        });
-      },
+  const { mutateAsync: deleteMapping, isPending } = trpc.admin.directoryMappings.delete.useMutation({
+    onSuccess: () => {
+      toast({ title: t`Directory mapping deleted successfully.` });
+      setOpen(false);
     },
-  );
+    onError: (err) => {
+      console.error(err);
+
+      toast({
+        title: t`Failed to delete directory mapping.`,
+        variant: 'destructive',
+      });
+    },
+  });
 
   return (
     <Dialog open={open} onOpenChange={(value) => !isPending && setOpen(value)}>

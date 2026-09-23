@@ -9,6 +9,7 @@ import { expectTextToBeVisible, expectTextToNotBeVisible, openDropdownMenu } fro
 
 test('[ORGANISATIONS]: create and delete organisation', async ({ page }) => {
   const { user, organisation } = await seedUser({
+    isAdmin: true,
     isPersonalOrganisation: false,
   });
 

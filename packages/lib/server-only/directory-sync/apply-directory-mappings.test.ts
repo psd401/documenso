@@ -38,12 +38,13 @@ const jane = {
   googleGroups: [],
 };
 
-const mapping = (
-  id: string,
-  sourceValue: string,
-  organisationGroupId: string,
-  active = true,
-) => ({ id, sourceField: 'DEPARTMENT', sourceValue, organisationGroupId, active });
+const mapping = (id: string, sourceValue: string, organisationGroupId: string, active = true) => ({
+  id,
+  sourceField: 'DEPARTMENT',
+  sourceValue,
+  organisationGroupId,
+  active,
+});
 
 const memberRow = (id: string, createdAt: string, groupIds: string[]) => ({
   id,
@@ -128,7 +129,9 @@ describe('applyDirectoryMappings', () => {
         mapping('directory_mapping_1', 'Technology', 'org_group_1'),
         mapping('directory_mapping_2', 'Technology', 'org_group_2'),
       ]);
-      mockMemberFindMany.mockResolvedValue([memberRow('member_1', '2026-01-01', [...BASELINE_GROUP_IDS, 'org_group_1'])]);
+      mockMemberFindMany.mockResolvedValue([
+        memberRow('member_1', '2026-01-01', [...BASELINE_GROUP_IDS, 'org_group_1']),
+      ]);
       mockCreateManyAndReturn.mockResolvedValue([
         { id: 'group_member_1', groupId: 'org_group_2', organisationMemberId: 'member_1' },
       ]);
@@ -161,7 +164,9 @@ describe('applyDirectoryMappings', () => {
 
     it('is idempotent: nothing to grant or revoke opens no transaction', async () => {
       mockMappingFindMany.mockResolvedValue([mapping('directory_mapping_1', 'Technology', 'org_group_1')]);
-      mockMemberFindMany.mockResolvedValue([memberRow('member_1', '2026-01-01', [...BASELINE_GROUP_IDS, 'org_group_1'])]);
+      mockMemberFindMany.mockResolvedValue([
+        memberRow('member_1', '2026-01-01', [...BASELINE_GROUP_IDS, 'org_group_1']),
+      ]);
 
       const { applyDirectoryMappings } = await import('./apply-directory-mappings');
       const result = await applyDirectoryMappings(1, 'login', 'synced');
@@ -206,39 +211,41 @@ describe('applyDirectoryMappings', () => {
   });
 
   describe('revocations', () => {
-    it.each(['synced', 'throttled'] as const)(
-      'enforce mode deletes a managed group the user no longer matches and audits it (status %s)',
-      async (syncStatus) => {
-        mockMappingFindMany.mockResolvedValue([mapping('directory_mapping_1', 'Facilities', 'org_group_1')]);
-        mockMemberFindMany.mockResolvedValue([
-          memberRow('member_1', '2026-01-01', [...BASELINE_GROUP_IDS, 'org_group_1']),
-        ]);
+    it.each([
+      'synced',
+      'throttled',
+    ] as const)('enforce mode deletes a managed group the user no longer matches and audits it (status %s)', async (syncStatus) => {
+      mockMappingFindMany.mockResolvedValue([mapping('directory_mapping_1', 'Facilities', 'org_group_1')]);
+      mockMemberFindMany.mockResolvedValue([
+        memberRow('member_1', '2026-01-01', [...BASELINE_GROUP_IDS, 'org_group_1']),
+      ]);
 
-        const { applyDirectoryMappings } = await import('./apply-directory-mappings');
-        await applyDirectoryMappings(1, 'login', syncStatus);
+      const { applyDirectoryMappings } = await import('./apply-directory-mappings');
+      await applyDirectoryMappings(1, 'login', syncStatus);
 
-        expect(mockDeleteMany).toHaveBeenCalledTimes(1);
-        expect(mockDeleteMany).toHaveBeenCalledWith({ where: { id: 'gm_member_1_org_group_1' } });
-        expect(auditRowsOfType('MEMBERSHIP_REVOKED')).toEqual([
-          expect.objectContaining({
-            userId: 1,
-            data: {
-              targetUserId: 1,
-              organisationMemberId: 'member_1',
-              organisationGroupId: 'org_group_1',
-              reason: 'no_matching_mapping',
-            },
-          }),
-        ]);
-      },
-    );
+      expect(mockDeleteMany).toHaveBeenCalledTimes(1);
+      expect(mockDeleteMany).toHaveBeenCalledWith({ where: { id: 'gm_member_1_org_group_1' } });
+      expect(auditRowsOfType('MEMBERSHIP_REVOKED')).toEqual([
+        expect.objectContaining({
+          userId: 1,
+          data: {
+            targetUserId: 1,
+            organisationMemberId: 'member_1',
+            organisationGroupId: 'org_group_1',
+            reason: 'no_matching_mapping',
+          },
+        }),
+      ]);
+    });
 
     it('keeps a managed group when another active mapping for the same group still matches', async () => {
       mockMappingFindMany.mockResolvedValue([
         mapping('directory_mapping_1', 'Facilities', 'org_group_1'),
         mapping('directory_mapping_2', 'Technology', 'org_group_1'),
       ]);
-      mockMemberFindMany.mockResolvedValue([memberRow('member_1', '2026-01-01', [...BASELINE_GROUP_IDS, 'org_group_1'])]);
+      mockMemberFindMany.mockResolvedValue([
+        memberRow('member_1', '2026-01-01', [...BASELINE_GROUP_IDS, 'org_group_1']),
+      ]);
 
       const { applyDirectoryMappings } = await import('./apply-directory-mappings');
       await applyDirectoryMappings(1, 'login', 'synced');
@@ -273,10 +280,10 @@ describe('applyDirectoryMappings', () => {
     });
 
     it('does not revoke a group whose only mapping is deactivated', async () => {
-      mockMappingFindMany.mockResolvedValue([
-        mapping('directory_mapping_1', 'Facilities', 'org_group_1', false),
+      mockMappingFindMany.mockResolvedValue([mapping('directory_mapping_1', 'Facilities', 'org_group_1', false)]);
+      mockMemberFindMany.mockResolvedValue([
+        memberRow('member_1', '2026-01-01', [...BASELINE_GROUP_IDS, 'org_group_1']),
       ]);
-      mockMemberFindMany.mockResolvedValue([memberRow('member_1', '2026-01-01', [...BASELINE_GROUP_IDS, 'org_group_1'])]);
 
       const { applyDirectoryMappings } = await import('./apply-directory-mappings');
       await applyDirectoryMappings(1, 'login', 'synced');
@@ -285,34 +292,36 @@ describe('applyDirectoryMappings', () => {
       expect(mockAuditLogCreateMany).not.toHaveBeenCalled();
     });
 
-    it.each(['failed', 'disabled'] as const)(
-      'does not revoke when the directory sync status is %s, but still grants',
-      async (syncStatus) => {
-        mockMappingFindMany.mockResolvedValue([
-          mapping('directory_mapping_1', 'Facilities', 'org_group_1'),
-          mapping('directory_mapping_2', 'Technology', 'org_group_2'),
-        ]);
-        mockMemberFindMany.mockResolvedValue([
-          memberRow('member_1', '2026-01-01', [...BASELINE_GROUP_IDS, 'org_group_1']),
-        ]);
-        mockCreateManyAndReturn.mockResolvedValue([
-          { id: 'group_member_2', groupId: 'org_group_2', organisationMemberId: 'member_1' },
-        ]);
+    it.each([
+      'failed',
+      'disabled',
+    ] as const)('does not revoke when the directory sync status is %s, but still grants', async (syncStatus) => {
+      mockMappingFindMany.mockResolvedValue([
+        mapping('directory_mapping_1', 'Facilities', 'org_group_1'),
+        mapping('directory_mapping_2', 'Technology', 'org_group_2'),
+      ]);
+      mockMemberFindMany.mockResolvedValue([
+        memberRow('member_1', '2026-01-01', [...BASELINE_GROUP_IDS, 'org_group_1']),
+      ]);
+      mockCreateManyAndReturn.mockResolvedValue([
+        { id: 'group_member_2', groupId: 'org_group_2', organisationMemberId: 'member_1' },
+      ]);
 
-        const { applyDirectoryMappings } = await import('./apply-directory-mappings');
-        const result = await applyDirectoryMappings(1, 'login', syncStatus);
+      const { applyDirectoryMappings } = await import('./apply-directory-mappings');
+      const result = await applyDirectoryMappings(1, 'login', syncStatus);
 
-        expect(result.granted).toBe(1);
-        expect(mockDeleteMany).not.toHaveBeenCalled();
-        expect(auditRowsOfType('MEMBERSHIP_REVOKED')).toEqual([]);
-        expect(auditRowsOfType('MEMBERSHIP_REVOKE_DRY_RUN')).toEqual([]);
-      },
-    );
+      expect(result.granted).toBe(1);
+      expect(mockDeleteMany).not.toHaveBeenCalled();
+      expect(auditRowsOfType('MEMBERSHIP_REVOKED')).toEqual([]);
+      expect(auditRowsOfType('MEMBERSHIP_REVOKE_DRY_RUN')).toEqual([]);
+    });
 
     it('log mode writes a dry-run audit row and deletes nothing', async () => {
       setEnv({ GOOGLE_DIRECTORY_SYNC_ENABLED: 'true', DIRECTORY_SYNC_REVOKE_MODE: 'log' });
       mockMappingFindMany.mockResolvedValue([mapping('directory_mapping_1', 'Facilities', 'org_group_1')]);
-      mockMemberFindMany.mockResolvedValue([memberRow('member_1', '2026-01-01', [...BASELINE_GROUP_IDS, 'org_group_1'])]);
+      mockMemberFindMany.mockResolvedValue([
+        memberRow('member_1', '2026-01-01', [...BASELINE_GROUP_IDS, 'org_group_1']),
+      ]);
 
       const { applyDirectoryMappings } = await import('./apply-directory-mappings');
       await applyDirectoryMappings(1, 'login', 'synced');
@@ -331,27 +340,26 @@ describe('applyDirectoryMappings', () => {
       ]);
     });
 
-    it.each([undefined, 'bogus'])(
-      'defaults to log mode when DIRECTORY_SYNC_REVOKE_MODE is %s',
-      async (revokeMode) => {
-        setEnv({ GOOGLE_DIRECTORY_SYNC_ENABLED: 'true', DIRECTORY_SYNC_REVOKE_MODE: revokeMode });
-        mockMappingFindMany.mockResolvedValue([mapping('directory_mapping_1', 'Facilities', 'org_group_1')]);
-        mockMemberFindMany.mockResolvedValue([
-          memberRow('member_1', '2026-01-01', [...BASELINE_GROUP_IDS, 'org_group_1']),
-        ]);
+    it.each([undefined, 'bogus'])('defaults to log mode when DIRECTORY_SYNC_REVOKE_MODE is %s', async (revokeMode) => {
+      setEnv({ GOOGLE_DIRECTORY_SYNC_ENABLED: 'true', DIRECTORY_SYNC_REVOKE_MODE: revokeMode });
+      mockMappingFindMany.mockResolvedValue([mapping('directory_mapping_1', 'Facilities', 'org_group_1')]);
+      mockMemberFindMany.mockResolvedValue([
+        memberRow('member_1', '2026-01-01', [...BASELINE_GROUP_IDS, 'org_group_1']),
+      ]);
 
-        const { applyDirectoryMappings } = await import('./apply-directory-mappings');
-        await applyDirectoryMappings(1, 'login', 'synced');
+      const { applyDirectoryMappings } = await import('./apply-directory-mappings');
+      await applyDirectoryMappings(1, 'login', 'synced');
 
-        expect(mockDeleteMany).not.toHaveBeenCalled();
-        expect(auditRowsOfType('MEMBERSHIP_REVOKE_DRY_RUN')).toHaveLength(1);
-      },
-    );
+      expect(mockDeleteMany).not.toHaveBeenCalled();
+      expect(auditRowsOfType('MEMBERSHIP_REVOKE_DRY_RUN')).toHaveLength(1);
+    });
 
     it('off mode skips revocation entirely: no delete and no audit row', async () => {
       setEnv({ GOOGLE_DIRECTORY_SYNC_ENABLED: 'true', DIRECTORY_SYNC_REVOKE_MODE: 'off' });
       mockMappingFindMany.mockResolvedValue([mapping('directory_mapping_1', 'Facilities', 'org_group_1')]);
-      mockMemberFindMany.mockResolvedValue([memberRow('member_1', '2026-01-01', [...BASELINE_GROUP_IDS, 'org_group_1'])]);
+      mockMemberFindMany.mockResolvedValue([
+        memberRow('member_1', '2026-01-01', [...BASELINE_GROUP_IDS, 'org_group_1']),
+      ]);
 
       const { applyDirectoryMappings } = await import('./apply-directory-mappings');
       const result = await applyDirectoryMappings(1, 'sweep', 'synced', { deferRevocations: true });
@@ -395,7 +403,9 @@ describe('applyDirectoryMappings', () => {
 
     it('returns planned revocations without writing them when deferRevocations is set', async () => {
       mockMappingFindMany.mockResolvedValue([mapping('directory_mapping_1', 'Facilities', 'org_group_1')]);
-      mockMemberFindMany.mockResolvedValue([memberRow('member_1', '2026-01-01', [...BASELINE_GROUP_IDS, 'org_group_1'])]);
+      mockMemberFindMany.mockResolvedValue([
+        memberRow('member_1', '2026-01-01', [...BASELINE_GROUP_IDS, 'org_group_1']),
+      ]);
 
       const { applyDirectoryMappings } = await import('./apply-directory-mappings');
       const result = await applyDirectoryMappings(1, 'sweep', 'synced', { deferRevocations: true });

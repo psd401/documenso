@@ -1,8 +1,5 @@
 // ABOUTME: Dialog for creating a directory mapping rule. Fetches the group picker options
 // ABOUTME: itself so the create button works standalone from the page header.
-import { useState } from 'react';
-
-import { Trans, useLingui } from '@lingui/react/macro';
 
 import { trpc } from '@documenso/trpc/react';
 import { Button } from '@documenso/ui/primitives/button';
@@ -16,6 +13,8 @@ import {
   DialogTrigger,
 } from '@documenso/ui/primitives/dialog';
 import { useToast } from '@documenso/ui/primitives/use-toast';
+import { Trans, useLingui } from '@lingui/react/macro';
+import { useState } from 'react';
 
 import { DirectoryMappingForm } from '../forms/directory-mapping-form';
 
@@ -29,20 +28,18 @@ export const DirectoryMappingCreateDialog = () => {
     enabled: open,
   });
 
-  const { mutateAsync: createMapping, isPending } = trpc.admin.directoryMappings.create.useMutation(
-    {
-      onSuccess: () => {
-        toast({ title: t`Directory mapping created successfully.` });
-        setOpen(false);
-      },
-      onError: () => {
-        toast({
-          title: t`Failed to create directory mapping.`,
-          variant: 'destructive',
-        });
-      },
+  const { mutateAsync: createMapping, isPending } = trpc.admin.directoryMappings.create.useMutation({
+    onSuccess: () => {
+      toast({ title: t`Directory mapping created successfully.` });
+      setOpen(false);
     },
-  );
+    onError: () => {
+      toast({
+        title: t`Failed to create directory mapping.`,
+        variant: 'destructive',
+      });
+    },
+  });
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -75,12 +72,7 @@ export const DirectoryMappingCreateDialog = () => {
           }}
           formSubmitTrigger={
             <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setOpen(false)}
-                disabled={isPending}
-              >
+              <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isPending}>
                 <Trans>Cancel</Trans>
               </Button>
 

@@ -1,7 +1,7 @@
 // ABOUTME: Zod input/output types for admin.directoryMappings.create.
-import { z } from 'zod';
 
 import DirectoryGroupMappingSchema from '@documenso/prisma/generated/zod/modelSchema/DirectoryGroupMappingSchema';
+import { z } from 'zod';
 
 export const ZCreateDirectoryMappingRequestSchema = z.object({
   sourceField: z.enum(['GROUP', 'DEPARTMENT', 'ORG_UNIT']),
