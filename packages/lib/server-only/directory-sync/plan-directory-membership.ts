@@ -44,9 +44,23 @@ export type DirectoryMembershipPlan = {
 };
 
 /**
+ * True when the profile field this mapping reads has never been fetched from Google, so a non-match
+ * means "unknown" rather than "not a member". googleGroups is only ever written as an array, and
+ * Google always returns an orgUnitPath, so null orgUnitPath means the user lookup never succeeded.
+ */
+const dependsOnUnfetchedData = (
+  mapping: PlannableDirectoryMapping,
+  profile: DirectoryProfile,
+): boolean =>
+  mapping.sourceField === 'GROUP'
+    ? !Array.isArray(profile.googleGroups)
+    : profile.orgUnitPath === null;
+
+/**
  * A group is managed when at least one active mapping targets it. Grants are matched groups the
  * user holds on none of their member rows. Revocations are rows in managed, non-baseline groups
  * that no active mapping matches. Inactive mappings neither grant nor make a group managed.
+ * A group is never revoked while any of its active mappings depends on unfetched directory data.
  */
 export const planDirectoryMembership = ({
   mappings,
@@ -58,6 +72,7 @@ export const planDirectoryMembership = ({
   heldMemberships: HeldGroupMembership[];
 }): DirectoryMembershipPlan => {
   const managedGroupIds = new Set<string>();
+  const undecidableGroupIds = new Set<string>();
   const matchedMappingIdsByGroup = new Map<string, string[]>();
 
   for (const mapping of mappings) {
@@ -66,6 +81,10 @@ export const planDirectoryMembership = ({
     }
 
     managedGroupIds.add(mapping.organisationGroupId);
+
+    if (dependsOnUnfetchedData(mapping, profile)) {
+      undecidableGroupIds.add(mapping.organisationGroupId);
+    }
 
     if (!matchDirectoryMapping(mapping, profile)) {
       continue;
@@ -86,6 +105,7 @@ export const planDirectoryMembership = ({
     .filter(
       (membership) =>
         managedGroupIds.has(membership.groupId) &&
+        !undecidableGroupIds.has(membership.groupId) &&
         !matchedMappingIdsByGroup.has(membership.groupId) &&
         !PSD401_BASELINE_GROUP_IDS.includes(membership.groupId),
     )
