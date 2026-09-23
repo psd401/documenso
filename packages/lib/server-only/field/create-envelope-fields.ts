@@ -1,5 +1,6 @@
 import { DOCUMENT_AUDIT_LOG_TYPE } from '@documenso/lib/types/document-audit-logs';
 import type { TFieldAndMeta } from '@documenso/lib/types/field-meta';
+import { resolveFieldMetaForCreate } from '@documenso/lib/types/field-meta';
 import type { ApiRequestMetadata } from '@documenso/lib/universal/extract-request-metadata';
 import { getFileServerSide } from '@documenso/lib/universal/upload/get-file.server';
 import { putPdfFileServerSide } from '@documenso/lib/universal/upload/put-file.server';
@@ -257,7 +258,7 @@ export const createEnvelopeFields = async ({
         height: field.height,
         customText: '',
         inserted: false,
-        fieldMeta: field.fieldMeta,
+        fieldMeta: resolveFieldMetaForCreate(field.type, field.fieldMeta),
         envelopeId: envelope.id,
         envelopeItemId: field.envelopeItemId,
         recipientId: field.recipientId,

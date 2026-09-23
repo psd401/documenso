@@ -19,9 +19,7 @@ vi.mock('@documenso/prisma', () => ({
   },
 }));
 
-const user = { id: 42, email: 'new@psd401.net' } as Parameters<
-  typeof import('./create-user').onCreateUserHook
->[0];
+const user = { id: 42, email: 'new@psd401.net' } as Parameters<typeof import('./create-user').onCreateUserHook>[0];
 
 describe('onCreateUserHook', () => {
   beforeEach(() => {
