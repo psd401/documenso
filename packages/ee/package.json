@@ -17,7 +17,7 @@
     "@documenso/lib": "*",
     "@documenso/prisma": "*",
     "arctic": "^3.7.0",
-    "hono": "^4.12.14",
+    "hono": "^4.13.8",
     "luxon": "^3.7.2",
     "react": "^19.2.7",
     "ts-pattern": "^5.9.0",
