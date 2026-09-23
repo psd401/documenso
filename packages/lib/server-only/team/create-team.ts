@@ -1,18 +1,10 @@
-import {
-  OrganisationGroupType,
-  OrganisationMemberRole,
-  Prisma,
-  TeamMemberRole,
-} from '@prisma/client';
-import { match } from 'ts-pattern';
-
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { prisma } from '@documenso/prisma';
+import { OrganisationGroupType, OrganisationMemberRole, Prisma, TeamMemberRole } from '@prisma/client';
+import { match } from 'ts-pattern';
 
-import {
-  LOWEST_ORGANISATION_ROLE,
-  ORGANISATION_MEMBER_ROLE_PERMISSIONS_MAP,
-} from '../../constants/organisations';
+import { IS_BILLING_ENABLED } from '../../constants/app';
+import { LOWEST_ORGANISATION_ROLE, ORGANISATION_MEMBER_ROLE_PERMISSIONS_MAP } from '../../constants/organisations';
 import { TEAM_INTERNAL_GROUPS } from '../../constants/teams';
 import { generateDatabaseId } from '../../universal/id';
 import { buildOrganisationWhereQuery } from '../../utils/organisations';
@@ -55,13 +47,7 @@ export type CreateTeamOptions = {
   }[];
 };
 
-export const createTeam = async ({
-  userId,
-  teamName,
-  teamUrl,
-  organisationId,
-  inheritMembers,
-}: CreateTeamOptions) => {
+export const createTeam = async ({ userId, teamName, teamUrl, organisationId, inheritMembers }: CreateTeamOptions) => {
   const organisation = await prisma.organisation.findFirst({
     where: buildOrganisationWhereQuery({
       organisationId,
@@ -89,7 +75,7 @@ export const createTeam = async ({
   }
 
   // Validate they have enough team slots. 0 means they can create unlimited teams.
-  if (organisation.organisationClaim.teamCount !== 0) {
+  if (organisation.organisationClaim.teamCount !== 0 && IS_BILLING_ENABLED()) {
     const teamCount = await prisma.team.count({
       where: {
         organisationId,

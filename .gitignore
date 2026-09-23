@@ -74,6 +74,6 @@ tmp/
 
 # opencode
 .opencode/package-lock.json
-branding/
+/branding/
 deploy/cert.p12
 .openwiki/

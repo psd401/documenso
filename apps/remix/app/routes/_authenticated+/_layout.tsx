@@ -1,20 +1,21 @@
-import { msg } from '@lingui/core/macro';
-import { Trans } from '@lingui/react/macro';
-import { Link, Outlet, redirect } from 'react-router';
-
 import { getOptionalSession } from '@documenso/auth/server/lib/utils/get-session';
+import { useChildRouteFlags } from '@documenso/lib/client-only/hooks/use-child-route-flags';
 import { OrganisationProvider } from '@documenso/lib/client-only/providers/organisation';
 import { useSession } from '@documenso/lib/client-only/providers/session';
 import { getSiteSettings } from '@documenso/lib/server-only/site-settings/get-site-settings';
 import { SITE_SETTINGS_BANNER_ID } from '@documenso/lib/server-only/site-settings/schemas/banner';
 import { cn } from '@documenso/ui/lib/utils';
 import { Button } from '@documenso/ui/primitives/button';
+import { msg } from '@lingui/core/macro';
+import { Trans } from '@lingui/react/macro';
+import { Link, Outlet, redirect } from 'react-router';
 
 import { AppBanner } from '~/components/general/app-banner';
 import { AppFooter } from '~/components/general/app-footer';
 import { Header } from '~/components/general/app-header';
 import { GenericErrorLayout } from '~/components/general/generic-error-layout';
 import { OrganisationBillingBanner } from '~/components/general/organisations/organisation-billing-banner';
+import { OrganisationQuotaBanner } from '~/components/general/organisations/organisation-quota-banner';
 import { VerifyEmailBanner } from '~/components/general/verify-email-banner';
 import { TeamProvider } from '~/providers/team';
 
@@ -30,9 +31,7 @@ export const shouldRevalidate = () => false;
 export async function loader({ request }: Route.LoaderArgs) {
   const [session, banner] = await Promise.all([
     getOptionalSession(request),
-    getSiteSettings().then((settings) =>
-      settings.find((setting) => setting.id === SITE_SETTINGS_BANNER_ID),
-    ),
+    getSiteSettings().then((settings) => settings.find((setting) => setting.id === SITE_SETTINGS_BANNER_ID)),
   ]);
 
   if (!session.isAuthenticated) {
@@ -48,6 +47,8 @@ export default function Layout({ loaderData, params, matches }: Route.ComponentP
   const { banner } = loaderData;
 
   const { user, organisations } = useSession();
+
+  const { layoutMode } = useChildRouteFlags();
 
   const teamUrl = params.teamUrl;
   const orgUrl = params.orgUrl;
@@ -111,23 +112,28 @@ export default function Layout({ loaderData, params, matches }: Route.ComponentP
   return (
     <OrganisationProvider organisation={currentOrganisation}>
       <TeamProvider team={currentTeam || null}>
-        <OrganisationBillingBanner />
+        <div className={cn({ 'md:flex md:h-dvh md:flex-col md:overflow-hidden': layoutMode === 'settings' })}>
+          <OrganisationBillingBanner />
 
-        {!user.emailVerified && <VerifyEmailBanner email={user.email} />}
+          <OrganisationQuotaBanner />
 
-        {banner && !hideHeader && <AppBanner banner={banner} />}
+          {!user.emailVerified && <VerifyEmailBanner email={user.email} />}
 
-        {!hideHeader && <Header />}
+          {banner && !hideHeader && <AppBanner banner={banner} />}
 
-        <main
-          className={cn({
-            'mt-8 pb-8 md:mt-12 md:pb-12': !hideHeader,
-          })}
-        >
-          <Outlet />
-        </main>
+          {!hideHeader && <Header fullWidth={layoutMode === 'settings'} />}
 
-        {!hideHeader && <AppFooter />}
+          <main
+            className={cn({
+              'mt-8 pb-8 md:mt-12 md:pb-12': !hideHeader && layoutMode !== 'settings',
+              'md:flex md:min-h-0 md:flex-1 md:flex-col': layoutMode === 'settings',
+            })}
+          >
+            <Outlet />
+          </main>
+
+          {!hideHeader && <AppFooter />}
+        </div>
       </TeamProvider>
     </OrganisationProvider>
   );

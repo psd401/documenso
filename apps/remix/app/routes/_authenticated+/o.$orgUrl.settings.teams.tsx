@@ -1,12 +1,8 @@
-import { useEffect, useState } from 'react';
-
-import { useLingui } from '@lingui/react/macro';
-import { Trans } from '@lingui/react/macro';
-import { useSearchParams } from 'react-router';
-import { useLocation } from 'react-router';
-
 import { useDebouncedValue } from '@documenso/lib/client-only/hooks/use-debounced-value';
 import { Input } from '@documenso/ui/primitives/input';
+import { Trans, useLingui } from '@lingui/react/macro';
+import { useEffect, useState } from 'react';
+import { useLocation, useSearchParams } from 'react-router';
 
 import { TeamCreateDialog } from '~/components/dialogs/team-create-dialog';
 import { TeamMergeDialog } from '~/components/dialogs/team-merge-dialog';
@@ -41,7 +37,7 @@ export default function OrganisationSettingsTeamsPage() {
 
   return (
     <div>
-      <SettingsHeader title={t`Teams`} subtitle={t`Manage the teams in this organisation.`}>
+      <SettingsHeader hideDivider title={t`Teams`} subtitle={t`Manage the teams in this organisation.`}>
         <TeamCreateDialog />
       </SettingsHeader>
 
@@ -54,20 +50,14 @@ export default function OrganisationSettingsTeamsPage() {
 
       {selectedTeamIds.size >= 2 && (
         <div className="mb-4 flex items-center gap-2">
-          <TeamMergeDialog
-            sourceTeamIds={[...selectedTeamIds]}
-            onMerged={() => setSelectedTeamIds(new Set())}
-          />
-          <span className="text-sm text-muted-foreground">
+          <TeamMergeDialog sourceTeamIds={[...selectedTeamIds]} onMerged={() => setSelectedTeamIds(new Set())} />
+          <span className="text-muted-foreground text-sm">
             {selectedTeamIds.size} <Trans>teams selected</Trans>
           </span>
         </div>
       )}
 
-      <OrganisationTeamsTable
-        selectedTeamIds={selectedTeamIds}
-        onSelectionChange={setSelectedTeamIds}
-      />
+      <OrganisationTeamsTable selectedTeamIds={selectedTeamIds} onSelectionChange={setSelectedTeamIds} />
     </div>
   );
 }

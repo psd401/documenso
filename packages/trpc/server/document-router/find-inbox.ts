@@ -1,16 +1,9 @@
-import type { Envelope, Prisma, Recipient } from '@prisma/client';
-import {
-  DocumentSigningOrder,
-  DocumentStatus,
-  EnvelopeType,
-  RecipientRole,
-  SigningStatus,
-} from '@prisma/client';
-
 import type { FindResultResponse } from '@documenso/lib/types/search-params';
 import { mapEnvelopesToDocumentMany } from '@documenso/lib/utils/document';
 import { maskRecipientTokensForDocument } from '@documenso/lib/utils/mask-recipient-tokens-for-document';
 import { prisma } from '@documenso/prisma';
+import type { Envelope, Prisma, Recipient } from '@prisma/client';
+import { DocumentSigningOrder, DocumentStatus, EnvelopeType, RecipientRole, SigningStatus } from '@prisma/client';
 
 import { authenticatedProcedure } from '../trpc';
 import type { TInboxFilter } from './find-inbox.types';
@@ -51,10 +44,7 @@ export type FindInboxOptions = {
   };
 };
 
-type RecipientTurnInfo = Pick<
-  Recipient,
-  'id' | 'email' | 'role' | 'signingStatus' | 'signingOrder'
->;
+type RecipientTurnInfo = Pick<Recipient, 'id' | 'email' | 'role' | 'signingStatus' | 'signingOrder'>;
 
 /**
  * Determine whether an envelope is currently waiting on a specific user to act.
@@ -92,13 +82,9 @@ const getIsWaitingForUser = (
   }
 
   // Sequential signing: every recipient ahead of the current user must have signed.
-  const orderedRecipients = [...envelope.recipients].sort(
-    (a, b) => (a.signingOrder ?? 0) - (b.signingOrder ?? 0),
-  );
+  const orderedRecipients = [...envelope.recipients].sort((a, b) => (a.signingOrder ?? 0) - (b.signingOrder ?? 0));
 
-  const currentRecipientIndex = orderedRecipients.findIndex(
-    (recipient) => recipient.id === currentRecipient.id,
-  );
+  const currentRecipientIndex = orderedRecipients.findIndex((recipient) => recipient.id === currentRecipient.id);
 
   for (let i = 0; i < currentRecipientIndex; i++) {
     if (orderedRecipients[i].signingStatus !== SigningStatus.SIGNED) {
@@ -139,13 +125,7 @@ const inboxInclude = {
   },
 } satisfies Prisma.EnvelopeInclude;
 
-export const findInbox = async ({
-  userId,
-  page = 1,
-  perPage = 10,
-  filter = 'ALL',
-  orderBy,
-}: FindInboxOptions) => {
+export const findInbox = async ({ userId, page = 1, perPage = 10, filter = 'ALL', orderBy }: FindInboxOptions) => {
   const user = await prisma.user.findFirstOrThrow({
     where: {
       id: userId,
@@ -234,8 +214,14 @@ export const findInbox = async ({
     }),
   ]);
 
+  // Not using the maskRecipientTokensForDocument helper here because it needs a
+  // rework due to recipients vs Recipient.
   const maskedData = data.map((document) => ({
-    ...maskRecipientTokensForDocument({ document, user }),
+    ...document,
+    recipients: document.recipients.map((recipient) => ({
+      ...recipient,
+      token: recipient.email === user.email ? recipient.token : '',
+    })),
     isWaitingForCurrentUser: getIsWaitingForUser(document, user.email),
   }));
 

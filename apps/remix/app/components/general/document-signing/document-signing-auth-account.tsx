@@ -1,14 +1,13 @@
-import { useState } from 'react';
-
-import { Trans, useLingui } from '@lingui/react/macro';
-import { RecipientRole } from '@prisma/client';
-import { match } from 'ts-pattern';
-
 import { authClient } from '@documenso/auth/client';
+import { formatPath } from '@documenso/lib/constants/app';
 import { Alert, AlertDescription } from '@documenso/ui/primitives/alert';
 import { Button } from '@documenso/ui/primitives/button';
 import { DialogFooter } from '@documenso/ui/primitives/dialog';
 import { useToast } from '@documenso/ui/primitives/use-toast';
+import { Trans, useLingui } from '@lingui/react/macro';
+import { RecipientRole } from '@prisma/client';
+import { useState } from 'react';
+import { match } from 'ts-pattern';
 
 import { useRequiredDocumentSigningAuthContext } from './document-signing-auth-provider';
 
@@ -36,7 +35,9 @@ export const DocumentSigningAuthAccount = ({
       const currentPath = `${window.location.pathname}${window.location.search}${window.location.hash}`;
 
       await authClient.signOut({
-        redirectPath: `/signin?returnTo=${encodeURIComponent(currentPath)}#embedded=true&email=${isDirectTemplate ? '' : email}`,
+        redirectPath: formatPath(
+          `/signin?returnTo=${encodeURIComponent(currentPath)}#embedded=true&email=${isDirectTemplate ? '' : email}`,
+        ),
       });
     } catch {
       setIsSigningOut(false);
@@ -61,8 +62,7 @@ export const DocumentSigningAuthAccount = ({
                   <Trans>To sign this field, you need to be logged in.</Trans>
                 ) : (
                   <Trans>
-                    To sign this field, you need to be logged in as{' '}
-                    <strong>{recipient.email}</strong>
+                    To sign this field, you need to be logged in as <strong>{recipient.email}</strong>
                   </Trans>
                 ),
               )
@@ -71,8 +71,7 @@ export const DocumentSigningAuthAccount = ({
                   <Trans>To sign this document, you need to be logged in.</Trans>
                 ) : (
                   <Trans>
-                    To sign this document, you need to be logged in as{' '}
-                    <strong>{recipient.email}</strong>
+                    To sign this document, you need to be logged in as <strong>{recipient.email}</strong>
                   </Trans>
                 ),
               )
@@ -81,8 +80,7 @@ export const DocumentSigningAuthAccount = ({
                   <Trans>To approve this field, you need to be logged in.</Trans>
                 ) : (
                   <Trans>
-                    To approve this field, you need to be logged in as{' '}
-                    <strong>{recipient.email}</strong>
+                    To approve this field, you need to be logged in as <strong>{recipient.email}</strong>
                   </Trans>
                 ),
               )
@@ -91,8 +89,7 @@ export const DocumentSigningAuthAccount = ({
                   <Trans>To approve this document, you need to be logged in.</Trans>
                 ) : (
                   <Trans>
-                    To approve this document, you need to be logged in as{' '}
-                    <strong>{recipient.email}</strong>
+                    To approve this document, you need to be logged in as <strong>{recipient.email}</strong>
                   </Trans>
                 ),
               )
@@ -101,8 +98,7 @@ export const DocumentSigningAuthAccount = ({
                   <Trans>To view this field, you need to be logged in.</Trans>
                 ) : (
                   <Trans>
-                    To view this field, you need to be logged in as{' '}
-                    <strong>{recipient.email}</strong>
+                    To view this field, you need to be logged in as <strong>{recipient.email}</strong>
                   </Trans>
                 ),
               )
@@ -111,8 +107,7 @@ export const DocumentSigningAuthAccount = ({
                   <Trans>To mark this document as viewed, you need to be logged in.</Trans>
                 ) : (
                   <Trans>
-                    To mark this document as viewed, you need to be logged in as{' '}
-                    <strong>{recipient.email}</strong>
+                    To mark this document as viewed, you need to be logged in as <strong>{recipient.email}</strong>
                   </Trans>
                 ),
               )
@@ -121,8 +116,7 @@ export const DocumentSigningAuthAccount = ({
                   <Trans>To view this field, you need to be logged in.</Trans>
                 ) : (
                   <Trans>
-                    To view this field, you need to be logged in as{' '}
-                    <strong>{recipient.email}</strong>
+                    To view this field, you need to be logged in as <strong>{recipient.email}</strong>
                   </Trans>
                 ),
               )
@@ -131,8 +125,7 @@ export const DocumentSigningAuthAccount = ({
                   <Trans>To view this document, you need to be logged in.</Trans>
                 ) : (
                   <Trans>
-                    To view this document, you need to be logged in as{' '}
-                    <strong>{recipient.email}</strong>
+                    To view this document, you need to be logged in as <strong>{recipient.email}</strong>
                   </Trans>
                 ),
               )
@@ -141,8 +134,7 @@ export const DocumentSigningAuthAccount = ({
                   <Trans>To assist with this field, you need to be logged in.</Trans>
                 ) : (
                   <Trans>
-                    To assist with this field, you need to be logged in as{' '}
-                    <strong>{recipient.email}</strong>
+                    To assist with this field, you need to be logged in as <strong>{recipient.email}</strong>
                   </Trans>
                 ),
               )
@@ -151,8 +143,7 @@ export const DocumentSigningAuthAccount = ({
                   <Trans>To assist with this document, you need to be logged in.</Trans>
                 ) : (
                   <Trans>
-                    To assist with this document, you need to be logged in as{' '}
-                    <strong>{recipient.email}</strong>
+                    To assist with this document, you need to be logged in as <strong>{recipient.email}</strong>
                   </Trans>
                 ),
               )

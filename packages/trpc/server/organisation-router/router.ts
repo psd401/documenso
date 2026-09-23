@@ -15,12 +15,14 @@ import { findOrganisationMemberInvitesRoute } from './find-organisation-member-i
 import { findOrganisationMembersRoute } from './find-organisation-members';
 import { getOrganisationRoute } from './get-organisation';
 import { getOrganisationMemberInvitesRoute } from './get-organisation-member-invites';
+import { getOrganisationQuotaFlagsRoute } from './get-organisation-quota-flags';
 import { getOrganisationSessionRoute } from './get-organisation-session';
 import { getOrganisationsRoute } from './get-organisations';
 import { leaveOrganisationRoute } from './leave-organisation';
 import { removeOrganisationGroupMembersRoute } from './remove-organisation-group-members';
 import { resendOrganisationMemberInviteRoute } from './resend-organisation-member-invite';
 import { updateOrganisationRoute } from './update-organisation';
+import { updateOrganisationBrandingLogoRoute } from './update-organisation-branding-logo';
 import { updateOrganisationGroupRoute } from './update-organisation-group';
 import { updateOrganisationMemberRoute } from './update-organisation-members';
 import { updateOrganisationSettingsRoute } from './update-organisation-settings';
@@ -28,6 +30,7 @@ import { updateOrganisationSettingsRoute } from './update-organisation-settings'
 export const organisationRouter = router({
   get: getOrganisationRoute,
   getMany: getOrganisationsRoute,
+  getQuotaFlags: getOrganisationQuotaFlagsRoute,
   create: createOrganisationRoute,
   update: updateOrganisationRoute,
   delete: deleteOrganisationRoute,
@@ -57,6 +60,7 @@ export const organisationRouter = router({
   },
   settings: {
     update: updateOrganisationSettingsRoute,
+    updateBrandingLogo: updateOrganisationBrandingLogoRoute,
   },
   internal: {
     getOrganisationSession: getOrganisationSessionRoute,
