@@ -4,7 +4,7 @@ import { FieldType } from '@prisma/client';
 import type Konva from 'konva';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 
-import type { FieldToRender } from './render-field';
+import type { FieldToRender } from './field-renderer';
 
 // Letter-size page in PDF points, matching the sealed-PDF overlay dimensions.
 const PAGE_WIDTH = 612;
@@ -101,7 +101,8 @@ describe('renderGenericTextFieldElement – export mode overflow (FS-162157)', (
       type: FieldType.DATE,
       width: 18.1506,
       customText: '2026-07-06 04:45 PM',
-      fieldMeta: { type: 'date', fontSize: 12, showLine: false, textAlign: 'left' },
+      // Legacy date fields have no stored overflow mode, which resolves to 'crop'.
+      fieldMeta: { type: 'date', fontSize: 12, showLine: false, textAlign: 'left', overflow: 'crop' },
     });
 
     expect(renderedText(fieldText)).toBe('2026-07-06 04:45 PM');

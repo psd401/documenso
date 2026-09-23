@@ -1,19 +1,11 @@
-import { forwardRef, useEffect, useState } from 'react';
-
-import type { MessageDescriptor } from '@lingui/core';
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { FieldType } from '@prisma/client';
-import { GripVerticalIcon, Maximize2Icon, Minimize2Icon, XIcon } from 'lucide-react';
-import { createPortal } from 'react-dom';
-import { Rnd } from 'react-rnd';
-import { match } from 'ts-pattern';
-
 import { useAutoSave } from '@documenso/lib/client-only/hooks/use-autosave';
 import {
   type TBaseFieldMeta as BaseFieldMeta,
   type TCheckboxFieldMeta as CheckboxFieldMeta,
   type TDateFieldMeta as DateFieldMeta,
+  DEFAULT_DATE_OVERFLOW_MODE,
+  DEFAULT_EMAIL_OVERFLOW_MODE,
+  DEFAULT_SIGNATURE_OVERFLOW_MODE,
   type TDropdownFieldMeta as DropdownFieldMeta,
   type TEmailFieldMeta as EmailFieldMeta,
   FIELD_DEFAULT_CALCULATED_PRECISION,
@@ -26,6 +18,15 @@ import {
   ZFieldMetaSchema,
 } from '@documenso/lib/types/field-meta';
 import { useToast } from '@documenso/ui/primitives/use-toast';
+import type { MessageDescriptor } from '@lingui/core';
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { FieldType } from '@prisma/client';
+import { GripVerticalIcon, Maximize2Icon, Minimize2Icon, XIcon } from 'lucide-react';
+import { forwardRef, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { Rnd } from 'react-rnd';
+import { match } from 'ts-pattern';
 
 import type { FieldFormType } from './add-fields';
 import {
@@ -93,6 +94,7 @@ const getDefaultState = (fieldType: FieldType): FieldMeta => {
         type: 'signature',
         showLine: false,
         required: true,
+        overflow: DEFAULT_SIGNATURE_OVERFLOW_MODE,
       };
     case FieldType.INITIALS:
       return {
@@ -114,6 +116,7 @@ const getDefaultState = (fieldType: FieldType): FieldMeta => {
         fontSize: 14,
         textAlign: 'left',
         required: true,
+        overflow: DEFAULT_EMAIL_OVERFLOW_MODE,
       };
     case FieldType.DATE:
       return {
@@ -121,6 +124,7 @@ const getDefaultState = (fieldType: FieldType): FieldMeta => {
         fontSize: 14,
         textAlign: 'left',
         required: true,
+        overflow: DEFAULT_DATE_OVERFLOW_MODE,
       };
     case FieldType.TEXT:
       return {
@@ -280,17 +284,10 @@ export const FieldAdvancedSettings = forwardRef<HTMLDivElement, FieldAdvancedSet
 
     const handleFieldChange = (
       key: FieldMetaKeys,
-      value:
-        | string
-        | { checked: boolean; value: string }[]
-        | { value: string }[]
-        | boolean
-        | number,
+      value: string | { checked: boolean; value: string }[] | { value: string }[] | boolean | number,
     ) => {
       setFieldState((prevState: FieldMeta) => {
-        if (
-          ['characterLimit', 'minValue', 'maxValue', 'validationLength', 'fontSize'].includes(key)
-        ) {
+        if (['characterLimit', 'minValue', 'maxValue', 'validationLength', 'fontSize'].includes(key)) {
           const parsedValue = Number(value);
 
           return {
@@ -406,7 +403,7 @@ export const FieldAdvancedSettings = forwardRef<HTMLDivElement, FieldAdvancedSet
       <div className="mt-4">
         <ul>
           {errors.map((error, index) => (
-            <li className="text-sm text-red-500" key={index}>
+            <li className="text-red-500 text-sm" key={index}>
               {error}
             </li>
           ))}
@@ -443,10 +440,10 @@ export const FieldAdvancedSettings = forwardRef<HTMLDivElement, FieldAdvancedSet
               style={{ width: PANEL_WIDTH }}
               className="flex max-h-[80vh] flex-col overflow-hidden rounded-xl border border-border bg-widget shadow-2xl dark:bg-background"
             >
-              <div className="field-advanced-settings-drag-handle flex cursor-move items-center justify-between gap-2 border-b border-border bg-muted/40 px-3 py-2">
+              <div className="field-advanced-settings-drag-handle flex cursor-move items-center justify-between gap-2 border-border border-b bg-muted/40 px-3 py-2">
                 <div className="flex min-w-0 items-center gap-2">
                   <GripVerticalIcon className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-                  <span className="truncate text-sm font-semibold text-foreground">{_(title)}</span>
+                  <span className="truncate font-semibold text-foreground text-sm">{_(title)}</span>
                 </div>
 
                 <div className="flex flex-shrink-0 items-center gap-1">
@@ -458,11 +455,7 @@ export const FieldAdvancedSettings = forwardRef<HTMLDivElement, FieldAdvancedSet
                     className="rounded-sm p-1 text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground"
                     onClick={() => setIsCollapsed((prev) => !prev)}
                   >
-                    {isCollapsed ? (
-                      <Maximize2Icon className="h-4 w-4" />
-                    ) : (
-                      <Minimize2Icon className="h-4 w-4" />
-                    )}
+                    {isCollapsed ? <Maximize2Icon className="h-4 w-4" /> : <Minimize2Icon className="h-4 w-4" />}
                   </button>
 
                   <button
@@ -481,7 +474,7 @@ export const FieldAdvancedSettings = forwardRef<HTMLDivElement, FieldAdvancedSet
               {!isCollapsed && (
                 <>
                   <div className="custom-scrollbar flex-1 overflow-y-auto px-4 py-4">
-                    <p className="mb-4 text-sm text-muted-foreground">{_(description)}</p>
+                    <p className="mb-4 text-muted-foreground text-sm">{_(description)}</p>
 
                     {fieldSettingsForm}
 
@@ -489,7 +482,7 @@ export const FieldAdvancedSettings = forwardRef<HTMLDivElement, FieldAdvancedSet
                   </div>
 
                   <DocumentFlowFormContainerFooter
-                    className="m-0 flex-shrink-0 border-t border-border px-4 py-3"
+                    className="m-0 flex-shrink-0 border-border border-t px-4 py-3"
                     data-testid="field-advanced-settings-footer"
                   >
                     {footerActions}
@@ -515,9 +508,7 @@ export const FieldAdvancedSettings = forwardRef<HTMLDivElement, FieldAdvancedSet
                   key={index}
                   field={localField}
                   disabled={true}
-                  fieldClassName={
-                    localField.formId === field.formId ? 'ring-red-400' : 'ring-neutral-200'
-                  }
+                  fieldClassName={localField.formId === field.formId ? 'ring-red-400' : 'ring-neutral-200'}
                 />
               </span>
             ))}
@@ -527,10 +518,7 @@ export const FieldAdvancedSettings = forwardRef<HTMLDivElement, FieldAdvancedSet
           {errorList}
         </DocumentFlowFormContainerContent>
 
-        <DocumentFlowFormContainerFooter
-          className="mt-auto"
-          data-testid="field-advanced-settings-footer"
-        >
+        <DocumentFlowFormContainerFooter className="mt-auto" data-testid="field-advanced-settings-footer">
           {footerActions}
         </DocumentFlowFormContainerFooter>
       </div>

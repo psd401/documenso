@@ -1,13 +1,13 @@
-import { updateDocumentMeta } from '@documenso/lib/server-only/document-meta/upsert-document-meta';
 import { scheduleDocument } from '@documenso/lib/server-only/document/schedule-document';
 import { sendDocument } from '@documenso/lib/server-only/document/send-document';
+import { updateDocumentMeta } from '@documenso/lib/server-only/document-meta/upsert-document-meta';
 import { formatSigningLink } from '@documenso/lib/utils/recipients';
 
 import { authenticatedProcedure } from '../trpc';
 import {
+  distributeEnvelopeMeta,
   ZDistributeEnvelopeRequestSchema,
   ZDistributeEnvelopeResponseSchema,
-  distributeEnvelopeMeta,
 } from './distribute-envelope.types';
 
 export const distributeEnvelopeRoute = authenticatedProcedure

@@ -42,8 +42,8 @@ Documenso is an open-source document signing platform built as a **monorepo** us
 | Package                    | Description                                              | Port |
 | -------------------------- | -------------------------------------------------------- | ---- |
 | `@documenso/remix`         | Main application - React Router (Remix) with Hono server | 3000 |
-| `@documenso/documentation` | Documentation site (Next.js + Nextra)                    | 3002 |
 | `@documenso/openpage-api`  | Public analytics API                                     | 3003 |
+| `@documenso/docs`          | Documentation site                                       | 3004 |
 
 ### Core Packages (`packages/`)
 
@@ -65,8 +65,6 @@ Documenso is an open-source document signing platform built as a **monorepo** us
 | Package                      | Description               |
 | ---------------------------- | ------------------------- |
 | `@documenso/app-tests`       | E2E tests (Playwright)    |
-| `@documenso/eslint-config`   | Shared ESLint config      |
-| `@documenso/prettier-config` | Shared Prettier config    |
 | `@documenso/tailwind-config` | Shared Tailwind config    |
 | `@documenso/tsconfig`        | Shared TypeScript configs |
 

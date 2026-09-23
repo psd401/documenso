@@ -1,14 +1,3 @@
-import { useEffect } from 'react';
-
-import { zodResolver } from '@hookform/resolvers/zod';
-import { plural } from '@lingui/core/macro';
-import { Plural, useLingui } from '@lingui/react/macro';
-import { Trans } from '@lingui/react/macro';
-import { EnvelopeType } from '@prisma/client';
-import type * as DialogPrimitive from '@radix-ui/react-dialog';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-
 import { trpc } from '@documenso/trpc/react';
 import { Alert, AlertDescription } from '@documenso/ui/primitives/alert';
 import { Button } from '@documenso/ui/primitives/button';
@@ -20,16 +9,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@documenso/ui/primitives/dialog';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@documenso/ui/primitives/form/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@documenso/ui/primitives/form/form';
 import { Input } from '@documenso/ui/primitives/input';
 import { useToast } from '@documenso/ui/primitives/use-toast';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { plural } from '@lingui/core/macro';
+import { Plural, Trans, useLingui } from '@lingui/react/macro';
+import { EnvelopeType } from '@prisma/client';
+import type * as DialogPrimitive from '@radix-ui/react-dialog';
+import { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 
 export type EnvelopesBulkDeleteDialogProps = {
   envelopeIds: string[];
@@ -137,9 +127,7 @@ export const EnvelopesBulkDeleteDialog = ({
     <Dialog {...props} open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>
-            {isDocument ? <Trans>Delete Documents</Trans> : <Trans>Delete Templates</Trans>}
-          </DialogTitle>
+          <DialogTitle>{isDocument ? <Trans>Delete Documents</Trans> : <Trans>Delete Templates</Trans>}</DialogTitle>
 
           <DialogDescription>
             {isDocument ? (
@@ -207,8 +195,7 @@ export const EnvelopesBulkDeleteDialog = ({
                   <FormItem>
                     <FormLabel>
                       <Trans>
-                        Confirm by typing{' '}
-                        <span className="text-destructive font-semibold">{confirmationMessage}</span>
+                        Confirm by typing <span className="font-semibold text-destructive">{confirmationMessage}</span>
                       </Trans>
                     </FormLabel>
                     <FormControl>
@@ -220,21 +207,11 @@ export const EnvelopesBulkDeleteDialog = ({
               />
 
               <DialogFooter>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => onOpenChange(false)}
-                  disabled={isPending}
-                >
+                <Button type="button" variant="secondary" onClick={() => onOpenChange(false)} disabled={isPending}>
                   <Trans>Cancel</Trans>
                 </Button>
 
-                <Button
-                  type="submit"
-                  loading={isPending}
-                  disabled={!isConfirmed}
-                  variant="destructive"
-                >
+                <Button type="submit" loading={isPending} disabled={!isConfirmed} variant="destructive">
                   <Trans>Delete</Trans>
                 </Button>
               </DialogFooter>

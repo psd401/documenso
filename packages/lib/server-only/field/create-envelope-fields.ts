@@ -1,6 +1,3 @@
-import { PDF } from '@libpdf/core';
-import { EnvelopeType } from '@prisma/client';
-
 import { DOCUMENT_AUDIT_LOG_TYPE } from '@documenso/lib/types/document-audit-logs';
 import type { TFieldAndMeta } from '@documenso/lib/types/field-meta';
 import { resolveFieldMetaForCreate } from '@documenso/lib/types/field-meta';
@@ -9,11 +6,14 @@ import { getFileServerSide } from '@documenso/lib/universal/upload/get-file.serv
 import { putPdfFileServerSide } from '@documenso/lib/universal/upload/put-file.server';
 import { createDocumentAuditLogData } from '@documenso/lib/utils/document-audit-logs';
 import { prisma } from '@documenso/prisma';
+import { PDF } from '@libpdf/core';
+import { EnvelopeType } from '@prisma/client';
 
 import { AppError, AppErrorCode } from '../../errors/app-error';
 import type { EnvelopeIdOptions } from '../../utils/envelope';
 import { mapFieldToLegacyField } from '../../utils/fields';
 import { canRecipientFieldsBeModified } from '../../utils/recipients';
+import { assertEnvelopeMutable } from '../envelope/assert-envelope-mutable';
 import { getEnvelopeWhereInput } from '../envelope/get-envelope-by-id';
 import { type BoundingBox, whiteoutRegions } from '../pdf/auto-place-fields';
 
@@ -95,6 +95,8 @@ export const createEnvelopeFields = async ({
     });
   }
 
+  assertEnvelopeMutable(envelope);
+
   if (envelope.type === EnvelopeType.DOCUMENT && envelope.completedAt) {
     throw new AppError(AppErrorCode.INVALID_REQUEST, {
       message: 'Envelope already complete',
@@ -158,8 +160,7 @@ export const createEnvelopeFields = async ({
     // Check whether the recipient associated with the field can have new fields created.
     if (!canRecipientFieldsBeModified(recipient, envelope.fields)) {
       throw new AppError(AppErrorCode.INVALID_REQUEST, {
-        message:
-          'Recipient type cannot have fields, or they have already interacted with the document.',
+        message: 'Recipient type cannot have fields, or they have already interacted with the document.',
       });
     }
 
@@ -245,6 +246,8 @@ export const createEnvelopeFields = async ({
   });
 
   const createdFields = await prisma.$transaction(async (tx) => {
+    await assertEnvelopeMutable(envelope, tx);
+
     const newlyCreatedFields = await tx.field.createManyAndReturn({
       data: validatedFields.map((field) => ({
         type: field.type,
@@ -266,9 +269,7 @@ export const createEnvelopeFields = async ({
     if (envelope.type === EnvelopeType.DOCUMENT) {
       await tx.documentAuditLog.createMany({
         data: newlyCreatedFields.map((createdField) => {
-          const recipient = validatedFields.find(
-            (field) => field.recipientId === createdField.recipientId,
-          );
+          const recipient = validatedFields.find((field) => field.recipientId === createdField.recipientId);
 
           return createDocumentAuditLogData({
             type: DOCUMENT_AUDIT_LOG_TYPE.FIELD_CREATED,

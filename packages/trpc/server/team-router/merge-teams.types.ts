@@ -1,8 +1,9 @@
 // ABOUTME: Zod schemas and inferred TypeScript types for the team merge feature.
 // ABOUTME: Used by the merge-teams and preview-merge-teams TRPC routes.
+import { ZNameSchema } from '@documenso/lib/types/name';
 import { z } from 'zod';
 
-import { ZTeamNameSchema, ZTeamUrlSchema } from './schema';
+import { ZTeamUrlSchema } from './schema';
 
 export const ZMergeTeamsPreviewRequestSchema = z.object({
   organisationId: z.string(),
@@ -34,13 +35,11 @@ export const ZMergeTeamsRequestSchema = z
     organisationId: z.string(),
     sourceTeamIds: z.array(z.number()).min(1),
     destinationTeamId: z.number().optional(),
-    newTeamName: ZTeamNameSchema.optional(),
+    newTeamName: ZNameSchema.optional(),
     newTeamUrl: ZTeamUrlSchema.optional(),
   })
   .refine(
-    (data) =>
-      data.destinationTeamId !== undefined ||
-      (data.newTeamName !== undefined && data.newTeamUrl !== undefined),
+    (data) => data.destinationTeamId !== undefined || (data.newTeamName !== undefined && data.newTeamUrl !== undefined),
     {
       message: 'Either destinationTeamId or both newTeamName and newTeamUrl must be provided.',
     },

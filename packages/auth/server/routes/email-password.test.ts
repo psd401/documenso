@@ -1,12 +1,11 @@
 // ABOUTME: API-level tests for POST /email-password/signup proving the password-signup
 // ABOUTME: gate rejects account creation server-side before any user is created.
 
+import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-
-import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 
 import type { HonoAuthContext } from '../types/context';
 
@@ -32,6 +31,11 @@ vi.mock('@documenso/lib/server-only/user/create-user', () => ({
 
 vi.mock('@documenso/lib/jobs/client', () => ({
   jobsClient: { triggerJob: mockTriggerJob },
+}));
+
+// Upstream's disposable-email check reads the site-settings blocklist from the DB.
+vi.mock('@documenso/lib/server-only/site-settings/get-email-blocklist-domains', () => ({
+  getEmailBlocklistDomains: vi.fn().mockResolvedValue([]),
 }));
 
 // The routes below are unrelated to /signup but live in the same Hono chain, so

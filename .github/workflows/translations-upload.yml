@@ -15,6 +15,7 @@ jobs:
     if: false
     name: Extract and upload translations
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     environment: Translations
     permissions:
       contents: write
