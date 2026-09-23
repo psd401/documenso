@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   exceedsRevokeCircuitBreaker,
+  findGroupsExceedingRevokeCircuitBreaker,
   type PlannableDirectoryMapping,
   planDirectoryMembership,
 } from './plan-directory-membership';
@@ -95,5 +96,31 @@ describe('exceedsRevokeCircuitBreaker', () => {
 
   it('does not trip when planned revocations exceed the floor but stay under the percentage', () => {
     expect(exceedsRevokeCircuitBreaker(11, 1000)).toBe(false);
+  });
+});
+
+describe('findGroupsExceedingRevokeCircuitBreaker', () => {
+  it('flags a single group losing most of its members even when the org-wide share is small', () => {
+    const tripped = findGroupsExceedingRevokeCircuitBreaker(
+      new Map([
+        ['org_group_building', 60],
+        ['org_group_other', 1],
+      ]),
+      new Map([
+        ['org_group_building', 60],
+        ['org_group_other', 400],
+      ]),
+    );
+
+    expect(tripped).toEqual(['org_group_building']);
+  });
+
+  it('flags nothing when every group stays at or under the floor', () => {
+    const tripped = findGroupsExceedingRevokeCircuitBreaker(
+      new Map([['org_group_small', 10]]),
+      new Map([['org_group_small', 12]]),
+    );
+
+    expect(tripped).toEqual([]);
   });
 });

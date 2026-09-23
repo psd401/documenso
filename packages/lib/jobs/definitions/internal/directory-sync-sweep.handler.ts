@@ -10,6 +10,7 @@ import {
 } from '../../../server-only/directory-sync/apply-directory-mappings';
 import {
   exceedsRevokeCircuitBreaker,
+  findGroupsExceedingRevokeCircuitBreaker,
   type PlannedRevocation,
   REVOKE_CIRCUIT_BREAKER_MINIMUM,
   REVOKE_CIRCUIT_BREAKER_PERCENT,
@@ -119,9 +120,34 @@ export const run = async ({ io }: { payload: TDirectorySyncSweepJobDefinition; i
       where: { group: { directoryGroupMappings: { some: { active: true } } } },
     });
 
-    if (exceedsRevokeCircuitBreaker(counters.plannedRevocations, managedMembershipCount)) {
+    const plannedRevocationsByGroup = new Map<string, number>();
+
+    for (const { revocations } of deferredRevocations) {
+      for (const { organisationGroupId } of revocations) {
+        plannedRevocationsByGroup.set(
+          organisationGroupId,
+          (plannedRevocationsByGroup.get(organisationGroupId) ?? 0) + 1,
+        );
+      }
+    }
+
+    const groupMembershipCounts = await prisma.organisationGroupMember.groupBy({
+      by: ['groupId'],
+      where: { groupId: { in: [...plannedRevocationsByGroup.keys()] } },
+      _count: { _all: true },
+    });
+
+    const trippedGroupIds = findGroupsExceedingRevokeCircuitBreaker(
+      plannedRevocationsByGroup,
+      new Map(groupMembershipCounts.map((row) => [row.groupId, row._count._all])),
+    );
+
+    if (
+      exceedsRevokeCircuitBreaker(counters.plannedRevocations, managedMembershipCount) ||
+      trippedGroupIds.length > 0
+    ) {
       io.logger.error(
-        `[directory-sync-sweep] Revocation circuit breaker tripped: ${counters.plannedRevocations} planned revocations exceed ${REVOKE_CIRCUIT_BREAKER_MINIMUM} and ${REVOKE_CIRCUIT_BREAKER_PERCENT}% of ${managedMembershipCount} memberships in managed groups; no revocations applied`,
+        `[directory-sync-sweep] Revocation circuit breaker tripped: ${counters.plannedRevocations} planned revocations of ${managedMembershipCount} memberships in managed groups (limit: more than ${REVOKE_CIRCUIT_BREAKER_MINIMUM} and ${REVOKE_CIRCUIT_BREAKER_PERCENT}% org-wide or within one group); groups over the limit: ${trippedGroupIds.join(', ') || 'none'}; no revocations applied`,
       );
 
       await prisma.directorySyncAuditLog.create({
@@ -136,6 +162,7 @@ export const run = async ({ io }: { payload: TDirectorySyncSweepJobDefinition; i
             managedMembershipCount,
             thresholdPercent: REVOKE_CIRCUIT_BREAKER_PERCENT,
             thresholdMinimum: REVOKE_CIRCUIT_BREAKER_MINIMUM,
+            trippedGroupIds,
             revokeMode: getDirectorySyncRevokeMode(),
           },
         },

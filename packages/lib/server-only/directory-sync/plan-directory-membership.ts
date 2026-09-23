@@ -122,3 +122,15 @@ export const planDirectoryMembership = ({
 export const exceedsRevokeCircuitBreaker = (plannedRevocationCount: number, managedMembershipCount: number): boolean =>
   plannedRevocationCount > REVOKE_CIRCUIT_BREAKER_MINIMUM &&
   plannedRevocationCount * 100 > managedMembershipCount * REVOKE_CIRCUIT_BREAKER_PERCENT;
+
+/**
+ * Group ids whose planned revocations exceed the breaker thresholds relative to that group's own
+ * membership, so one deactivated or mistyped mapping cannot empty a group inside a large org.
+ */
+export const findGroupsExceedingRevokeCircuitBreaker = (
+  plannedRevocationsByGroup: Map<string, number>,
+  membershipCountByGroup: Map<string, number>,
+): string[] =>
+  [...plannedRevocationsByGroup.entries()]
+    .filter(([groupId, planned]) => exceedsRevokeCircuitBreaker(planned, membershipCountByGroup.get(groupId) ?? 0))
+    .map(([groupId]) => groupId);

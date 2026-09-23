@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockFindMany = vi.fn();
 const mockGroupMemberCount = vi.fn();
+const mockGroupMemberGroupBy = vi.fn();
 const mockAuditLogCreate = vi.fn();
 const mockSyncGoogleDirectory = vi.fn();
 const mockApplyDirectoryMappings = vi.fn();
@@ -16,7 +17,7 @@ const mockLoggerError = vi.fn();
 vi.mock('@documenso/prisma', () => ({
   prisma: {
     user: { findMany: mockFindMany },
-    organisationGroupMember: { count: mockGroupMemberCount },
+    organisationGroupMember: { count: mockGroupMemberCount, groupBy: mockGroupMemberGroupBy },
     directorySyncAuditLog: { create: mockAuditLogCreate },
   },
 }));
@@ -156,6 +157,7 @@ describe('directory-sync-sweep handler', () => {
       ]);
       mockSyncGoogleDirectory.mockResolvedValue('synced');
       mockGroupMemberCount.mockResolvedValue(100);
+      mockGroupMemberGroupBy.mockResolvedValue([]);
     });
 
     it('applies deferred revocations per user when they are at most 5% of managed-group memberships', async () => {
@@ -210,11 +212,49 @@ describe('directory-sync-sweep handler', () => {
             managedMembershipCount: 100,
             thresholdPercent: 5,
             thresholdMinimum: 10,
+            trippedGroupIds: [],
             revokeMode: 'enforce',
           },
         },
       });
       expect(mockLoggerInfo).toHaveBeenCalledWith(expect.stringContaining('granted=1'));
+    });
+
+    it('applies no revocations when one group would lose more than the breaker allows, even under the org-wide share', async () => {
+      const userIds = Array.from({ length: 11 }, (_, i) => i + 1);
+      mockFindMany.mockResolvedValue(userIds.map((id) => ({ id, email: `u${id}@psd401.net` })));
+      mockGroupMemberCount.mockResolvedValue(10000);
+      mockGroupMemberGroupBy.mockResolvedValue([{ groupId: 'org_group_building', _count: { _all: 60 } }]);
+
+      for (const id of userIds) {
+        mockApplyDirectoryMappings.mockResolvedValueOnce({
+          granted: 0,
+          deferredRevocations: [
+            {
+              organisationGroupMemberId: `gm_${id}`,
+              organisationMemberId: `member_${id}`,
+              organisationGroupId: 'org_group_building',
+            },
+          ],
+        });
+      }
+
+      const { run } = await import('./directory-sync-sweep.handler');
+      await run({ payload: {}, io });
+
+      expect(mockGroupMemberGroupBy).toHaveBeenCalledWith({
+        by: ['groupId'],
+        where: { groupId: { in: ['org_group_building'] } },
+        _count: { _all: true },
+      });
+      expect(mockApplyDirectoryRevocations).not.toHaveBeenCalled();
+      expect(mockLoggerError).toHaveBeenCalledWith(expect.stringContaining('org_group_building'));
+      expect(mockAuditLogCreate).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          type: 'REVOKE_CIRCUIT_BREAKER',
+          data: expect.objectContaining({ trippedGroupIds: ['org_group_building'] }),
+        }),
+      });
     });
   });
 });
