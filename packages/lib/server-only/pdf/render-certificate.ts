@@ -1,24 +1,23 @@
-import type { I18n } from '@lingui/core';
-import { msg } from '@lingui/core/macro';
-import type { Field, Signature } from '@prisma/client';
-import { SigningStatus } from '@prisma/client';
-import type { RecipientRole } from '@prisma/client';
-import Konva from 'konva';
-import 'konva/skia-backend';
-import { DateTime } from 'luxon';
+// sort-imports-ignore
+import '../konva/skia-backend';
+
 import fs from 'node:fs';
 import path from 'node:path';
-import type { Canvas } from 'skia-canvas';
-import { Image as SkiaImage } from 'skia-canvas';
+import type { Canvas } from '@documenso/skia-canvas';
+import { Image as SkiaImage } from '@documenso/skia-canvas';
+import type { I18n } from '@lingui/core';
+import { msg } from '@lingui/core/macro';
+import type { Field, RecipientRole, Signature } from '@prisma/client';
+import { SigningStatus } from '@prisma/client';
+import Konva from 'konva';
+import { DateTime } from 'luxon';
 import { UAParser } from 'ua-parser-js';
 import { renderSVG } from 'uqr';
 
 import { NEXT_PUBLIC_WEBAPP_URL } from '../../constants/app';
 import { APP_I18N_OPTIONS } from '../../constants/i18n';
-import {
-  RECIPIENT_ROLES_DESCRIPTION,
-  RECIPIENT_ROLE_SIGNING_REASONS,
-} from '../../constants/recipient-roles';
+import { getSignatureFontFamily } from '../../constants/pdf';
+import { RECIPIENT_ROLE_SIGNING_REASONS, RECIPIENT_ROLES_DESCRIPTION } from '../../constants/recipient-roles';
 import type { TDocumentAuditLogBaseSchema } from '../../types/document-audit-logs';
 import { svgToPng } from '../../utils/images/svg-to-png';
 import { ensureFontLibrary } from './helpers';
@@ -305,7 +304,7 @@ const renderColumnTwo = (options: RenderColumnOptions) => {
         x: 2,
         text: recipient.signatureField?.signature?.typedSignature,
         padding: 4,
-        fontFamily: 'Caveat',
+        fontFamily: getSignatureFontFamily(recipient.signatureField?.signature?.typedSignature),
         fontSize: 16,
         align: 'center',
         verticalAlign: 'middle',

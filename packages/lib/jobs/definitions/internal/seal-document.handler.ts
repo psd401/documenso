@@ -1,31 +1,21 @@
-import { PDFDocument } from '@cantoo/pdf-lib';
-import { PDF } from '@libpdf/core';
-import type { DocumentData, Envelope, EnvelopeItem, Field } from '@prisma/client';
-import {
-  DocumentStatus,
-  EnvelopeType,
-  RecipientRole,
-  SigningStatus,
-  WebhookTriggerEvents,
-} from '@prisma/client';
-import { nanoid } from 'nanoid';
 import path from 'node:path';
-import { groupBy } from 'remeda';
-
+import { PDFDocument } from '@cantoo/pdf-lib';
+import { finalizeTspEnvelopeCompletion } from '@documenso/ee/server-only/signing/csc/finalize-tsp-completion';
 import { addRejectionStampToPdf } from '@documenso/lib/server-only/pdf/add-rejection-stamp-to-pdf';
 import { generateAuditLogPdf } from '@documenso/lib/server-only/pdf/generate-audit-log-pdf';
 import { generateCertificatePdf } from '@documenso/lib/server-only/pdf/generate-certificate-pdf';
-import {
-  getLastPageDimensions,
-  getV2OverlayPlacement,
-} from '@documenso/lib/server-only/pdf/get-page-size';
+import { getLastPageDimensions, getV2OverlayPlacement } from '@documenso/lib/server-only/pdf/get-page-size';
 import { mergePageContentStreams } from '@documenso/lib/server-only/pdf/merge-page-content-streams';
 import { prisma } from '@documenso/prisma';
 import { signPdf } from '@documenso/signing';
+import { PDF } from '@libpdf/core';
+import type { DocumentData, Envelope, EnvelopeItem, Field } from '@prisma/client';
+import { DocumentStatus, EnvelopeType, RecipientRole, SigningStatus, WebhookTriggerEvents } from '@prisma/client';
+import { nanoid } from 'nanoid';
+import { groupBy } from 'remeda';
 
 import { NEXT_PRIVATE_USE_PLAYWRIGHT_PDF } from '../../../constants/app';
 import { AppError, AppErrorCode } from '../../../errors/app-error';
-import { sendCompletedEmail } from '../../../server-only/document/send-completed-email';
 import { getAuditLogsPdf } from '../../../server-only/htmltopdf/get-audit-logs-pdf';
 import { getCertificatePdf } from '../../../server-only/htmltopdf/get-certificate-pdf';
 import { insertFieldInPDFV1 } from '../../../server-only/pdf/insert-field-in-pdf-v1';
@@ -33,14 +23,9 @@ import { insertFieldInPDFV2 } from '../../../server-only/pdf/insert-field-in-pdf
 import { legacy_insertFieldInPDF } from '../../../server-only/pdf/legacy-insert-field-in-pdf';
 import { getTeamSettings } from '../../../server-only/team/get-team-settings';
 import { triggerWebhook } from '../../../server-only/webhooks/trigger/trigger-webhook';
-import {
-  DOCUMENT_AUDIT_LOG_TYPE,
-  type TDocumentAuditLog,
-} from '../../../types/document-audit-logs';
-import {
-  ZWebhookDocumentSchema,
-  mapEnvelopeToWebhookDocumentPayload,
-} from '../../../types/webhook-payload';
+import { DOCUMENT_AUDIT_LOG_TYPE, type TDocumentAuditLog } from '../../../types/document-audit-logs';
+import { isTspEnvelope } from '../../../types/signature-level';
+import { mapEnvelopeToWebhookDocumentPayload, ZWebhookDocumentSchema } from '../../../types/webhook-payload';
 import { prefixedId } from '../../../universal/id';
 import { getFileServerSide } from '../../../universal/upload/get-file.server';
 import { putPdfFileServerSide } from '../../../universal/upload/put-file.server';
@@ -48,23 +33,12 @@ import { fieldsContainUnsignedRequiredField } from '../../../utils/advanced-fiel
 import { isDocumentCompleted } from '../../../utils/document';
 import { createDocumentAuditLogData } from '../../../utils/document-audit-logs';
 import { mapDocumentIdToSecondaryId } from '../../../utils/envelope';
+import { jobs } from '../../client';
 import type { JobRunIO } from '../../client/_internal/job';
 import type { TSealDocumentJobDefinition } from './seal-document';
 
-export const run = async ({
-  payload,
-  io,
-}: {
-  payload: TSealDocumentJobDefinition;
-  io: JobRunIO;
-}) => {
-  const {
-    documentId,
-    sendEmail = true,
-    isResealing = false,
-    isEarlyCompletion = false,
-    requestMetadata,
-  } = payload;
+export const run = async ({ payload, io }: { payload: TSealDocumentJobDefinition; io: JobRunIO }) => {
+  const { documentId, sendEmail = true, isResealing = false, isEarlyCompletion = false, requestMetadata } = payload;
 
   const { envelopeId, envelopeStatus, isRejected } = await io.runTask('seal-document', async () => {
     const envelope = await prisma.envelope.findFirstOrThrow({
@@ -122,8 +96,7 @@ export const run = async ({
     const isComplete =
       envelope.recipients.some((recipient) => recipient.signingStatus === SigningStatus.REJECTED) ||
       envelope.recipients.every(
-        (recipient) =>
-          recipient.signingStatus === SigningStatus.SIGNED || recipient.role === RecipientRole.CC,
+        (recipient) => recipient.signingStatus === SigningStatus.SIGNED || recipient.role === RecipientRole.CC,
       );
 
     // When the owner finalizes the document early we intentionally bypass the
@@ -143,9 +116,7 @@ export const run = async ({
       throw new Error(`Document ${envelope.id} has no envelope items`);
     }
 
-    const recipientsWithoutCCers = envelope.recipients.filter(
-      (recipient) => recipient.role !== RecipientRole.CC,
-    );
+    const recipientsWithoutCCers = envelope.recipients.filter((recipient) => recipient.role !== RecipientRole.CC);
 
     // Determine if the document has been rejected by checking if any recipient has rejected it
     const rejectedRecipient = recipientsWithoutCCers.find(
@@ -201,6 +172,33 @@ export const run = async ({
 
     const finalEnvelopeStatus = isRejected ? DocumentStatus.REJECTED : DocumentStatus.COMPLETED;
 
+    if (isTspEnvelope(envelope)) {
+      if (isResealing) {
+        throw new AppError(AppErrorCode.NOT_SETUP, {
+          message: 'Re-sealing TSP envelopes is not supported — recipient signatures cannot be regenerated externally.',
+        });
+      }
+
+      if (isRejected) {
+        throw new AppError(AppErrorCode.NOT_SETUP, {
+          message:
+            'TSP envelope rejection is not supported in V1 — rejection stamps would invalidate PAdES signatures.',
+        });
+      }
+
+      await finalizeTspEnvelopeCompletion({
+        envelope,
+        envelopeCompletedAuditLog,
+        requestMetadata,
+      });
+
+      return {
+        envelopeId: envelope.id,
+        envelopeStatus: envelope.status,
+        isRejected,
+      };
+    }
+
     // Pre-fetch all PDF data so we can read dimensions and pass it
     // to decorateAndSignPdf without fetching again.
     const prefetchedItems = await Promise.all(
@@ -219,9 +217,7 @@ export const run = async ({
     const newDocumentData: Array<{ oldDocumentDataId: string; newDocumentDataId: string }> = [];
 
     for (const { envelopeItem, pdfData } of prefetchedItems) {
-      let envelopeItemFields = envelope.envelopeItems.find(
-        (item) => item.id === envelopeItem.id,
-      )?.field;
+      let envelopeItemFields = envelope.envelopeItems.find((item) => item.id === envelopeItem.id)?.field;
 
       if (!envelopeItemFields) {
         throw new Error(`Envelope item fields not found for envelope item ${envelopeItem.id}`);
@@ -341,21 +337,6 @@ export const run = async ({
     };
   });
 
-  await io.runTask('send-completed-email', async () => {
-    let shouldSendCompletedEmail = sendEmail && !isResealing && !isRejected;
-
-    if (isResealing && !isDocumentCompleted(envelopeStatus)) {
-      shouldSendCompletedEmail = sendEmail;
-    }
-
-    if (shouldSendCompletedEmail) {
-      await sendCompletedEmail({
-        id: { type: 'envelopeId', id: envelopeId },
-        requestMetadata,
-      });
-    }
-  });
-
   const updatedEnvelope = await prisma.envelope.findFirstOrThrow({
     where: {
       id: envelopeId,
@@ -367,13 +348,27 @@ export const run = async ({
   });
 
   await triggerWebhook({
-    event: isRejected
-      ? WebhookTriggerEvents.DOCUMENT_REJECTED
-      : WebhookTriggerEvents.DOCUMENT_COMPLETED,
+    event: isRejected ? WebhookTriggerEvents.DOCUMENT_REJECTED : WebhookTriggerEvents.DOCUMENT_COMPLETED,
     data: ZWebhookDocumentSchema.parse(mapEnvelopeToWebhookDocumentPayload(updatedEnvelope)),
     userId: updatedEnvelope.userId,
     teamId: updatedEnvelope.teamId ?? undefined,
   });
+
+  let shouldSendCompletedEmail = sendEmail && !isResealing && !isRejected;
+
+  if (isResealing && !isDocumentCompleted(envelopeStatus)) {
+    shouldSendCompletedEmail = sendEmail;
+  }
+
+  if (shouldSendCompletedEmail) {
+    await jobs.triggerJob({
+      name: 'send.document.completed.emails',
+      payload: {
+        envelopeId,
+        requestMetadata,
+      },
+    });
+  }
 };
 
 type DecorateAndSignPdfOptions = {
@@ -467,10 +462,7 @@ const decorateAndSignPdf = async ({
       // The frontend (pdfjs) renders the page against its CropBox, whereas
       // `page.width`/`page.height` report the MediaBox. Size and position the
       // overlay from the CropBox so it lines up regardless of the CropBox origin.
-      const { pageWidth, pageHeight, translateX, translateY } = getV2OverlayPlacement(
-        page.getCropBox(),
-        page.rotation,
-      );
+      const { pageWidth, pageHeight, translateX, translateY } = getV2OverlayPlacement(page.getCropBox(), page.rotation);
 
       const overlayBytes = await insertFieldInPDFV2({
         pageWidth,

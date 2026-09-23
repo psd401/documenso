@@ -1,14 +1,4 @@
-import { useMemo, useState } from 'react';
-
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
-import { EnvelopeType } from '@prisma/client';
-import type { FileRejection } from 'react-dropzone';
-import { useNavigate, useParams } from 'react-router';
-
 import { useLimits } from '@documenso/ee/server-only/limits/provider/client';
-import { useAnalytics } from '@documenso/lib/client-only/hooks/use-analytics';
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { useSession } from '@documenso/lib/client-only/providers/session';
 import { DEFAULT_DOCUMENT_TIME_ZONE, TIME_ZONES } from '@documenso/lib/constants/time-zones';
@@ -18,28 +8,27 @@ import { trpc } from '@documenso/trpc/react';
 import type { TCreateDocumentPayloadSchema } from '@documenso/trpc/server/document-router/create-document.types';
 import type { TCreateTemplatePayloadSchema } from '@documenso/trpc/server/template-router/schema';
 import { buildDropzoneRejectionDescription } from '@documenso/ui/lib/handle-dropzone-rejection';
-import { buildUploadErrorMessage } from '@documenso/ui/lib/handle-upload-error';
 import { cn } from '@documenso/ui/lib/utils';
 import { DocumentUploadButton as DocumentUploadButtonPrimitive } from '@documenso/ui/primitives/document-upload-button';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@documenso/ui/primitives/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@documenso/ui/primitives/tooltip';
 import { useToast } from '@documenso/ui/primitives/use-toast';
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
+import { EnvelopeType } from '@prisma/client';
+import { useMemo, useState } from 'react';
+import type { FileRejection } from 'react-dropzone';
+import { useNavigate, useParams } from 'react-router';
 
 import { useCurrentTeam } from '~/providers/team';
+import { getUploadErrorMessage } from '~/utils/toast-error-messages';
 
 export type DocumentUploadButtonLegacyProps = {
   className?: string;
   type: EnvelopeType;
 };
 
-export const DocumentUploadButtonLegacy = ({
-  className,
-  type,
-}: DocumentUploadButtonLegacyProps) => {
+export const DocumentUploadButtonLegacy = ({ className, type }: DocumentUploadButtonLegacyProps) => {
   const { _ } = useLingui();
   const { toast } = useToast();
   const { user } = useSession();
@@ -48,7 +37,6 @@ export const DocumentUploadButtonLegacy = ({
   const team = useCurrentTeam();
 
   const navigate = useNavigate();
-  const analytics = useAnalytics();
   const organisation = useCurrentOrganisation();
 
   const userTimezone =
@@ -113,12 +101,6 @@ export const DocumentUploadButtonLegacy = ({
           description: _(msg`Your document has been uploaded successfully.`),
           duration: 5000,
         });
-
-        analytics.capture('App: Document Uploaded', {
-          userId: user.id,
-          documentId: id,
-          timestamp: new Date().toISOString(),
-        });
       }
 
       // Handle legacy template creation.
@@ -140,11 +122,11 @@ export const DocumentUploadButtonLegacy = ({
 
       console.error(err);
 
-      const errorMessage = buildUploadErrorMessage(error.code);
+      const errorMessage = getUploadErrorMessage(error.code);
 
       toast({
-        title: _(msg`Error`),
-        description: _(errorMessage),
+        title: _(errorMessage.title),
+        description: _(errorMessage.description),
         variant: 'destructive',
         duration: 7500,
       });

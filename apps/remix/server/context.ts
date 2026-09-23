@@ -1,10 +1,6 @@
-import type { Context, Next } from 'hono';
-
 import { extractSessionCookieFromHeaders } from '@documenso/auth/server/lib/session/session-cookies';
-import {
-  type RequestMetadata,
-  extractRequestMetadata,
-} from '@documenso/lib/universal/extract-request-metadata';
+import { extractRequestMetadata, type RequestMetadata } from '@documenso/lib/universal/extract-request-metadata';
+import type { Context, Next } from 'hono';
 
 export type AppContext = {
   requestMetadata: RequestMetadata;
@@ -28,12 +24,11 @@ export const appContext = async (c: Context, next: Next) => {
 
   // These are non page paths like API.
   if (!isPageRequest(request) || noSessionCookie || blacklistedPathsRegex.test(url.pathname)) {
-    return next();
+    return await next();
   }
 
   // Add context to any pages you want here.
-
-  return next();
+  return await next();
 };
 
 const setAppContext = (c: Context, context: AppContext) => {
@@ -64,4 +59,4 @@ const isPageRequest = (request: Request) => {
  * - Urls that start with /api
  * - Urls that start with _
  */
-const blacklistedPathsRegex = new RegExp('^/api/|^/__');
+const blacklistedPathsRegex = /^\/api\/|^\/__/;

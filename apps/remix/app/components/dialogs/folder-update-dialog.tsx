@@ -1,17 +1,9 @@
 // ABOUTME: Dialog for editing folder settings including name, visibility, and per-user/group access control.
 // allowedUserIds and allowedGroupIds restrict folder visibility when non-empty.
-import { useEffect, useState } from 'react';
-
-import { zodResolver } from '@hookform/resolvers/zod';
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react/macro';
-import { Trans } from '@lingui/react/macro';
-import type * as DialogPrimitive from '@radix-ui/react-dialog';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
 
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { DocumentVisibility } from '@documenso/lib/types/document-visibility';
+import { ZNameSchema } from '@documenso/lib/types/name';
 import { trpc } from '@documenso/trpc/react';
 import type { TFolderWithSubfolders } from '@documenso/trpc/server/folder-router/schema';
 import { Button } from '@documenso/ui/primitives/button';
@@ -24,24 +16,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@documenso/ui/primitives/dialog';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@documenso/ui/primitives/form/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@documenso/ui/primitives/form/form';
 import { Input } from '@documenso/ui/primitives/input';
 import { MultiSelectCombobox } from '@documenso/ui/primitives/multi-select-combobox';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@documenso/ui/primitives/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@documenso/ui/primitives/select';
 import { useToast } from '@documenso/ui/primitives/use-toast';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { msg } from '@lingui/core/macro';
+import { Trans, useLingui } from '@lingui/react/macro';
+import type * as DialogPrimitive from '@radix-ui/react-dialog';
+import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 
 import { useOptionalCurrentTeam } from '~/providers/team';
 
@@ -52,7 +38,7 @@ export type FolderUpdateDialogProps = {
 } & Omit<DialogPrimitive.DialogProps, 'children'>;
 
 export const ZUpdateFolderFormSchema = z.object({
-  name: z.string().min(1),
+  name: ZNameSchema,
   visibility: z.nativeEnum(DocumentVisibility).optional(),
 });
 
@@ -60,10 +46,11 @@ export type TUpdateFolderFormSchema = z.infer<typeof ZUpdateFolderFormSchema>;
 
 export const FolderUpdateDialog = ({ folder, isOpen, onOpenChange }: FolderUpdateDialogProps) => {
   const { t } = useLingui();
-  const team = useOptionalCurrentTeam();
 
   const { toast } = useToast();
   const { mutateAsync: updateFolder } = trpc.folder.updateFolder.useMutation();
+
+  const team = useOptionalCurrentTeam();
 
   const { data: teamMembers } = trpc.team.member.getMany.useQuery(
     { teamId: team?.id ?? 0 },

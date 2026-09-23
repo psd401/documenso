@@ -1,12 +1,4 @@
-import { useState } from 'react';
-
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
-import { DocumentStatus, SigningStatus } from '@prisma/client';
-import { Loader, LucideChevronDown, LucideChevronUp, X } from 'lucide-react';
-import { P, match } from 'ts-pattern';
-
+import { useAnalytics } from '@documenso/lib/client-only/hooks/use-analytics';
 import { PDF_VIEWER_PAGE_SELECTOR } from '@documenso/lib/constants/pdf-viewer';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { getDocumentDataUrlForPdfViewer } from '@documenso/lib/utils/envelope-download';
@@ -26,8 +18,16 @@ import { Input } from '@documenso/ui/primitives/input';
 import { Label } from '@documenso/ui/primitives/label';
 import { SignaturePadDialog } from '@documenso/ui/primitives/signature-pad/signature-pad-dialog';
 import { useToast } from '@documenso/ui/primitives/use-toast';
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
+import { DocumentStatus, SigningStatus } from '@prisma/client';
+import { Loader, LucideChevronDown, LucideChevronUp, X } from 'lucide-react';
+import { useState } from 'react';
+import { match, P } from 'ts-pattern';
 
 import PDFViewerLazy from '~/components/general/pdf-viewer/pdf-viewer-lazy';
+import { getSigningCompletionErrorMessage } from '~/utils/toast-error-messages';
 
 import { useRequiredDocumentSigningContext } from '../../general/document-signing/document-signing-provider';
 import { DocumentSigningRejectDialog } from '../../general/document-signing/document-signing-reject-dialog';
@@ -38,12 +38,7 @@ interface MultiSignDocumentSigningViewProps {
   recipientId: number;
   onBack: () => void;
   onDocumentCompleted?: (data: { token: string; documentId: number; recipientId: number }) => void;
-  onDocumentRejected?: (data: {
-    token: string;
-    documentId: number;
-    recipientId: number;
-    reason: string;
-  }) => void;
+  onDocumentRejected?: (data: { token: string; documentId: number; recipientId: number; reason: string }) => void;
   onDocumentError?: () => void;
   onDocumentReady?: () => void;
   isNameLocked?: boolean;
@@ -63,9 +58,9 @@ export const MultiSignDocumentSigningView = ({
 }: MultiSignDocumentSigningViewProps) => {
   const { _ } = useLingui();
   const { toast } = useToast();
+  const analytics = useAnalytics();
 
-  const { fullName, email, signature, setFullName, setSignature } =
-    useRequiredDocumentSigningContext();
+  const { fullName, email, signature, setFullName, setSignature } = useRequiredDocumentSigningContext();
 
   const [hasDocumentLoaded, setHasDocumentLoaded] = useState(false);
 
@@ -81,21 +76,17 @@ export const MultiSignDocumentSigningView = ({
   );
 
   const { mutateAsync: signFieldWithToken } = trpc.field.signFieldWithToken.useMutation();
-  const { mutateAsync: removeSignedFieldWithToken } =
-    trpc.field.removeSignedFieldWithToken.useMutation();
+  const { mutateAsync: removeSignedFieldWithToken } = trpc.field.removeSignedFieldWithToken.useMutation();
 
-  const { mutateAsync: completeDocumentWithToken } =
-    trpc.recipient.completeDocumentWithToken.useMutation();
+  const { mutateAsync: completeDocumentWithToken } = trpc.recipient.completeDocumentWithToken.useMutation();
 
   const hasSignatureField = document?.fields.some((field) => isSignatureFieldType(field.type));
 
   const [pendingFields, completedFields] = [
     sortFieldsByPosition(
-      document?.fields.filter((field) => field.recipient.signingStatus !== SigningStatus.SIGNED) ??
-        [],
+      document?.fields.filter((field) => field.recipient.signingStatus !== SigningStatus.SIGNED) ?? [],
     ),
-    document?.fields.filter((field) => field.recipient.signingStatus === SigningStatus.SIGNED) ??
-      [],
+    document?.fields.filter((field) => field.recipient.signingStatus === SigningStatus.SIGNED) ?? [],
   ];
 
   const uninsertedFields = document?.fields.filter((field) => !field.inserted) ?? [];
@@ -111,6 +102,13 @@ export const MultiSignDocumentSigningView = ({
       }
 
       console.error(err);
+
+      analytics.captureException(err, {
+        source: 'embed',
+        location: 'sign_field',
+        recipientId,
+        documentId: document?.id,
+      });
 
       toast({
         title: _(msg`Error`),
@@ -131,6 +129,13 @@ export const MultiSignDocumentSigningView = ({
       }
 
       console.error(err);
+
+      analytics.captureException(err, {
+        source: 'embed',
+        location: 'remove_field',
+        recipientId,
+        documentId: document?.id,
+      });
     }
   };
 
@@ -151,11 +156,21 @@ export const MultiSignDocumentSigningView = ({
         recipientId,
       });
     } catch (err) {
+      analytics.captureException(err, {
+        source: 'embed',
+        location: 'complete_document',
+        recipientId,
+        documentId: document?.id,
+      });
+
       onDocumentError?.();
 
+      const error = AppError.parseError(err);
+      const toastMessage = getSigningCompletionErrorMessage(error.code);
+
       toast({
-        title: _(msg`Error`),
-        description: _(msg`Failed to complete the document. Please try again.`),
+        title: _(toastMessage.title),
+        description: _(toastMessage.description),
         variant: 'destructive',
       });
     } finally {
@@ -188,7 +203,7 @@ export const MultiSignDocumentSigningView = ({
             <div className="flex min-h-[400px] w-full items-center justify-center">
               <div className="flex flex-col items-center gap-4">
                 <Loader className="h-8 w-8 animate-spin text-primary" />
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   <Trans>Loading document...</Trans>
                 </p>
               </div>
@@ -196,7 +211,7 @@ export const MultiSignDocumentSigningView = ({
           ))
           .with({ isLoading: false, document: undefined }, () => (
             <div className="flex min-h-[400px] w-full items-center justify-center">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 <Trans>Failed to load document</Trans>
               </p>
             </div>
@@ -205,7 +220,7 @@ export const MultiSignDocumentSigningView = ({
             <>
               <div className="mx-auto flex w-full max-w-screen-xl items-baseline justify-between">
                 <div className="flex items-center gap-4">
-                  <h1 className="text-2xl font-semibold">{document.title}</h1>
+                  <h1 className="font-semibold text-2xl">{document.title}</h1>
                 </div>
 
                 <Button variant="ghost" size="sm" onClick={onBack} className="p-2">
@@ -214,12 +229,8 @@ export const MultiSignDocumentSigningView = ({
               </div>
 
               {allowDocumentRejection && (
-                <div className="embed--Actions mb-4 mt-8 flex w-full flex-row-reverse items-baseline justify-between">
-                  <DocumentSigningRejectDialog
-                    documentId={document.id}
-                    token={token}
-                    onRejected={onRejected}
-                  />
+                <div className="embed--Actions mt-8 mb-4 flex w-full flex-row-reverse items-baseline justify-between">
+                  <DocumentSigningRejectDialog documentId={document.id} token={token} onRejected={onRejected} />
                 </div>
               )}
 
@@ -250,14 +261,14 @@ export const MultiSignDocumentSigningView = ({
                 {document.status !== DocumentStatus.COMPLETED && (
                   <div
                     key={isExpanded ? 'expanded' : 'collapsed'}
-                    className="embed--DocumentWidgetContainer group/document-widget fixed bottom-8 left-0 z-50 h-fit max-h-[calc(100dvh-2rem)] w-full flex-shrink-0 px-6 md:sticky md:bottom-[unset] md:top-0 md:z-auto md:w-[350px] md:px-0"
+                    className="embed--DocumentWidgetContainer group/document-widget fixed bottom-8 left-0 z-50 h-fit max-h-[calc(100dvh-2rem)] w-full flex-shrink-0 px-6 md:sticky md:top-0 md:bottom-[unset] md:z-auto md:w-[350px] md:px-0"
                     data-expanded={isExpanded || undefined}
                   >
                     <div className="embed--DocumentWidget flex w-full flex-col rounded-xl border border-border bg-widget px-4 py-4 md:py-6">
                       {/* Header */}
                       <div className="embed--DocumentWidgetHeader">
                         <div className="flex items-center justify-between gap-x-2">
-                          <h3 className="text-xl font-semibold text-foreground md:text-2xl">
+                          <h3 className="font-semibold text-foreground text-xl md:text-2xl">
                             <Trans>Sign document</Trans>
                           </h3>
 
@@ -278,11 +289,11 @@ export const MultiSignDocumentSigningView = ({
                       </div>
 
                       <div className="embed--DocumentWidgetContent hidden group-data-[expanded]/document-widget:block md:block">
-                        <p className="mt-2 text-sm text-muted-foreground">
+                        <p className="mt-2 text-muted-foreground text-sm">
                           <Trans>Sign the document to complete the process.</Trans>
                         </p>
 
-                        <hr className="mb-8 mt-4 border-border" />
+                        <hr className="mt-4 mb-8 border-border" />
                       </div>
 
                       {/* Form */}
@@ -310,13 +321,7 @@ export const MultiSignDocumentSigningView = ({
                                   <Trans>Email</Trans>
                                 </Label>
 
-                                <Input
-                                  type="email"
-                                  id="email"
-                                  className="mt-2 bg-background"
-                                  value={email}
-                                  disabled
-                                />
+                                <Input type="email" id="email" className="mt-2 bg-background" value={email} disabled />
                               </div>
 
                               {hasSignatureField && (
@@ -332,15 +337,9 @@ export const MultiSignDocumentSigningView = ({
                                     fullName={fullName}
                                     value={signature ?? ''}
                                     onChange={(v) => setSignature(v ?? '')}
-                                    typedSignatureEnabled={
-                                      document.documentMeta?.typedSignatureEnabled
-                                    }
-                                    uploadSignatureEnabled={
-                                      document.documentMeta?.uploadSignatureEnabled
-                                    }
-                                    drawSignatureEnabled={
-                                      document.documentMeta?.drawSignatureEnabled
-                                    }
+                                    typedSignatureEnabled={document.documentMeta?.typedSignatureEnabled}
+                                    uploadSignatureEnabled={document.documentMeta?.uploadSignatureEnabled}
+                                    drawSignatureEnabled={document.documentMeta?.drawSignatureEnabled}
                                   />
                                 </div>
                               )}
@@ -357,11 +356,7 @@ export const MultiSignDocumentSigningView = ({
                             <Trans>Next</Trans>
                           </Button>
                         ) : (
-                          <Button
-                            className="col-span-2"
-                            loading={isSubmitting}
-                            onClick={onDocumentComplete}
-                          >
+                          <Button className="col-span-2" loading={isSubmitting} onClick={onDocumentComplete}>
                             <Trans>Complete</Trans>
                           </Button>
                         )}
@@ -371,14 +366,8 @@ export const MultiSignDocumentSigningView = ({
                 )}
 
                 {hasDocumentLoaded && showPendingFieldTooltip && pendingFields.length > 0 && (
-                  <ElementVisible
-                    target={`${PDF_VIEWER_PAGE_SELECTOR}[data-page-number="${pendingFields[0].page}"]`}
-                  >
-                    <FieldToolTip
-                      key={pendingFields[0].id}
-                      field={pendingFields[0]}
-                      color="warning"
-                    >
+                  <ElementVisible target={`${PDF_VIEWER_PAGE_SELECTOR}[data-page-number="${pendingFields[0].page}"]`}>
+                    <FieldToolTip key={pendingFields[0].id} field={pendingFields[0]} color="warning">
                       <Trans>Click to insert field</Trans>
                     </FieldToolTip>
                   </ElementVisible>
@@ -396,10 +385,7 @@ export const MultiSignDocumentSigningView = ({
 
                 {/* Completed fields */}
                 {document.status !== DocumentStatus.COMPLETED && (
-                  <DocumentReadOnlyFields
-                    documentMeta={document.documentMeta ?? undefined}
-                    fields={completedFields}
-                  />
+                  <DocumentReadOnlyFields documentMeta={document.documentMeta ?? undefined} fields={completedFields} />
                 )}
               </div>
             </>

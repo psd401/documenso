@@ -1,17 +1,6 @@
 // https://github.com/Hopding/pdf-lib/issues/20#issuecomment-412852821
 import type { PDFDocument, PDFFont, PDFTextField } from '@cantoo/pdf-lib';
-import {
-  RotationTypes,
-  TextAlignment,
-  degrees,
-  radiansToDegrees,
-  rgb,
-  setFontAndSize,
-} from '@cantoo/pdf-lib';
-import fontkit from '@pdf-lib/fontkit';
-import { FieldType } from '@prisma/client';
-import { P, match } from 'ts-pattern';
-
+import { degrees, RotationTypes, radiansToDegrees, rgb, setFontAndSize, TextAlignment } from '@cantoo/pdf-lib';
 import {
   DEFAULT_HANDWRITING_FONT_SIZE,
   DEFAULT_STANDARD_FONT_SIZE,
@@ -21,6 +10,9 @@ import {
 import { fromCheckboxValue } from '@documenso/lib/universal/field-checkbox';
 import { isSignatureFieldType } from '@documenso/prisma/guards/is-signature-field';
 import type { FieldWithSignature } from '@documenso/prisma/types/field-with-signature';
+import fontkit from '@pdf-lib/fontkit';
+import { FieldType } from '@prisma/client';
+import { match, P } from 'ts-pattern';
 
 import { NEXT_PRIVATE_INTERNAL_WEBAPP_URL } from '../../constants/app';
 import {
@@ -37,12 +29,8 @@ import { getPageSize } from './get-page-size';
 
 export const insertFieldInPDFV1 = async (pdf: PDFDocument, field: FieldWithSignature) => {
   const [fontCaveat, fontNoto] = await Promise.all([
-    fetch(`${NEXT_PRIVATE_INTERNAL_WEBAPP_URL()}/fonts/caveat.ttf`).then(async (res) =>
-      res.arrayBuffer(),
-    ),
-    fetch(`${NEXT_PRIVATE_INTERNAL_WEBAPP_URL()}/fonts/noto-sans.ttf`).then(async (res) =>
-      res.arrayBuffer(),
-    ),
+    fetch(`${NEXT_PRIVATE_INTERNAL_WEBAPP_URL()}/fonts/caveat.ttf`).then(async (res) => res.arrayBuffer()),
+    fetch(`${NEXT_PRIVATE_INTERNAL_WEBAPP_URL()}/fonts/noto-sans.ttf`).then(async (res) => res.arrayBuffer()),
   ]);
 
   const isSignatureField = isSignatureFieldType(field.type);
@@ -109,13 +97,7 @@ export const insertFieldInPDFV1 = async (pdf: PDFDocument, field: FieldWithSigna
     let debugY = pageHeight - fieldY - fieldHeight; // Invert Y for PDF coordinates
 
     if (pageRotationInDegrees !== 0) {
-      const adjustedPosition = adjustPositionForRotation(
-        pageWidth,
-        pageHeight,
-        debugX,
-        debugY,
-        pageRotationInDegrees,
-      );
+      const adjustedPosition = adjustPositionForRotation(pageWidth, pageHeight, debugX, debugY, pageRotationInDegrees);
 
       debugX = adjustedPosition.xPos;
       debugY = adjustedPosition.yPos;
@@ -187,9 +169,7 @@ export const insertFieldInPDFV1 = async (pdf: PDFDocument, field: FieldWithSigna
         } else {
           const signatureText = field.signature?.typedSignature ?? '';
 
-          const longestLineInTextForWidth = signatureText
-            .split('\n')
-            .sort((a, b) => b.length - a.length)[0];
+          const longestLineInTextForWidth = signatureText.split('\n').sort((a, b) => b.length - a.length)[0];
 
           let fontSize = maxFontSize;
           let textWidth = font.widthOfTextAtSize(longestLineInTextForWidth, fontSize);
@@ -368,79 +348,70 @@ export const insertFieldInPDFV1 = async (pdf: PDFDocument, field: FieldWithSigna
         }
       }
     })
-    .with(
-      { type: P.union(FieldType.NAME, FieldType.DATE, FieldType.INITIALS) },
-      (field) => {
-        /**
-         * NAME/DATE/INITIALS hold short, auto-populated single-line values. We
-         * draw them with `page.drawText()` centered in the field box (like the
-         * signature path) instead of an AcroForm text widget. AcroForm widgets
-         * anchor their baseline to the bottom of the box, which makes the text
-         * sit lower than the editor's vertically-centered rendering.
-         */
-        const fieldMetaParsers = {
-          [FieldType.NAME]: ZNameFieldMeta,
-          [FieldType.DATE]: ZDateFieldMeta,
-          [FieldType.INITIALS]: ZInitialsFieldMeta,
-        } as const;
+    .with({ type: P.union(FieldType.NAME, FieldType.DATE, FieldType.INITIALS) }, (field) => {
+      /**
+       * NAME/DATE/INITIALS hold short, auto-populated single-line values. We
+       * draw them with `page.drawText()` centered in the field box (like the
+       * signature path) instead of an AcroForm text widget. AcroForm widgets
+       * anchor their baseline to the bottom of the box, which makes the text
+       * sit lower than the editor's vertically-centered rendering.
+       */
+      const fieldMetaParsers = {
+        [FieldType.NAME]: ZNameFieldMeta,
+        [FieldType.DATE]: ZDateFieldMeta,
+        [FieldType.INITIALS]: ZInitialsFieldMeta,
+      } as const;
 
-        const meta = fieldMetaParsers[field.type].safeParse(field.fieldMeta);
+      const meta = fieldMetaParsers[field.type].safeParse(field.fieldMeta);
 
-        const customFontSize = meta.success && meta.data.fontSize ? meta.data.fontSize : null;
-        const textAlign = meta.success && meta.data.textAlign ? meta.data.textAlign : 'left';
+      const customFontSize = meta.success && meta.data.fontSize ? meta.data.fontSize : null;
+      const textAlign = meta.success && meta.data.textAlign ? meta.data.textAlign : 'left';
 
-        const text = field.customText;
+      const text = field.customText;
 
-        let fontSize = customFontSize || maxFontSize;
-        let textWidth = font.widthOfTextAtSize(text, fontSize);
-        let textHeight = font.heightAtSize(fontSize);
+      let fontSize = customFontSize || maxFontSize;
+      let textWidth = font.widthOfTextAtSize(text, fontSize);
+      let textHeight = font.heightAtSize(fontSize);
 
-        // Scale the font down to fit the field box when no explicit size was set.
-        if (!customFontSize) {
-          const scalingFactor = Math.min(fieldWidth / textWidth, fieldHeight / textHeight, 1);
-          fontSize = Math.max(Math.min(fontSize * scalingFactor, maxFontSize), minFontSize);
-          textWidth = font.widthOfTextAtSize(text, fontSize);
-          textHeight = font.heightAtSize(fontSize);
-        }
+      // Scale the font down to fit the field box when no explicit size was set.
+      if (!customFontSize) {
+        const scalingFactor = Math.min(fieldWidth / textWidth, fieldHeight / textHeight, 1);
+        fontSize = Math.max(Math.min(fontSize * scalingFactor, maxFontSize), minFontSize);
+        textWidth = font.widthOfTextAtSize(text, fontSize);
+        textHeight = font.heightAtSize(fontSize);
+      }
 
-        // Add padding similar to web display (roughly 0.5rem equivalent in PDF units)
-        const padding = 8;
+      // Add padding similar to web display (roughly 0.5rem equivalent in PDF units)
+      const padding = 8;
 
-        // Horizontal position based on the field's alignment.
-        let textX = match(textAlign)
-          .with('left', () => fieldX + padding)
-          .with('center', () => fieldX + (fieldWidth - textWidth) / 2)
-          .with('right', () => fieldX + fieldWidth - textWidth - padding)
-          .exhaustive();
+      // Horizontal position based on the field's alignment.
+      let textX = match(textAlign)
+        .with('left', () => fieldX + padding)
+        .with('center', () => fieldX + (fieldWidth - textWidth) / 2)
+        .with('right', () => fieldX + fieldWidth - textWidth - padding)
+        .exhaustive();
 
-        // Vertically center the text within the field box to match the editor.
-        let textY = fieldY + (fieldHeight - textHeight) / 2;
+      // Vertically center the text within the field box to match the editor.
+      let textY = fieldY + (fieldHeight - textHeight) / 2;
 
-        // Invert the Y axis since PDFs use a bottom-left coordinate system.
-        textY = pageHeight - textY - textHeight;
+      // Invert the Y axis since PDFs use a bottom-left coordinate system.
+      textY = pageHeight - textY - textHeight;
 
-        if (pageRotationInDegrees !== 0) {
-          const adjustedPosition = adjustPositionForRotation(
-            pageWidth,
-            pageHeight,
-            textX,
-            textY,
-            pageRotationInDegrees,
-          );
+      if (pageRotationInDegrees !== 0) {
+        const adjustedPosition = adjustPositionForRotation(pageWidth, pageHeight, textX, textY, pageRotationInDegrees);
 
-          textX = adjustedPosition.xPos;
-          textY = adjustedPosition.yPos;
-        }
+        textX = adjustedPosition.xPos;
+        textY = adjustedPosition.yPos;
+      }
 
-        page.drawText(text, {
-          x: textX,
-          y: textY,
-          size: fontSize,
-          font,
-          rotate: degrees(pageRotationInDegrees),
-        });
-      },
-    )
+      page.drawText(text, {
+        x: textX,
+        y: textY,
+        size: fontSize,
+        font,
+        rotate: degrees(pageRotationInDegrees),
+      });
+    })
     .otherwise((field) => {
       const fieldMetaParsers = {
         [FieldType.TEXT]: ZTextFieldMeta,
@@ -474,9 +445,7 @@ export const insertFieldInPDFV1 = async (pdf: PDFDocument, field: FieldWithSigna
        * - True = text will overflow downwards.
        * - False = text will overflow sideways.
        */
-      const isMultiline =
-        field.type === FieldType.TEXT &&
-        (textWidth > fieldWidth || field.customText.includes('\n'));
+      const isMultiline = field.type === FieldType.TEXT && (textWidth > fieldWidth || field.customText.includes('\n'));
 
       // Add padding similar to web display (roughly 0.5rem equivalent in PDF units)
       const padding = 8;

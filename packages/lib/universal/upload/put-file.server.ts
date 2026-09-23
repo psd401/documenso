@@ -1,11 +1,10 @@
 // ABOUTME: Server-side file upload pipeline for PDF and office documents.
 // ABOUTME: Handles DOCX/DOC conversion to PDF, encrypted PDF decryption, and storage routing.
+import { env } from '@documenso/lib/utils/env';
 import { PDF } from '@libpdf/core';
 import { DocumentDataType } from '@prisma/client';
 import { base64 } from '@scure/base';
 import { match } from 'ts-pattern';
-
-import { env } from '@documenso/lib/utils/env';
 
 import { AppError } from '../../errors/app-error';
 import { createDocumentData } from '../../server-only/document-data/create-document-data';
@@ -47,14 +46,9 @@ export const putPdfFileServerSide = async (file: File, initialData?: string) => 
   let fileName = file.name;
 
   const officeExt = getOfficeExtension(file);
-  const convertedBuffer = officeExt
-    ? await convertToPdf(Buffer.from(originalBuffer), officeExt)
-    : null;
+  const convertedBuffer = officeExt ? await convertToPdf(Buffer.from(originalBuffer), officeExt) : null;
   const arrayBuffer = convertedBuffer
-    ? convertedBuffer.buffer.slice(
-        convertedBuffer.byteOffset,
-        convertedBuffer.byteOffset + convertedBuffer.byteLength,
-      )
+    ? convertedBuffer.buffer.slice(convertedBuffer.byteOffset, convertedBuffer.byteOffset + convertedBuffer.byteLength)
     : originalBuffer;
 
   if (officeExt) {
@@ -72,10 +66,7 @@ export const putPdfFileServerSide = async (file: File, initialData?: string) => 
 
   if (pdf.isEncrypted) {
     const decrypted = await decryptPdf(Buffer.from(arrayBuffer));
-    const decryptedBuffer = decrypted.buffer.slice(
-      decrypted.byteOffset,
-      decrypted.byteOffset + decrypted.byteLength,
-    );
+    const decryptedBuffer = decrypted.buffer.slice(decrypted.byteOffset, decrypted.byteOffset + decrypted.byteLength);
 
     const decryptedPdf = await PDF.load(new Uint8Array(decryptedBuffer)).catch((e) => {
       console.error(`PDF upload parse error after decryption: ${e.message}`);
@@ -124,20 +115,14 @@ export const putPdfFileServerSide = async (file: File, initialData?: string) => 
 /**
  * Uploads a pdf file and normalizes it.
  */
-export const putNormalizedPdfFileServerSide = async (
-  file: File,
-  options: { flattenForm?: boolean } = {},
-) => {
+export const putNormalizedPdfFileServerSide = async (file: File, options: { flattenForm?: boolean } = {}) => {
   let arrayBuffer = await file.arrayBuffer();
   let fileName = file.name;
 
   const officeExt = getOfficeExtension(file);
   if (officeExt) {
     const converted = await convertToPdf(Buffer.from(arrayBuffer), officeExt);
-    arrayBuffer = converted.buffer.slice(
-      converted.byteOffset,
-      converted.byteOffset + converted.byteLength,
-    );
+    arrayBuffer = converted.buffer.slice(converted.byteOffset, converted.byteOffset + converted.byteLength);
     fileName = fileName.replace(/\.[^.]+$/, '.pdf');
     if (!fileName.endsWith('.pdf')) {
       fileName = `${fileName}.pdf`;
@@ -171,7 +156,8 @@ export const putFileServerSide = async (file: File) => {
   const NEXT_PUBLIC_UPLOAD_TRANSPORT = env('NEXT_PUBLIC_UPLOAD_TRANSPORT');
 
   return await match(NEXT_PUBLIC_UPLOAD_TRANSPORT)
-    .with('s3', async () => putFileInS3(file))
+    .with('s3', async () => putFileInObjectStorage(file))
+    .with('azure-blob', async () => putFileInObjectStorage(file))
     .otherwise(async () => putFileInDatabase(file));
 };
 
@@ -188,7 +174,7 @@ const putFileInDatabase = async (file: File) => {
   };
 };
 
-const putFileInS3 = async (file: File) => {
+const putFileInObjectStorage = async (file: File) => {
   const buffer = await file.arrayBuffer();
 
   const blob = new Blob([buffer], { type: file.type });

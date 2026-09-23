@@ -1,6 +1,3 @@
-import { OrganisationMemberInviteStatus } from '@prisma/client';
-
-import { syncMemberCountWithStripeSeatPlan } from '@documenso/ee/server-only/stripe/update-subscription-item-quantity';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { jobs } from '@documenso/lib/jobs/client';
 import { prisma } from '@documenso/prisma';
@@ -29,8 +26,6 @@ export const deleteAdminOrganisationMemberRoute = adminProcedure
         id: organisationId,
       },
       include: {
-        subscription: true,
-        organisationClaim: true,
         teams: {
           select: {
             id: true,
@@ -42,14 +37,6 @@ export const deleteAdminOrganisationMemberRoute = adminProcedure
             userId: true,
           },
         },
-        invites: {
-          where: {
-            status: OrganisationMemberInviteStatus.PENDING,
-          },
-          select: {
-            id: true,
-          },
-        },
       },
     });
 
@@ -59,9 +46,7 @@ export const deleteAdminOrganisationMemberRoute = adminProcedure
       });
     }
 
-    const memberToDelete = organisation.members.find(
-      (member) => member.id === organisationMemberId,
-    );
+    const memberToDelete = organisation.members.find((member) => member.id === organisationMemberId);
 
     if (!memberToDelete) {
       throw new AppError(AppErrorCode.NOT_FOUND, {
@@ -73,18 +58,6 @@ export const deleteAdminOrganisationMemberRoute = adminProcedure
       throw new AppError(AppErrorCode.INVALID_REQUEST, {
         message: 'Cannot remove the organisation owner. Transfer ownership first.',
       });
-    }
-
-    const newMemberCount = organisation.members.length + organisation.invites.length - 1;
-
-    // Removing a member is a reducing operation, so we don't gate it on the
-    // subscription being present. Sync Stripe only when one exists.
-    if (organisation.subscription) {
-      await syncMemberCountWithStripeSeatPlan(
-        organisation.subscription,
-        organisation.organisationClaim,
-        newMemberCount,
-      );
     }
 
     const teamIds = organisation.teams.map((team) => team.id);
@@ -114,6 +87,13 @@ export const deleteAdminOrganisationMemberRoute = adminProcedure
           organisationId,
         },
       });
+    });
+
+    // A member was removed — queue a seat sync to true the Stripe quantity down
+    // to the new count (no proration, no credit).
+    await jobs.triggerJob({
+      name: 'internal.sync-organisation-seats',
+      payload: { organisationId },
     });
 
     await jobs.triggerJob({
