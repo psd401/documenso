@@ -1,8 +1,12 @@
 // ABOUTME: Unit tests for the pure directory membership planner, focused on never revoking
-// ABOUTME: a group when the directory field its mappings depend on has never been fetched.
+// ABOUTME: a group when its directory field has never been fetched, plus the revocation circuit breaker.
 import { describe, expect, it } from 'vitest';
 
-import { type PlannableDirectoryMapping, planDirectoryMembership } from './plan-directory-membership';
+import {
+  exceedsRevokeCircuitBreaker,
+  type PlannableDirectoryMapping,
+  planDirectoryMembership,
+} from './plan-directory-membership';
 
 const GROUP_MAPPING: PlannableDirectoryMapping = {
   id: 'map_group',
@@ -73,5 +77,23 @@ describe('planDirectoryMembership revocation safety', () => {
     });
 
     expect(plan.revocations).toEqual([]);
+  });
+});
+
+describe('exceedsRevokeCircuitBreaker', () => {
+  it('does not trip on a single revocation in a small managed population', () => {
+    expect(exceedsRevokeCircuitBreaker(1, 11)).toBe(false);
+  });
+
+  it('does not trip at or below the absolute floor even when the percentage is high', () => {
+    expect(exceedsRevokeCircuitBreaker(10, 20)).toBe(false);
+  });
+
+  it('trips when planned revocations exceed both the floor and the percentage', () => {
+    expect(exceedsRevokeCircuitBreaker(11, 100)).toBe(true);
+  });
+
+  it('does not trip when planned revocations exceed the floor but stay under the percentage', () => {
+    expect(exceedsRevokeCircuitBreaker(11, 1000)).toBe(false);
   });
 });

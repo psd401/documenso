@@ -6,6 +6,7 @@ import { PSD401_BASELINE_GROUP_IDS } from '../../constants/psd401';
 import { matchDirectoryMapping } from './mapping-matching';
 
 export const REVOKE_CIRCUIT_BREAKER_PERCENT = 5;
+export const REVOKE_CIRCUIT_BREAKER_MINIMUM = 10;
 
 export type PlannableDirectoryMapping = {
   id: string;
@@ -48,13 +49,8 @@ export type DirectoryMembershipPlan = {
  * means "unknown" rather than "not a member". googleGroups is only ever written as an array, and
  * Google always returns an orgUnitPath, so null orgUnitPath means the user lookup never succeeded.
  */
-const dependsOnUnfetchedData = (
-  mapping: PlannableDirectoryMapping,
-  profile: DirectoryProfile,
-): boolean =>
-  mapping.sourceField === 'GROUP'
-    ? !Array.isArray(profile.googleGroups)
-    : profile.orgUnitPath === null;
+const dependsOnUnfetchedData = (mapping: PlannableDirectoryMapping, profile: DirectoryProfile): boolean =>
+  mapping.sourceField === 'GROUP' ? !Array.isArray(profile.googleGroups) : profile.orgUnitPath === null;
 
 /**
  * A group is managed when at least one active mapping targets it. Grants are matched groups the
@@ -119,10 +115,10 @@ export const planDirectoryMembership = ({
 };
 
 /**
- * True when the planned revocations exceed REVOKE_CIRCUIT_BREAKER_PERCENT of all rows in managed groups.
+ * True when the planned revocations exceed both REVOKE_CIRCUIT_BREAKER_MINIMUM and
+ * REVOKE_CIRCUIT_BREAKER_PERCENT of all rows in managed groups. The minimum keeps a single
+ * legitimate revocation in a small managed population from tripping the breaker.
  */
-export const exceedsRevokeCircuitBreaker = (
-  plannedRevocationCount: number,
-  managedMembershipCount: number,
-): boolean =>
+export const exceedsRevokeCircuitBreaker = (plannedRevocationCount: number, managedMembershipCount: number): boolean =>
+  plannedRevocationCount > REVOKE_CIRCUIT_BREAKER_MINIMUM &&
   plannedRevocationCount * 100 > managedMembershipCount * REVOKE_CIRCUIT_BREAKER_PERCENT;

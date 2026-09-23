@@ -3,15 +3,16 @@
 import { prisma } from '@documenso/prisma';
 
 import {
-  DIRECTORY_SYNC_SYSTEM_ACTOR,
   applyDirectoryMappings,
   applyDirectoryRevocations,
+  DIRECTORY_SYNC_SYSTEM_ACTOR,
   getDirectorySyncRevokeMode,
 } from '../../../server-only/directory-sync/apply-directory-mappings';
 import {
-  type PlannedRevocation,
-  REVOKE_CIRCUIT_BREAKER_PERCENT,
   exceedsRevokeCircuitBreaker,
+  type PlannedRevocation,
+  REVOKE_CIRCUIT_BREAKER_MINIMUM,
+  REVOKE_CIRCUIT_BREAKER_PERCENT,
 } from '../../../server-only/directory-sync/plan-directory-membership';
 import type { SyncGoogleDirectoryStatus } from '../../../server-only/user/sync-google-directory';
 import { syncGoogleDirectory } from '../../../server-only/user/sync-google-directory';
@@ -41,9 +42,7 @@ const chunk = <T>(items: T[], size: number): T[][] => {
 
 export const run = async ({ io }: { payload: TDirectorySyncSweepJobDefinition; io: JobRunIO }) => {
   if (env('GOOGLE_DIRECTORY_SYNC_ENABLED') !== 'true') {
-    io.logger.info(
-      '[directory-sync-sweep] Directory sync disabled; ensuring baseline membership only',
-    );
+    io.logger.info('[directory-sync-sweep] Directory sync disabled; ensuring baseline membership only');
   }
 
   const users = await prisma.user.findMany({
@@ -113,10 +112,7 @@ export const run = async ({ io }: { payload: TDirectorySyncSweepJobDefinition; i
     );
   }
 
-  counters.plannedRevocations = deferredRevocations.reduce(
-    (sum, entry) => sum + entry.revocations.length,
-    0,
-  );
+  counters.plannedRevocations = deferredRevocations.reduce((sum, entry) => sum + entry.revocations.length, 0);
 
   if (counters.plannedRevocations > 0) {
     const managedMembershipCount = await prisma.organisationGroupMember.count({
@@ -125,7 +121,7 @@ export const run = async ({ io }: { payload: TDirectorySyncSweepJobDefinition; i
 
     if (exceedsRevokeCircuitBreaker(counters.plannedRevocations, managedMembershipCount)) {
       io.logger.error(
-        `[directory-sync-sweep] Revocation circuit breaker tripped: ${counters.plannedRevocations} planned revocations exceed ${REVOKE_CIRCUIT_BREAKER_PERCENT}% of ${managedMembershipCount} memberships in managed groups; no revocations applied`,
+        `[directory-sync-sweep] Revocation circuit breaker tripped: ${counters.plannedRevocations} planned revocations exceed ${REVOKE_CIRCUIT_BREAKER_MINIMUM} and ${REVOKE_CIRCUIT_BREAKER_PERCENT}% of ${managedMembershipCount} memberships in managed groups; no revocations applied`,
       );
 
       await prisma.directorySyncAuditLog.create({
@@ -139,6 +135,7 @@ export const run = async ({ io }: { payload: TDirectorySyncSweepJobDefinition; i
             affectedUsers: deferredRevocations.length,
             managedMembershipCount,
             thresholdPercent: REVOKE_CIRCUIT_BREAKER_PERCENT,
+            thresholdMinimum: REVOKE_CIRCUIT_BREAKER_MINIMUM,
             revokeMode: getDirectorySyncRevokeMode(),
           },
         },

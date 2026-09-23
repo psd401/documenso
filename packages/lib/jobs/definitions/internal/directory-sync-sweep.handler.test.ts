@@ -187,10 +187,10 @@ describe('directory-sync-sweep handler', () => {
       expect(mockLoggerInfo).toHaveBeenCalledWith(expect.stringContaining('revoked=5'));
     });
 
-    it('applies no revocations, logs an error, and writes one audit row when planned revocations exceed 5%', async () => {
+    it('applies no revocations, logs an error, and writes one audit row when planned revocations exceed 5% and 10', async () => {
       mockApplyDirectoryMappings
-        .mockResolvedValueOnce({ granted: 1, deferredRevocations: revocations(1, 4) })
-        .mockResolvedValueOnce({ granted: 0, deferredRevocations: revocations(2, 2) });
+        .mockResolvedValueOnce({ granted: 1, deferredRevocations: revocations(1, 7) })
+        .mockResolvedValueOnce({ granted: 0, deferredRevocations: revocations(2, 4) });
 
       const { run } = await import('./directory-sync-sweep.handler');
       await run({ payload: {}, io });
@@ -205,10 +205,11 @@ describe('directory-sync-sweep handler', () => {
           name: 'directory-sync',
           email: null,
           data: {
-            plannedRevocations: 6,
+            plannedRevocations: 11,
             affectedUsers: 2,
             managedMembershipCount: 100,
             thresholdPercent: 5,
+            thresholdMinimum: 10,
             revokeMode: 'enforce',
           },
         },
