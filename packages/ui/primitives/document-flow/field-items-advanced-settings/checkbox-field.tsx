@@ -1,24 +1,16 @@
-import { useEffect, useState } from 'react';
-
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
-import { ChevronDown, ChevronUp, Trash } from 'lucide-react';
-
 import { validateCheckboxField } from '@documenso/lib/advanced-fields-validation/validate-checkbox';
-import { type TCheckboxFieldMeta as CheckboxFieldMeta } from '@documenso/lib/types/field-meta';
+import type { TCheckboxFieldMeta as CheckboxFieldMeta } from '@documenso/lib/types/field-meta';
 import { Button } from '@documenso/ui/primitives/button';
 import { Checkbox } from '@documenso/ui/primitives/checkbox';
 import { Input } from '@documenso/ui/primitives/input';
 import { Label } from '@documenso/ui/primitives/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@documenso/ui/primitives/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@documenso/ui/primitives/select';
 import { Switch } from '@documenso/ui/primitives/switch';
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
+import { ChevronDown, ChevronUp, Trash } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 import { checkboxValidationLength, checkboxValidationRules } from './constants';
 
@@ -44,25 +36,16 @@ export const CheckboxFieldAdvancedSettings = ({
   const [required, setRequired] = useState(fieldState.required ?? false);
   const [validationLength, setValidationLength] = useState(fieldState.validationLength ?? 0);
   const [validationRule, setValidationRule] = useState(fieldState.validationRule ?? '');
-  const [direction, setDirection] = useState<'vertical' | 'horizontal' | 'custom'>(
-    fieldState.direction ?? 'vertical',
-  );
+  const [direction, setDirection] = useState<'vertical' | 'horizontal' | 'custom'>(fieldState.direction ?? 'vertical');
 
   const handleToggleChange = (field: keyof CheckboxFieldMeta, value: string | boolean) => {
     const readOnly = field === 'readOnly' ? Boolean(value) : Boolean(fieldState.readOnly);
     const required = field === 'required' ? Boolean(value) : Boolean(fieldState.required);
-    const validationRule =
-      field === 'validationRule' ? String(value) : String(fieldState.validationRule);
-    const validationLength =
-      field === 'validationLength' ? Number(value) : Number(fieldState.validationLength);
-    const directionValue =
-      field === 'direction' ? String(value) : String(fieldState.direction ?? 'vertical');
+    const validationRule = field === 'validationRule' ? String(value) : String(fieldState.validationRule);
+    const validationLength = field === 'validationLength' ? Number(value) : Number(fieldState.validationLength);
+    const directionValue = field === 'direction' ? String(value) : String(fieldState.direction ?? 'vertical');
     const currentDirection: 'vertical' | 'horizontal' | 'custom' =
-      directionValue === 'horizontal'
-        ? 'horizontal'
-        : directionValue === 'custom'
-          ? 'custom'
-          : 'vertical';
+      directionValue === 'horizontal' ? 'horizontal' : directionValue === 'custom' ? 'custom' : 'vertical';
 
     setReadOnly(readOnly);
     setRequired(required);
@@ -108,7 +91,9 @@ export const CheckboxFieldAdvancedSettings = ({
   }, [values]);
 
   const removeValue = (index: number) => {
-    if (values.length === 1) return;
+    if (values.length === 1) {
+      return;
+    }
 
     const newValues = [...values];
     newValues.splice(index, 1);
@@ -116,11 +101,7 @@ export const CheckboxFieldAdvancedSettings = ({
     handleFieldChange('values', newValues);
   };
 
-  const handleCheckboxValue = (
-    index: number,
-    property: 'value' | 'checked',
-    newValue: string | boolean,
-  ) => {
+  const handleCheckboxValue = (index: number, property: 'value' | 'checked', newValue: string | boolean) => {
     const newValues = [...values];
 
     if (property === 'checked') {
@@ -179,10 +160,7 @@ export const CheckboxFieldAdvancedSettings = ({
           <Label>
             <Trans>Validation</Trans>
           </Label>
-          <Select
-            value={fieldState.validationRule}
-            onValueChange={(val) => handleToggleChange('validationRule', val)}
-          >
+          <Select value={fieldState.validationRule} onValueChange={(val) => handleToggleChange('validationRule', val)}>
             <SelectTrigger className="mt-2 w-full bg-background text-muted-foreground">
               <SelectValue placeholder={_(msg`Select at least`)} />
             </SelectTrigger>
@@ -264,7 +242,7 @@ export const CheckboxFieldAdvancedSettings = ({
               />
               <button
                 type="button"
-                className="col-span-1 mt-auto inline-flex h-10 w-10 items-center text-slate-500 hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
+                className="col-span-1 mt-auto inline-flex h-10 w-10 items-center text-muted-foreground hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
                 onClick={() => removeValue(index)}
               >
                 <Trash className="h-5 w-5" />
@@ -272,7 +250,7 @@ export const CheckboxFieldAdvancedSettings = ({
             </div>
           ))}
           <Button
-            className="ml-9 mt-4 border border-foreground/10 bg-foreground/10 hover:bg-foreground/5"
+            className="mt-4 ml-9 border border-foreground/10 bg-foreground/10 hover:bg-foreground/5"
             variant="outline"
             onClick={addValue}
           >

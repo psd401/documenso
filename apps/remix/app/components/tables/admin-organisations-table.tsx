@@ -1,10 +1,3 @@
-import { useMemo } from 'react';
-
-import { useLingui } from '@lingui/react/macro';
-import { Trans } from '@lingui/react/macro';
-import { MoreHorizontalIcon, SettingsIcon, UserIcon } from 'lucide-react';
-import { Link, useSearchParams } from 'react-router';
-
 import { useUpdateSearchParams } from '@documenso/lib/client-only/hooks/use-update-search-params';
 import { ZUrlSearchParamsSchema } from '@documenso/lib/types/search-params';
 import { trpc } from '@documenso/trpc/react';
@@ -21,6 +14,10 @@ import {
 } from '@documenso/ui/primitives/dropdown-menu';
 import { Skeleton } from '@documenso/ui/primitives/skeleton';
 import { TableCell } from '@documenso/ui/primitives/table';
+import { Trans, useLingui } from '@lingui/react/macro';
+import { MoreHorizontalIcon, SettingsIcon, UserIcon } from 'lucide-react';
+import { useMemo } from 'react';
+import { Link, useSearchParams } from 'react-router';
 
 type AdminOrganisationsTableOptions = {
   ownerUserId?: number;
@@ -69,9 +66,7 @@ export const AdminOrganisationsTable = ({
       {
         header: t`Organisation`,
         accessorKey: 'name',
-        cell: ({ row }) => (
-          <Link to={`/admin/organisations/${row.original.id}`}>{row.original.name}</Link>
-        ),
+        cell: ({ row }) => <Link to={`/admin/organisations/${row.original.id}`}>{row.original.name}</Link>,
       },
       {
         header: t`Created At`,
@@ -81,17 +76,13 @@ export const AdminOrganisationsTable = ({
       {
         header: t`Owner`,
         accessorKey: 'owner',
-        cell: ({ row }) => (
-          <Link to={`/admin/users/${row.original.owner.id}`}>{row.original.owner.name}</Link>
-        ),
+        cell: ({ row }) => <Link to={`/admin/users/${row.original.owner.id}`}>{row.original.owner.name}</Link>,
       },
       {
         id: 'role',
         header: t`Role`,
         cell: ({ row }) => (
-          <Badge variant="neutral">
-            {row.original.owner.id === memberUserId ? t`Owner` : t`Member`}
-          </Badge>
+          <Badge variant="neutral">{row.original.owner.id === memberUserId ? t`Owner` : t`Member`}</Badge>
         ),
       },
       {
@@ -170,7 +161,7 @@ export const AdminOrganisationsTable = ({
         }}
       >
         {(table) =>
-          !hidePaginationUntilOverflow || 1 > table.getPageCount() ? (
+          !hidePaginationUntilOverflow || table.getPageCount() > 1 ? (
             <DataTablePagination additionalInformation="VisibleCount" table={table} />
           ) : null
         }

@@ -1,15 +1,8 @@
 // ABOUTME: Upload button for envelopes (documents and templates).
 // ABOUTME: Intercepts uploads in the Default team to nudge users toward purpose-specific teams.
-import { useMemo, useState } from 'react';
-
-import { msg, plural } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react/macro';
-import { Trans } from '@lingui/react/macro';
-import { EnvelopeType } from '@prisma/client';
-import { ErrorCode as DropzoneErrorCode, type FileRejection } from 'react-dropzone';
-import { useNavigate } from 'react-router';
 
 import { useLimits } from '@documenso/ee/server-only/limits/provider/client';
+import { useAnalytics } from '@documenso/lib/client-only/hooks/use-analytics';
 import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/organisation';
 import { useSession } from '@documenso/lib/client-only/providers/session';
 import { TIME_ZONES } from '@documenso/lib/constants/time-zones';
@@ -18,19 +11,20 @@ import { formatDocumentsPath, formatTemplatesPath } from '@documenso/lib/utils/t
 import { trpc } from '@documenso/trpc/react';
 import type { TCreateEnvelopePayload } from '@documenso/trpc/server/envelope-router/create-envelope.types';
 import { buildDropzoneRejectionDescription } from '@documenso/ui/lib/handle-dropzone-rejection';
-import { buildUploadErrorMessage } from '@documenso/ui/lib/handle-upload-error';
 import { cn } from '@documenso/ui/lib/utils';
 import { DocumentUploadButton } from '@documenso/ui/primitives/document-upload-button';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@documenso/ui/primitives/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@documenso/ui/primitives/tooltip';
 import { useToast } from '@documenso/ui/primitives/use-toast';
+import { msg, plural } from '@lingui/core/macro';
+import { Trans, useLingui } from '@lingui/react/macro';
+import { EnvelopeType } from '@prisma/client';
+import { useMemo, useState } from 'react';
+import { ErrorCode as DropzoneErrorCode, type FileRejection } from 'react-dropzone';
+import { useNavigate } from 'react-router';
 
 import { DefaultTeamUploadDialog } from '~/components/dialogs/default-team-upload-dialog';
 import { useCurrentTeam } from '~/providers/team';
+import { getUploadErrorMessage } from '~/utils/toast-error-messages';
 
 export type EnvelopeUploadButtonProps = {
   className?: string;
@@ -45,15 +39,14 @@ export const EnvelopeUploadButton = ({ className, type, folderId }: EnvelopeUplo
   const { t, i18n } = useLingui();
   const { toast } = useToast();
   const { user } = useSession();
+  const analytics = useAnalytics();
 
   const team = useCurrentTeam();
 
   const navigate = useNavigate();
   const organisation = useCurrentOrganisation();
 
-  const userTimezone = TIME_ZONES.find(
-    (timezone) => timezone === Intl.DateTimeFormat().resolvedOptions().timeZone,
-  );
+  const userTimezone = TIME_ZONES.find((timezone) => timezone === Intl.DateTimeFormat().resolvedOptions().timeZone);
 
   const { quota, remaining, refreshLimits, maximumEnvelopeItemCount } = useLimits();
 
@@ -106,10 +99,7 @@ export const EnvelopeUploadButton = ({ className, type, folderId }: EnvelopeUplo
 
       void refreshLimits();
 
-      const pathPrefix =
-        type === EnvelopeType.DOCUMENT
-          ? formatDocumentsPath(team.url)
-          : formatTemplatesPath(team.url);
+      const pathPrefix = type === EnvelopeType.DOCUMENT ? formatDocumentsPath(team.url) : formatTemplatesPath(team.url);
 
       const aiQueryParam = team.preferences.aiFeaturesEnabled ? '?ai=true' : '';
 
@@ -128,11 +118,16 @@ export const EnvelopeUploadButton = ({ className, type, folderId }: EnvelopeUplo
 
       console.error(err);
 
-      const errorMessage = buildUploadErrorMessage(error.code);
+      analytics.captureException(err, {
+        source: 'editor',
+        location: 'upload_document',
+      });
+
+      const errorMessage = getUploadErrorMessage(error.code);
 
       toast({
-        title: t`Error`,
-        description: i18n._(errorMessage),
+        title: i18n._(errorMessage.title),
+        description: i18n._(errorMessage.description),
         variant: 'destructive',
         duration: 7500,
       });
@@ -203,17 +198,15 @@ export const EnvelopeUploadButton = ({ className, type, folderId }: EnvelopeUplo
               </div>
             </TooltipTrigger>
 
-            {type === EnvelopeType.DOCUMENT &&
-              remaining.documents > 0 &&
-              Number.isFinite(remaining.documents) && (
-                <TooltipContent>
-                  <p className="text-sm">
-                    <Trans>
-                      {remaining.documents} of {quota.documents} documents remaining this month.
-                    </Trans>
-                  </p>
-                </TooltipContent>
-              )}
+            {type === EnvelopeType.DOCUMENT && remaining.documents > 0 && Number.isFinite(remaining.documents) && (
+              <TooltipContent>
+                <p className="text-sm">
+                  <Trans>
+                    {remaining.documents} of {quota.documents} documents remaining this month.
+                  </Trans>
+                </p>
+              </TooltipContent>
+            )}
           </Tooltip>
         </TooltipProvider>
       </div>

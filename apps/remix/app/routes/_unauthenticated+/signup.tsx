@@ -1,13 +1,13 @@
-import { msg } from '@lingui/core/macro';
-import { redirect } from 'react-router';
-
 import {
   IS_GOOGLE_SSO_ENABLED,
   IS_MICROSOFT_SSO_ENABLED,
   IS_OIDC_SSO_ENABLED,
-  isPasswordSignupDisabled,
+  isSignupEnabledForProvider,
+  isSignupPageEnabled,
 } from '@documenso/lib/constants/auth';
 import { isValidReturnTo, normalizeReturnTo } from '@documenso/lib/utils/is-valid-return-to';
+import { msg } from '@lingui/core/macro';
+import { redirect } from 'react-router';
 
 import { SignUpForm } from '~/components/forms/signup';
 import { appMetaTags } from '~/utils/meta';
@@ -19,12 +19,12 @@ export function meta() {
 }
 
 export function loader({ request }: Route.LoaderArgs) {
-  // SSR env variables.
-  const isGoogleSSOEnabled = IS_GOOGLE_SSO_ENABLED;
-  const isMicrosoftSSOEnabled = IS_MICROSOFT_SSO_ENABLED;
-  const isOIDCSSOEnabled = IS_OIDC_SSO_ENABLED;
+  const isEmailPasswordSignupEnabled = isSignupEnabledForProvider('email');
+  const isGoogleSignupEnabled = IS_GOOGLE_SSO_ENABLED && isSignupEnabledForProvider('google');
+  const isMicrosoftSignupEnabled = IS_MICROSOFT_SSO_ENABLED && isSignupEnabledForProvider('microsoft');
+  const isOidcSignupEnabled = IS_OIDC_SSO_ENABLED && isSignupEnabledForProvider('oidc');
 
-  if (isPasswordSignupDisabled()) {
+  if (!isSignupPageEnabled()) {
     throw redirect('/signin');
   }
 
@@ -33,22 +33,30 @@ export function loader({ request }: Route.LoaderArgs) {
   returnTo = isValidReturnTo(returnTo) ? normalizeReturnTo(returnTo) : undefined;
 
   return {
-    isGoogleSSOEnabled,
-    isMicrosoftSSOEnabled,
-    isOIDCSSOEnabled,
+    isEmailPasswordSignupEnabled,
+    isGoogleSignupEnabled,
+    isMicrosoftSignupEnabled,
+    isOidcSignupEnabled,
     returnTo,
   };
 }
 
 export default function SignUp({ loaderData }: Route.ComponentProps) {
-  const { isGoogleSSOEnabled, isMicrosoftSSOEnabled, isOIDCSSOEnabled, returnTo } = loaderData;
+  const {
+    isEmailPasswordSignupEnabled,
+    isGoogleSignupEnabled,
+    isMicrosoftSignupEnabled,
+    isOidcSignupEnabled,
+    returnTo,
+  } = loaderData;
 
   return (
     <SignUpForm
       className="w-screen max-w-screen-2xl px-4 md:px-16 lg:-my-16"
-      isGoogleSSOEnabled={isGoogleSSOEnabled}
-      isMicrosoftSSOEnabled={isMicrosoftSSOEnabled}
-      isOIDCSSOEnabled={isOIDCSSOEnabled}
+      isEmailPasswordSignupEnabled={isEmailPasswordSignupEnabled}
+      isGoogleSignupEnabled={isGoogleSignupEnabled}
+      isMicrosoftSignupEnabled={isMicrosoftSignupEnabled}
+      isOidcSignupEnabled={isOidcSignupEnabled}
       returnTo={returnTo}
     />
   );

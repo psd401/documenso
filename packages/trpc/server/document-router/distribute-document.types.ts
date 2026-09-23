@@ -1,5 +1,3 @@
-import { z } from 'zod';
-
 import { ZDocumentLiteSchema } from '@documenso/lib/types/document';
 import { ZDocumentEmailSettingsSchema } from '@documenso/lib/types/document-email';
 import {
@@ -12,6 +10,7 @@ import {
   ZDocumentMetaTimezoneSchema,
 } from '@documenso/lib/types/document-meta';
 import { zEmail } from '@documenso/lib/utils/zod';
+import { z } from 'zod';
 
 import type { TrpcRouteMeta } from '../trpc';
 
@@ -20,8 +19,10 @@ export const distributeDocumentMeta: TrpcRouteMeta = {
     method: 'POST',
     path: '/document/distribute',
     summary: 'Distribute document',
-    description: 'Send the document out to recipients based on your distribution method',
+    description:
+      'Deprecated: this endpoint is being replaced by the Envelope API. See https://docs.documenso.com/docs/developers/api/migrate-to-envelopes for the migration guide. Send the document out to recipients based on your distribution method',
     tags: ['Document'],
+    deprecated: true,
   },
 };
 

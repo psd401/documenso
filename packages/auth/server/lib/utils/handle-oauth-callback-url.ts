@@ -1,19 +1,22 @@
-import { UserSecurityAuditLogType } from '@prisma/client';
-import { OAuth2Client, decodeIdToken } from 'arctic';
-import type { Context } from 'hono';
-import { deleteCookie } from 'hono/cookie';
-
-import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
-import { isEmailDomainAllowedForSignup } from '@documenso/lib/constants/auth';
+import { formatPath, NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
+import {
+  isDisposableEmail,
+  isEmailDomainAllowedForSignup,
+  isSignupEnabledForProvider,
+} from '@documenso/lib/constants/auth';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { applyDirectoryMappings } from '@documenso/lib/server-only/directory-sync/apply-directory-mappings';
+import { getEmailBlocklistDomains } from '@documenso/lib/server-only/site-settings/get-email-blocklist-domains';
 import { onCreateUserHook } from '@documenso/lib/server-only/user/create-user';
 import { deletedServiceAccountEmail } from '@documenso/lib/server-only/user/service-accounts/deleted-account';
 import { legacyServiceAccountEmail } from '@documenso/lib/server-only/user/service-accounts/legacy-service-account';
 import { syncGoogleDirectory } from '@documenso/lib/server-only/user/sync-google-directory';
-import { env } from '@documenso/lib/utils/env';
 import { isValidReturnTo, normalizeReturnTo } from '@documenso/lib/utils/is-valid-return-to';
 import { prisma } from '@documenso/prisma';
+import { UserSecurityAuditLogType } from '@prisma/client';
+import { decodeIdToken, OAuth2Client } from 'arctic';
+import type { Context } from 'hono';
+import { deleteCookie } from 'hono/cookie';
 
 import type { OAuthClientOptions } from '../../config';
 import { AuthenticationErrorCode } from '../errors/error-codes';
@@ -32,7 +35,7 @@ type HandleOAuthCallbackUrlOptions = {
  * account), mirroring the existing signup-disabled redirects below.
  */
 const redirectToSignInWithError = (c: Context, error: AuthenticationErrorCode) => {
-  const errorUrl = new URL('/signin', NEXT_PUBLIC_WEBAPP_URL());
+  const errorUrl = new URL(formatPath('/signin'), NEXT_PUBLIC_WEBAPP_URL());
 
   errorUrl.searchParams.set('error', error);
 
@@ -44,13 +47,12 @@ export const handleOAuthCallbackUrl = async (options: HandleOAuthCallbackUrlOpti
 
   const requestMeta = c.get('requestMetadata');
 
-  const { email, name, sub, accessToken, accessTokenExpiresAt, idToken, redirectPath } =
-    await validateOauth({ c, clientOptions });
+  const { email, name, sub, accessToken, accessTokenExpiresAt, idToken, redirectPath } = await validateOauth({
+    c,
+    clientOptions,
+  });
 
-  if (
-    email.toLowerCase() === legacyServiceAccountEmail() ||
-    email.toLowerCase() === deletedServiceAccountEmail()
-  ) {
+  if (email.toLowerCase() === legacyServiceAccountEmail() || email.toLowerCase() === deletedServiceAccountEmail()) {
     return c.text('FORBIDDEN', 403);
   }
 
@@ -170,18 +172,16 @@ export const handleOAuthCallbackUrl = async (options: HandleOAuthCallbackUrlOpti
         })
         .catch((err: unknown) => {
           const message = err instanceof Error ? err.message : 'Unknown error';
-          console.warn(
-            `[directory-sync] Login chain failed (account-link, user ${userWithSameEmail.id}): ${message}`,
-          );
+          console.warn(`[directory-sync] Login chain failed (account-link, user ${userWithSameEmail.id}): ${message}`);
         });
     }
 
     return c.redirect(redirectPath, 302);
   }
 
-  // Check if signups are disabled.
-  if (env('NEXT_PUBLIC_DISABLE_SIGNUP') === 'true') {
-    const errorUrl = new URL('/signin', NEXT_PUBLIC_WEBAPP_URL());
+  // Check if signups are disabled for this provider.
+  if (!isSignupEnabledForProvider(clientOptions.id as 'google' | 'microsoft' | 'oidc')) {
+    const errorUrl = new URL(formatPath('/signin'), NEXT_PUBLIC_WEBAPP_URL());
 
     errorUrl.searchParams.set('error', AuthenticationErrorCode.SignupDisabled);
 
@@ -190,9 +190,20 @@ export const handleOAuthCallbackUrl = async (options: HandleOAuthCallbackUrlOpti
 
   // Check domain restriction for new SSO users.
   if (!isEmailDomainAllowedForSignup(email)) {
-    const errorUrl = new URL('/signin', NEXT_PUBLIC_WEBAPP_URL());
+    const errorUrl = new URL(formatPath('/signin'), NEXT_PUBLIC_WEBAPP_URL());
 
     errorUrl.searchParams.set('error', AuthenticationErrorCode.SignupDisabled);
+
+    return c.redirect(errorUrl.toString(), 302);
+  }
+
+  // Reject disposable / throwaway email providers for new SSO users.
+  const additionalBlockedDomains = await getEmailBlocklistDomains();
+
+  if (isDisposableEmail(email, additionalBlockedDomains)) {
+    const errorUrl = new URL(formatPath('/signin'), NEXT_PUBLIC_WEBAPP_URL());
+
+    errorUrl.searchParams.set('error', AuthenticationErrorCode.SignupDisposableEmail);
 
     return c.redirect(errorUrl.toString(), 302);
   }
@@ -242,9 +253,7 @@ export const handleOAuthCallbackUrl = async (options: HandleOAuthCallbackUrlOpti
       })
       .catch((err: unknown) => {
         const message = err instanceof Error ? err.message : 'Unknown error';
-        console.warn(
-          `[directory-sync] Login chain failed (new-user, user ${createdUser.id}): ${message}`,
-        );
+        console.warn(`[directory-sync] Login chain failed (new-user, user ${createdUser.id}): ${message}`);
       });
   }
 
@@ -262,11 +271,7 @@ export const validateOauth = async (options: HandleOAuthCallbackUrlOptions) => {
     requiredScopes: clientOptions.scope,
   });
 
-  const oAuthClient = new OAuth2Client(
-    clientOptions.clientId,
-    clientOptions.clientSecret,
-    clientOptions.redirectUrl,
-  );
+  const oAuthClient = new OAuth2Client(clientOptions.clientId, clientOptions.clientSecret, clientOptions.redirectUrl);
 
   const code = c.req.query('code');
   const state = c.req.query('state');
@@ -284,21 +289,20 @@ export const validateOauth = async (options: HandleOAuthCallbackUrlOptions) => {
   // eslint-disable-next-line prefer-const
   let [redirectState, redirectPath] = storedRedirectPath.split(' ');
 
+  // The sub-path aware root, e.g. "/" or "/ESign/".
+  const defaultRedirectPath = formatPath('/');
+
   if (redirectState !== storedState || !redirectPath) {
-    redirectPath = '/';
+    redirectPath = defaultRedirectPath;
   }
 
   if (!isValidReturnTo(redirectPath)) {
-    redirectPath = '/';
+    redirectPath = defaultRedirectPath;
   }
 
-  redirectPath = normalizeReturnTo(redirectPath) || '/';
+  redirectPath = normalizeReturnTo(redirectPath) || defaultRedirectPath;
 
-  const tokens = await oAuthClient.validateAuthorizationCode(
-    token_endpoint,
-    code,
-    storedCodeVerifier,
-  );
+  const tokens = await oAuthClient.validateAuthorizationCode(token_endpoint, code, storedCodeVerifier);
 
   const accessToken = tokens.accessToken();
   const accessTokenExpiresAt = tokens.accessTokenExpiresAt();

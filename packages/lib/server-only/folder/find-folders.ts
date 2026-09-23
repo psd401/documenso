@@ -1,6 +1,5 @@
-import type { Prisma } from '@prisma/client';
-
 import { prisma } from '@documenso/prisma';
+import type { Prisma } from '@prisma/client';
 
 import type { TFolderType } from '../../types/folder-type';
 import type { FindResultResponse } from '../../types/search-params';
@@ -17,14 +16,7 @@ export interface FindFoldersOptions {
   perPage?: number;
 }
 
-export const findFolders = async ({
-  userId,
-  teamId,
-  parentId,
-  type,
-  page = 1,
-  perPage = 10,
-}: FindFoldersOptions) => {
+export const findFolders = async ({ userId, teamId, parentId, type, page = 1, perPage = 10 }: FindFoldersOptions) => {
   const team = await getTeamById({ userId, teamId });
   const userGroupIds = await getUserTeamGroupIds(userId, teamId);
 

@@ -2,13 +2,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { incrementTemplateId } from '@documenso/lib/server-only/envelope/increment-id';
+import type { TFieldMetaSchema } from '@documenso/lib/types/field-meta';
 import {
   FIELD_DATE_META_DEFAULT_VALUES,
   FIELD_NAME_META_DEFAULT_VALUES,
   FIELD_SIGNATURE_META_DEFAULT_VALUES,
   FIELD_TEXT_META_DEFAULT_VALUES,
 } from '@documenso/lib/types/field-meta';
-import type { TFieldMetaSchema } from '@documenso/lib/types/field-meta';
+import { SignatureLevel } from '@documenso/lib/types/signature-level';
 import { prefixedId } from '@documenso/lib/universal/id';
 
 import { prisma } from '..';
@@ -165,9 +166,7 @@ export type ProvisionGuestSpeakerTemplateOptions = {
  * Idempotent by default: if a template with the same title already exists in the
  * team it is returned untouched, so re-running (e.g. across environments) is safe.
  */
-export const provisionGuestSpeakerTemplate = async (
-  options: ProvisionGuestSpeakerTemplateOptions,
-) => {
+export const provisionGuestSpeakerTemplate = async (options: ProvisionGuestSpeakerTemplateOptions) => {
   const { teamId, userId, title = GUEST_SPEAKER_TEMPLATE_TITLE, force = false } = options;
 
   if (!force) {
@@ -214,9 +213,9 @@ export const provisionGuestSpeakerTemplate = async (
         title,
         templateType: TemplateType.ORGANISATION,
         publicTitle: 'Guest Speaker Request & Approval Form',
-        publicDescription:
-          'Submit a guest speaker request and route it for the required signatures.',
+        publicDescription: 'Submit a guest speaker request and route it for the required signatures.',
         source: DocumentSource.TEMPLATE,
+        signatureLevel: SignatureLevel.SES,
         documentMetaId: documentMeta.id,
         userId,
         teamId,

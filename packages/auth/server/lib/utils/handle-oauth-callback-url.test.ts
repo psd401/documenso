@@ -3,9 +3,8 @@
 
 import { Hono } from 'hono';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-
-import type { HonoAuthContext } from '../../types/context';
 import type { OAuthClientOptions } from '../../config';
+import type { HonoAuthContext } from '../../types/context';
 
 const mockEnv = vi.fn();
 const mockValidateAuthorizationCode = vi.fn();
@@ -64,6 +63,11 @@ vi.mock('@documenso/lib/server-only/user/sync-google-directory', () => ({
 
 vi.mock('@documenso/lib/server-only/directory-sync/apply-directory-mappings', () => ({
   applyDirectoryMappings: mockApplyDirectoryMappings,
+}));
+
+// Upstream's disposable-email check reads the site-settings blocklist from the DB.
+vi.mock('@documenso/lib/server-only/site-settings/get-email-blocklist-domains', () => ({
+  getEmailBlocklistDomains: vi.fn().mockResolvedValue([]),
 }));
 
 const testClientOptions: OAuthClientOptions = {
@@ -128,9 +132,7 @@ describe('handleOAuthCallbackUrl new user provisioning', () => {
   });
 
   it('still auto-provisions a new account when only NEXT_PUBLIC_DISABLE_PASSWORD_SIGNUP is set', async () => {
-    mockEnv.mockImplementation((key: string) =>
-      key === 'NEXT_PUBLIC_DISABLE_PASSWORD_SIGNUP' ? 'true' : undefined,
-    );
+    mockEnv.mockImplementation((key: string) => (key === 'NEXT_PUBLIC_DISABLE_PASSWORD_SIGNUP' ? 'true' : undefined));
 
     const app = await buildTestApp();
     const response = await requestCallback(app);
@@ -147,17 +149,13 @@ describe('handleOAuthCallbackUrl new user provisioning', () => {
   });
 
   it('still blocks new OAuth signups when the blanket NEXT_PUBLIC_DISABLE_SIGNUP flag is set', async () => {
-    mockEnv.mockImplementation((key: string) =>
-      key === 'NEXT_PUBLIC_DISABLE_SIGNUP' ? 'true' : undefined,
-    );
+    mockEnv.mockImplementation((key: string) => (key === 'NEXT_PUBLIC_DISABLE_SIGNUP' ? 'true' : undefined));
 
     const app = await buildTestApp();
     const response = await requestCallback(app);
 
     expect(response.status).toBe(302);
-    expect(new URL(response.headers.get('location') ?? '', 'http://localhost').pathname).toBe(
-      '/signin',
-    );
+    expect(new URL(response.headers.get('location') ?? '', 'http://localhost').pathname).toBe('/signin');
     expect(mockUserCreate).not.toHaveBeenCalled();
   });
 });

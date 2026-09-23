@@ -14,8 +14,8 @@ import {
   upsertFieldGroup,
   upsertFieldRect,
 } from './field-generic-items';
-import { calculateFieldPosition, calculateMultiItemPosition } from './field-renderer';
 import type { FieldToRender, RenderFieldElementOptions } from './field-renderer';
+import { calculateFieldPosition, calculateMultiItemPosition } from './field-renderer';
 
 // Do not change any of these values without consulting with the team.
 const checkboxFieldPadding = 8;
@@ -34,8 +34,7 @@ export const renderCheckboxFieldElement = (
 
   const { fieldWidth, fieldHeight } = calculateFieldPosition(field, pageWidth, pageHeight);
 
-  const checkboxMeta: TCheckboxFieldMeta | null =
-    field.fieldMeta?.type === 'checkbox' ? field.fieldMeta : null;
+  const checkboxMeta: TCheckboxFieldMeta | null = field.fieldMeta?.type === 'checkbox' ? field.fieldMeta : null;
   const checkboxValues = checkboxMeta?.values || [];
 
   const isFirstRender = !pageLayer.findOne(`#${field.renderId}`);
@@ -75,19 +74,18 @@ export const renderCheckboxFieldElement = (
     itemGroups.forEach((itemGroup, i) => {
       const checkboxValue = checkboxValues[i];
 
-      const { itemInputX, itemInputY, textX, textY, textWidth, textHeight } =
-        calculateMultiItemPosition({
-          fieldWidth: rectWidth,
-          fieldHeight: rectHeight,
-          itemCount: checkboxValues.length,
-          itemIndex: i,
-          itemSize: calculateCheckboxSize(fontSize),
-          spacingBetweenItemAndText: spacingBetweenCheckboxAndText,
-          fieldPadding: checkboxFieldPadding,
-          direction: checkboxMeta?.direction || 'vertical',
-          type: 'checkbox',
-          item: checkboxValue,
-        });
+      const { itemInputX, itemInputY, textX, textY, textWidth, textHeight } = calculateMultiItemPosition({
+        fieldWidth: rectWidth,
+        fieldHeight: rectHeight,
+        itemCount: checkboxValues.length,
+        itemIndex: i,
+        itemSize: calculateCheckboxSize(fontSize),
+        spacingBetweenItemAndText: spacingBetweenCheckboxAndText,
+        fieldPadding: checkboxFieldPadding,
+        direction: checkboxMeta?.direction || 'vertical',
+        type: 'checkbox',
+        item: checkboxValue,
+      });
 
       const squareElement = itemGroup.findOne('.checkbox-square');
       const checkmarkElement = itemGroup.findOne('.checkbox-checkmark');
@@ -148,19 +146,18 @@ export const renderCheckboxFieldElement = (
 
     const itemSize = calculateCheckboxSize(fontSize);
 
-    const { itemInputX, itemInputY, textX, textY, textWidth, textHeight } =
-      calculateMultiItemPosition({
-        fieldWidth,
-        fieldHeight,
-        itemCount: checkboxValues.length,
-        itemIndex: index,
-        itemSize,
-        spacingBetweenItemAndText: spacingBetweenCheckboxAndText,
-        fieldPadding: checkboxFieldPadding,
-        direction: checkboxMeta?.direction || 'vertical',
-        type: 'checkbox',
-        item: checkboxValue,
-      });
+    const { itemInputX, itemInputY, textX, textY, textWidth, textHeight } = calculateMultiItemPosition({
+      fieldWidth,
+      fieldHeight,
+      itemCount: checkboxValues.length,
+      itemIndex: index,
+      itemSize,
+      spacingBetweenItemAndText: spacingBetweenCheckboxAndText,
+      fieldPadding: checkboxFieldPadding,
+      direction: checkboxMeta?.direction || 'vertical',
+      type: 'checkbox',
+      item: checkboxValue,
+    });
 
     // Wrap each item's elements in a named group to support individual drag.
     const itemGroup = new Konva.Group({

@@ -1,8 +1,5 @@
-import { type APIRequestContext, expect, test } from '@playwright/test';
-import type { Team, User } from '@prisma/client';
 import fs from 'node:fs';
 import path from 'node:path';
-
 import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
 import { createApiToken } from '@documenso/lib/server-only/public-api/create-api-token';
 import { EnvelopeType, FieldType, RecipientRole } from '@documenso/prisma/client';
@@ -13,6 +10,8 @@ import type {
 } from '@documenso/trpc/server/envelope-router/create-envelope.types';
 import type { TCreateEnvelopeRecipientsRequest } from '@documenso/trpc/server/envelope-router/envelope-recipients/create-envelope-recipients.types';
 import type { TGetEnvelopeResponse } from '@documenso/trpc/server/envelope-router/get-envelope.types';
+import { type APIRequestContext, expect, test } from '@playwright/test';
+import type { Team, User } from '@prisma/client';
 
 const WEBAPP_BASE_URL = NEXT_PUBLIC_WEBAPP_URL();
 const baseUrl = `${WEBAPP_BASE_URL}/api/v2-beta`;
@@ -138,9 +137,7 @@ test.describe('Envelope distribute validation', () => {
     expect(errorResponse.message).toContain('Signers must have at least one field assigned');
   });
 
-  test('should succeed when signer has non-signature fields only (form-filler recipient)', async ({
-    request,
-  }) => {
+  test('should succeed when signer has non-signature fields only (form-filler recipient)', async ({ request }) => {
     const envelope = await createEnvelope(request, token);
     const envelopeData = await getEnvelope(request, token, envelope.id);
 
@@ -358,9 +355,7 @@ test.describe('Envelope distribute validation', () => {
     expect(errorResponse.message).toContain('missing required fields');
   });
 
-  test('should succeed with a mix of signing and form-filler-only signers', async ({
-    request,
-  }) => {
+  test('should succeed with a mix of signing and form-filler-only signers', async ({ request }) => {
     const envelope = await createEnvelope(request, token);
     const envelopeData = await getEnvelope(request, token, envelope.id);
 

@@ -7,7 +7,9 @@ import {
   FIELD_DEFAULT_GENERIC_VERTICAL_ALIGN,
   FIELD_DEFAULT_LETTER_SPACING,
   FIELD_DEFAULT_LINE_HEIGHT,
+  resolveFieldOverflowMode,
 } from '../../types/field-meta';
+import { calculateOverflowLayout } from './calculate-overflow-layout';
 import {
   createFieldHoverInteraction,
   konvaTextFill,
@@ -19,14 +21,14 @@ import {
 } from './field-generic-items';
 import type { FieldToRender, RenderFieldElementOptions } from './field-renderer';
 import { calculateFieldPosition } from './field-renderer';
-import { type TextMeasurer, fitFontSize } from './fit-font-size';
+import { fitFontSize, type TextMeasurer } from './fit-font-size';
 
 const DEFAULT_TEXT_X_PADDING = 6;
 
-const upsertFieldText = (field: FieldToRender, options: RenderFieldElementOptions): Konva.Text => {
+const upsertFieldText = (field: FieldToRender, options: RenderFieldElementOptions) => {
   const { pageWidth, pageHeight, mode = 'edit', pageLayer, translations } = options;
 
-  const { fieldWidth, fieldHeight } = calculateFieldPosition(field, pageWidth, pageHeight);
+  const { fieldX, fieldY, fieldWidth, fieldHeight } = calculateFieldPosition(field, pageWidth, pageHeight);
 
   const fieldMeta = field.fieldMeta as GenericTextFieldTypeMetas | undefined;
 
@@ -37,6 +39,7 @@ const upsertFieldText = (field: FieldToRender, options: RenderFieldElementOption
     new Konva.Text({
       id: `${field.renderId}-text`,
       name: 'field-text',
+      listening: false,
     });
 
   // Calculate text positioning based on alignment
@@ -44,7 +47,10 @@ const upsertFieldText = (field: FieldToRender, options: RenderFieldElementOption
   const textY = 0;
   const textFontSize = fieldMeta?.fontSize || DEFAULT_STANDARD_FONT_SIZE;
 
-  // By default, render the field name or label centered
+  // By default, render the field name or label centered.
+  // isLabel tracks whether we're rendering the field type name (like "Text", "Date", "Email")
+  // or a user label — overflow should not apply to these, only to actual content.
+  let isLabel = true;
   let textToRender: string = fieldMeta?.label || fieldTypeName;
   let textAlign: 'left' | 'center' | 'right' = 'center';
   let textVerticalAlign: 'top' | 'middle' | 'bottom' = FIELD_DEFAULT_GENERIC_VERTICAL_ALIGN;
@@ -57,6 +63,7 @@ const upsertFieldText = (field: FieldToRender, options: RenderFieldElementOption
     const value = fieldMeta?.type === 'text' ? fieldMeta.text : fieldMeta.value;
 
     if (value) {
+      isLabel = false;
       textToRender = value;
 
       textVerticalAlign = fieldMeta.verticalAlign || FIELD_DEFAULT_GENERIC_VERTICAL_ALIGN;
@@ -77,6 +84,7 @@ const upsertFieldText = (field: FieldToRender, options: RenderFieldElementOption
     const value = fieldMeta?.type === 'text' ? fieldMeta.text : fieldMeta.value;
 
     if (value) {
+      isLabel = false;
       textToRender = value;
 
       textVerticalAlign = fieldMeta.verticalAlign || FIELD_DEFAULT_GENERIC_VERTICAL_ALIGN;
@@ -90,6 +98,7 @@ const upsertFieldText = (field: FieldToRender, options: RenderFieldElementOption
 
   // Override everything with value if it's inserted.
   if (field.inserted) {
+    isLabel = false;
     textToRender = field.customText;
 
     textAlign = fieldMeta?.textAlign || FIELD_DEFAULT_GENERIC_ALIGN;
@@ -105,9 +114,14 @@ const upsertFieldText = (field: FieldToRender, options: RenderFieldElementOption
 
   const textAreaWidth = fieldWidth - DEFAULT_TEXT_X_PADDING * 2;
 
+  const overflowMode = resolveFieldOverflowMode(fieldMeta);
+
   let resolvedFontSize = textFontSize;
 
-  if (isRenderingValue) {
+  // PSD401: shrink inserted/prefilled values to fit the field so Konva does not
+  // silently drop wrapped lines (FS-162157). Only in 'crop' mode (the default);
+  // the upstream overflow modes intentionally let text extend past the field.
+  if (isRenderingValue && overflowMode === 'crop') {
     const measureFieldText: TextMeasurer = (text, fontFamily, fontSize, width) => {
       const probe = new Konva.Text({
         text,
@@ -133,32 +147,60 @@ const upsertFieldText = (field: FieldToRender, options: RenderFieldElementOption
     );
   }
 
+  const overflowLayout = calculateOverflowLayout({
+    overflowMode,
+    isLabel,
+    textToRender,
+    fontSize: resolvedFontSize,
+    fontFamily: konvaTextFontFamily,
+    lineHeight: textLineHeight,
+    letterSpacing: textLetterSpacing,
+    textAlign,
+    verticalAlign: textVerticalAlign,
+    baseX: textX + DEFAULT_TEXT_X_PADDING,
+    baseY: textY,
+    baseWidth: textAreaWidth,
+    baseHeight: fieldHeight,
+    groupX: fieldX,
+    groupY: fieldY,
+    pageWidth,
+    pageHeight,
+  });
+
   // Note: Do not use native text padding since it's uniform.
   // We only want to have padding on the left and right hand sides.
   fieldText.setAttrs({
-    x: textX + DEFAULT_TEXT_X_PADDING,
-    y: textY,
-    verticalAlign: textVerticalAlign,
-    wrap: 'word',
+    x: overflowLayout.x,
+    y: overflowLayout.y,
+    verticalAlign: overflowLayout.verticalAlign,
+    wrap: overflowLayout.wrap,
     text: textToRender,
     fontSize: resolvedFontSize,
-    align: textAlign,
+    align: overflowLayout.textAlign,
     lineHeight: textLineHeight,
     letterSpacing: textLetterSpacing,
     fontFamily: konvaTextFontFamily,
     fill: konvaTextFill,
-    width: textAreaWidth,
-    height: fieldHeight,
+    width: overflowLayout.width,
+    height: overflowLayout.height,
   } satisfies Partial<Konva.TextConfig>);
 
-  return fieldText;
+  return {
+    fieldText,
+    isLabel,
+    textToRender,
+    textFontSize: resolvedFontSize,
+    textAlign,
+    textVerticalAlign,
+    textLineHeight,
+    textLetterSpacing,
+  };
 };
 
-export const renderGenericTextFieldElement = (
-  field: FieldToRender,
-  options: RenderFieldElementOptions,
-) => {
+export const renderGenericTextFieldElement = (field: FieldToRender, options: RenderFieldElementOptions) => {
   const { mode = 'edit', pageLayer, color } = options;
+  const { pageWidth, pageHeight } = options;
+  const fieldMeta = field.fieldMeta as GenericTextFieldTypeMetas | undefined;
 
   const isFirstRender = !pageLayer.findOne(`#${field.renderId}`);
 
@@ -174,7 +216,16 @@ export const renderGenericTextFieldElement = (
 
   // Render the field background and text.
   const fieldRect = upsertFieldRect(field, options);
-  const fieldText = upsertFieldText(field, options);
+  const {
+    fieldText,
+    isLabel,
+    textToRender,
+    textFontSize,
+    textAlign,
+    textVerticalAlign,
+    textLineHeight,
+    textLetterSpacing,
+  } = upsertFieldText(field, options);
 
   fieldGroup.add(fieldRect);
   fieldGroup.add(fieldText);
@@ -199,12 +250,12 @@ export const renderGenericTextFieldElement = (
     const rectWidth = fieldRect.width() * groupScaleX;
     const rectHeight = fieldRect.height() * groupScaleY;
 
-    // Update text dimensions
+    // During active transform, use crop dimensions (field bounds only).
+    fieldText.x(DEFAULT_TEXT_X_PADDING);
+    fieldText.y(0);
     fieldText.width(rectWidth - DEFAULT_TEXT_X_PADDING * 2);
     fieldText.height(rectHeight);
-
-    // Force Konva to recalculate text layout
-    fieldText.height();
+    fieldText.wrap('word');
 
     // Keep the optional line spanning the field and pinned to the bottom while
     // resizing (counter-scaled so it stays a hairline like the text).
@@ -217,7 +268,6 @@ export const renderGenericTextFieldElement = (
     fieldGroup.getLayer()?.batchDraw();
   });
 
-  // Reset the text after transform has ended.
   fieldGroup.on('transformend', () => {
     fieldText.scaleX(1);
     fieldText.scaleY(1);
@@ -225,12 +275,33 @@ export const renderGenericTextFieldElement = (
     const rectWidth = fieldRect.width();
     const rectHeight = fieldRect.height();
 
-    // Update text dimensions
-    fieldText.width(rectWidth - DEFAULT_TEXT_X_PADDING * 2);
-    fieldText.height(rectHeight);
+    // Recalculate overflow layout with new field dimensions.
+    const newOverflowLayout = calculateOverflowLayout({
+      overflowMode: resolveFieldOverflowMode(fieldMeta),
+      isLabel,
+      textToRender,
+      fontSize: textFontSize,
+      fontFamily: konvaTextFontFamily,
+      lineHeight: textLineHeight,
+      letterSpacing: textLetterSpacing,
+      textAlign,
+      verticalAlign: textVerticalAlign,
+      baseX: DEFAULT_TEXT_X_PADDING,
+      baseY: 0,
+      baseWidth: rectWidth - DEFAULT_TEXT_X_PADDING * 2,
+      baseHeight: rectHeight,
+      groupX: fieldGroup.x(),
+      groupY: fieldGroup.y(),
+      pageWidth,
+      pageHeight,
+    });
 
-    // Force Konva to recalculate text layout
-    fieldText.height();
+    fieldText.x(newOverflowLayout.x);
+    fieldText.y(newOverflowLayout.y);
+    fieldText.width(newOverflowLayout.width);
+    fieldText.height(newOverflowLayout.height);
+    fieldText.wrap(newOverflowLayout.wrap);
+    fieldText.verticalAlign(newOverflowLayout.verticalAlign);
 
     if (fieldLine) {
       fieldLine.scaleX(1);

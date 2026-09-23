@@ -1,10 +1,11 @@
+import { createRequire } from 'node:module';
+import path from 'node:path';
 import { defaultOptions as devServerDefaults } from '@hono/vite-dev-server';
 import { lingui } from '@lingui/vite-plugin';
 import { reactRouter } from '@react-router/dev/vite';
 import autoprefixer from 'autoprefixer';
 import serverAdapter from 'hono-react-router-adapter/vite';
-import { createRequire } from 'node:module';
-import path from 'node:path';
+import type { AppLoadContext } from 'react-router';
 import tailwindcss from 'tailwindcss';
 import { defineConfig, normalizePath } from 'vite';
 import macrosPlugin from 'vite-plugin-babel-macros';
@@ -23,6 +24,10 @@ const cMapsDir = normalizePath(path.join(pdfjsDistPath, 'cmaps'));
  * Do not configure any envs here.
  */
 export default defineConfig({
+  // No trailing slash: the React Router dev server requires its `basename` to
+  // start with this raw value (see react-router.config.ts). Vite normalizes
+  // and joins asset URLs correctly either way.
+  base: process.env.NEXT_PUBLIC_BASE_PATH ? process.env.NEXT_PUBLIC_BASE_PATH.replace(/\/$/, '') : '/',
   css: {
     postcss: {
       plugins: [tailwindcss, autoprefixer],
@@ -47,13 +52,15 @@ export default defineConfig({
     tsconfigPaths(),
     serverAdapter({
       entry: 'server/router.ts',
+      getLoadContext: async () => {
+        const { getLoadContext } = await import('./server/load-context');
+        return getLoadContext() as unknown as AppLoadContext;
+      },
       exclude: [
         // Spread the defaults but replace the /.css$/ rule so that Bull
         // Board's static CSS at /api/jobs/board/static/** passes through to Hono.
         ...devServerDefaults.exclude.map((pattern) =>
-          pattern instanceof RegExp && pattern.source === '.*\\.css$'
-            ? /^(?!\/api\/jobs\/board\/).*\.css$/
-            : pattern,
+          pattern instanceof RegExp && pattern.source === '.*\\.css$' ? /^(?!\/api\/jobs\/board\/).*\.css$/ : pattern,
         ),
         '/assets/**',
         '/src/app/**',
@@ -94,14 +101,8 @@ export default defineConfig({
   resolve: {
     alias: {
       https: 'node:https',
-      '.prisma/client/default': path.resolve(
-        __dirname,
-        '../../node_modules/.prisma/client/default.js',
-      ),
-      '.prisma/client/index-browser': path.resolve(
-        __dirname,
-        '../../node_modules/.prisma/client/index-browser.js',
-      ),
+      '.prisma/client/default': path.resolve(__dirname, '../../node_modules/.prisma/client/default.js'),
+      '.prisma/client/index-browser': path.resolve(__dirname, '../../node_modules/.prisma/client/index-browser.js'),
       canvas: path.resolve(__dirname, './app/types/empty-module.ts'),
     },
   },
@@ -121,7 +122,7 @@ export default defineConfig({
         'nodemailer',
         /playwright/,
         '@playwright/browser-chromium',
-        'skia-canvas',
+        '@documenso/skia-canvas',
       ],
     },
   },

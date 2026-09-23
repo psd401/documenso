@@ -1,6 +1,5 @@
-import { DocumentSigningOrder, EnvelopeType, SigningStatus } from '@prisma/client';
-
 import { prisma } from '@documenso/prisma';
+import { DocumentSigningOrder, EnvelopeType, RecipientRole, SigningStatus } from '@prisma/client';
 
 export type GetIsRecipientTurnOptions = {
   token: string;
@@ -47,6 +46,11 @@ export async function getIsRecipientsTurnToSign({ token }: GetIsRecipientTurnOpt
   const currentSlot = slotOf(currentRecipient.signingOrder);
 
   for (const recipient of recipients) {
+    // CC recipients have no action to take, so they can never block the flow.
+    if (recipient.role === RecipientRole.CC) {
+      continue;
+    }
+
     if (slotOf(recipient.signingOrder) < currentSlot && recipient.signingStatus !== SigningStatus.SIGNED) {
       return false;
     }

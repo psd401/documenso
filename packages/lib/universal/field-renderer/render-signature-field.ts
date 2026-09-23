@@ -2,8 +2,11 @@
 // ABOUTME: Handles typed signatures (with auto-sized font via fitFontSize) and drawn/image signatures.
 import Konva from 'konva';
 
-import { DEFAULT_SIGNATURE_TEXT_FONT_SIZE } from '../../constants/pdf';
+import { DEFAULT_SIGNATURE_TEXT_FONT_SIZE, getSignatureFontFamily } from '../../constants/pdf';
 import { AppError } from '../../errors/app-error';
+import type { TSignatureFieldMeta } from '../../types/field-meta';
+import { resolveFieldOverflowMode } from '../../types/field-meta';
+import { calculateOverflowLayout } from './calculate-overflow-layout';
 import {
   createFieldHoverInteraction,
   setFieldLinePoints,
@@ -11,23 +14,24 @@ import {
   upsertFieldLine,
   upsertFieldRect,
 } from './field-generic-items';
-import { calculateFieldPosition } from './field-renderer';
 import type { FieldToRender, RenderFieldElementOptions } from './field-renderer';
-import { type TextMeasurer, fitFontSize } from './fit-font-size';
+import { calculateFieldPosition } from './field-renderer';
+import { fitFontSize, type TextMeasurer } from './fit-font-size';
 
 const AUTO_FIT_MIN_FONT_SIZE = 10;
 
+// Signatures are single "words", so they must be measured (and painted) with char wrapping.
 const konvaTextMeasurer: TextMeasurer = (text, fontFamily, fontSize, width) => {
   const probe = new Konva.Text({ text, fontFamily, fontSize, width, wrap: 'char' });
   return probe.height();
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-let SkiaImage: any = undefined;
+let SkiaImage: any;
 
 void (async () => {
   if (typeof window === 'undefined') {
-    const mod = await import('skia-canvas');
+    const mod = await import('@documenso/skia-canvas');
     SkiaImage = mod.Image;
   }
 })();
@@ -52,18 +56,94 @@ const getImageDimensions = (img: HTMLImageElement, fieldWidth: number, fieldHeig
   };
 };
 
-const createFieldSignature = (
-  field: FieldToRender,
-  options: RenderFieldElementOptions,
-): Konva.Text | Konva.Image => {
+type FieldSignature =
+  | {
+      node: Konva.Text;
+      isImageSignature: false;
+      isLabel: boolean;
+    }
+  | {
+      node: Konva.Image;
+      isImageSignature: true;
+      isLabel: boolean;
+    };
+
+/**
+ * The pixel ratio used when caching the signature image as an offscreen bitmap.
+ *
+ * Konva's default redraw composites the source image with low-quality scaling
+ * which makes signatures look blurry, especially when the source PNG is much
+ * larger than the field. Caching at a high pixel ratio rasterises the shape
+ * once into a sharp bitmap that is then reused on every redraw.
+ *
+ * Multiplied by `devicePixelRatio` to keep the cache crisp on retina displays.
+ */
+const SIGNATURE_IMAGE_CACHE_PIXEL_RATIO = 2;
+
+/**
+ * Build a Konva.Image for a base64 signature, sized to fit within the given
+ * field dimensions. Works in both browser and Node.js (via skia-canvas).
+ */
+const createSignatureImage = (signatureImageAsBase64: string, fieldWidth: number, fieldHeight: number): Konva.Image => {
+  if (typeof window !== 'undefined') {
+    const img = new Image();
+
+    const image = new Konva.Image({
+      image: img,
+      x: 0,
+      y: 0,
+      width: fieldWidth,
+      height: fieldHeight,
+      listening: false,
+    });
+
+    img.onload = () => {
+      image.setAttrs({
+        image: img,
+        ...getImageDimensions(img, fieldWidth, fieldHeight),
+      });
+
+      // Cache the image as a high-resolution bitmap so it stays sharp on
+      // redraws and zoom changes instead of being re-scaled from the source PNG
+      // every time.
+      image.cache({
+        pixelRatio: SIGNATURE_IMAGE_CACHE_PIXEL_RATIO * (window.devicePixelRatio || 1),
+      });
+    };
+
+    img.src = signatureImageAsBase64;
+
+    return image;
+  }
+
+  // Node.js with skia-canvas
+  if (!SkiaImage) {
+    throw new Error('Skia image not found');
+  }
+
+  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+  const img = new SkiaImage(signatureImageAsBase64) as unknown as HTMLImageElement;
+
+  return new Konva.Image({
+    image: img,
+    ...getImageDimensions(img, fieldWidth, fieldHeight),
+    listening: false,
+  });
+};
+
+const createFieldSignature = (field: FieldToRender, options: RenderFieldElementOptions): FieldSignature => {
   const { pageWidth, pageHeight, mode = 'edit', translations } = options;
 
-  const { fieldWidth, fieldHeight } = calculateFieldPosition(field, pageWidth, pageHeight);
-  let configuredFontSize = field.fieldMeta?.fontSize || DEFAULT_SIGNATURE_TEXT_FONT_SIZE;
+  const { fieldX, fieldY, fieldWidth, fieldHeight } = calculateFieldPosition(field, pageWidth, pageHeight);
+  let fontSize = field.fieldMeta?.fontSize || DEFAULT_SIGNATURE_TEXT_FONT_SIZE;
+
+  const fieldMeta = field.fieldMeta as TSignatureFieldMeta | undefined;
+  const overflowMode = resolveFieldOverflowMode(fieldMeta);
 
   const fieldText = new Konva.Text({
     id: `${field.renderId}-text`,
     name: 'field-text',
+    listening: false,
   });
 
   const fieldTypeName = translations?.[field.type] || field.type;
@@ -79,6 +159,20 @@ const createFieldSignature = (
   // Handle edit mode.
   if (mode === 'edit') {
     textToRender = fieldTypeName;
+
+    // If the field has already been signed and we have the signature data
+    // available, render it. Otherwise leave the field type label as a placeholder.
+    if (field.inserted && signature?.typedSignature) {
+      textToRender = signature.typedSignature;
+    }
+
+    if (field.inserted && signature?.signatureImageAsBase64) {
+      return {
+        node: createSignatureImage(signature.signatureImageAsBase64, fieldWidth, fieldHeight),
+        isImageSignature: true,
+        isLabel: false,
+      };
+    }
   }
 
   // Handle sign mode.
@@ -91,80 +185,74 @@ const createFieldSignature = (
 
     if (signature?.typedSignature) {
       textToRender = signature.typedSignature;
-      configuredFontSize = fitFontSize(
-        signature.typedSignature,
-        'Caveat, sans-serif',
-        fieldWidth,
-        fieldHeight,
-        configuredFontSize,
-        AUTO_FIT_MIN_FONT_SIZE,
-        konvaTextMeasurer,
-      );
+
+      // PSD401: shrink typed signatures to fit the field. Only in 'crop' mode (the
+      // default); the upstream overflow modes intentionally extend past the field.
+      if (overflowMode === 'crop') {
+        fontSize = fitFontSize(
+          signature.typedSignature,
+          getSignatureFontFamily(signature.typedSignature),
+          fieldWidth,
+          fieldHeight,
+          fontSize,
+          AUTO_FIT_MIN_FONT_SIZE,
+          konvaTextMeasurer,
+        );
+      }
     }
 
     if (signature?.signatureImageAsBase64) {
-      if (typeof window !== 'undefined') {
-        // Create a new HTML Image element
-        const img = new Image();
-
-        const image = new Konva.Image({
-          image: img,
-          x: 0,
-          y: 0,
-          width: fieldWidth,
-          height: fieldHeight,
-        });
-
-        img.onload = () => {
-          image.setAttrs({
-            image: img,
-            ...getImageDimensions(img, fieldWidth, fieldHeight),
-          });
-        };
-
-        img.src = signature.signatureImageAsBase64;
-
-        return image;
-      } else {
-        // Node.js with skia-canvas
-        if (!SkiaImage) {
-          throw new Error('Skia image not found');
-        }
-
-        // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-        const img = new SkiaImage(signature?.signatureImageAsBase64) as unknown as HTMLImageElement;
-
-        const image = new Konva.Image({
-          image: img,
-          ...getImageDimensions(img, fieldWidth, fieldHeight),
-        });
-
-        return image;
-      }
+      return {
+        node: createSignatureImage(signature.signatureImageAsBase64, fieldWidth, fieldHeight),
+        isImageSignature: true,
+        isLabel: false,
+      };
     }
   }
 
-  fieldText.setAttrs({
-    x: textX,
-    y: textY,
+  // Whether we're rendering the field type name (like "Signature") vs actual signed content.
+  // Overflow should not apply to the label.
+  const isLabel = !signature?.typedSignature;
+
+  const overflowLayout = calculateOverflowLayout({
+    overflowMode,
+    isLabel,
+    textToRender,
+    fontSize,
+    fontFamily: getSignatureFontFamily(textToRender),
+    lineHeight: 1,
+    letterSpacing: 0,
+    textAlign: 'center',
     verticalAlign: 'middle',
-    wrap: 'char',
+    baseX: textX,
+    baseY: textY,
+    baseWidth: fieldWidth,
+    baseHeight: fieldHeight,
+    groupX: fieldX,
+    groupY: fieldY,
+    pageWidth,
+    pageHeight,
+  });
+
+  fieldText.setAttrs({
+    x: overflowLayout.x,
+    y: overflowLayout.y,
+    verticalAlign: overflowLayout.verticalAlign,
+    // PSD401: crop mode paints with char wrapping to match the fitFontSize measurer.
+    wrap: overflowMode === 'crop' ? 'char' : overflowLayout.wrap,
     text: textToRender,
-    fontSize: configuredFontSize,
-    fontFamily: 'Caveat, sans-serif',
-    align: 'center',
-    width: fieldWidth,
-    height: fieldHeight,
+    fontSize,
+    fontFamily: getSignatureFontFamily(textToRender),
+    align: overflowLayout.textAlign,
+    width: overflowLayout.width,
+    height: overflowLayout.height,
   } satisfies Partial<Konva.TextConfig>);
 
-  return fieldText;
+  return { node: fieldText, isImageSignature: false, isLabel };
 };
 
-export const renderSignatureFieldElement = (
-  field: FieldToRender,
-  options: RenderFieldElementOptions,
-) => {
-  const { mode = 'edit', pageLayer, color } = options;
+export const renderSignatureFieldElement = (field: FieldToRender, options: RenderFieldElementOptions) => {
+  const { mode = 'edit', pageLayer, pageWidth, pageHeight, color } = options;
 
   const isFirstRender = !pageLayer.findOne(`#${field.renderId}`);
 
@@ -182,7 +270,7 @@ export const renderSignatureFieldElement = (
 
   // Render the field background and text.
   const fieldRect = upsertFieldRect(field, options);
-  const fieldSignature = createFieldSignature(field, options);
+  const { node: fieldSignature, isImageSignature, isLabel } = createFieldSignature(field, options);
 
   fieldGroup.add(fieldRect);
   fieldGroup.add(fieldSignature);
@@ -207,12 +295,15 @@ export const renderSignatureFieldElement = (
     const rectWidth = fieldRect.width() * groupScaleX;
     const rectHeight = fieldRect.height() * groupScaleY;
 
-    // Update text dimensions
+    // During active transform, use crop dimensions (field bounds only).
+    if (!isImageSignature) {
+      fieldSignature.x(0);
+      fieldSignature.y(0);
+      fieldSignature.wrap('word');
+    }
+
     fieldSignature.width(rectWidth);
     fieldSignature.height(rectHeight);
-
-    // Force Konva to recalculate text layout
-    fieldSignature.height();
 
     if (fieldLine) {
       fieldLine.scaleX(1 / groupScaleX);
@@ -223,7 +314,6 @@ export const renderSignatureFieldElement = (
     fieldGroup.getLayer()?.batchDraw();
   });
 
-  // Reset the text after transform has ended.
   fieldGroup.on('transformend', () => {
     fieldSignature.scaleX(1);
     fieldSignature.scaleY(1);
@@ -231,28 +321,58 @@ export const renderSignatureFieldElement = (
     const rectWidth = fieldRect.width();
     const rectHeight = fieldRect.height();
 
-    // Update text dimensions
-    fieldSignature.width(rectWidth); // Account for padding
-    fieldSignature.height(rectHeight);
+    if (!isImageSignature) {
+      const overflowMode = resolveFieldOverflowMode(field.fieldMeta as TSignatureFieldMeta | undefined);
 
-    // Re-run auto-sizing for typed signatures after resize.
-    const typedSignature = field.signature?.typedSignature;
-    if (fieldSignature instanceof Konva.Text && typedSignature) {
-      const maxFontSize = field.fieldMeta?.fontSize || DEFAULT_SIGNATURE_TEXT_FONT_SIZE;
-      const autoFontSize = fitFontSize(
-        typedSignature,
-        'Caveat, sans-serif',
-        rectWidth,
-        rectHeight,
-        maxFontSize,
-        AUTO_FIT_MIN_FONT_SIZE,
-        konvaTextMeasurer,
-      );
-      fieldSignature.fontSize(autoFontSize);
+      // PSD401: re-run auto-sizing for typed signatures after resize (crop mode only).
+      const typedSignature = field.signature?.typedSignature;
+
+      if (overflowMode === 'crop' && typedSignature) {
+        const maxFontSize = field.fieldMeta?.fontSize || DEFAULT_SIGNATURE_TEXT_FONT_SIZE;
+
+        fieldSignature.fontSize(
+          fitFontSize(
+            typedSignature,
+            getSignatureFontFamily(typedSignature),
+            rectWidth,
+            rectHeight,
+            maxFontSize,
+            AUTO_FIT_MIN_FONT_SIZE,
+            konvaTextMeasurer,
+          ),
+        );
+      }
+
+      const newOverflowLayout = calculateOverflowLayout({
+        overflowMode,
+        isLabel,
+        textToRender: fieldSignature.text(),
+        fontSize: fieldSignature.fontSize(),
+        fontFamily: getSignatureFontFamily(fieldSignature.text()),
+        lineHeight: 1,
+        letterSpacing: 0,
+        textAlign: 'center',
+        verticalAlign: 'middle',
+        baseX: 0,
+        baseY: 0,
+        baseWidth: rectWidth,
+        baseHeight: rectHeight,
+        groupX: fieldGroup.x(),
+        groupY: fieldGroup.y(),
+        pageWidth,
+        pageHeight,
+      });
+
+      fieldSignature.x(newOverflowLayout.x);
+      fieldSignature.y(newOverflowLayout.y);
+      fieldSignature.width(newOverflowLayout.width);
+      fieldSignature.height(newOverflowLayout.height);
+      fieldSignature.wrap(overflowMode === 'crop' ? 'char' : newOverflowLayout.wrap);
+      fieldSignature.verticalAlign(newOverflowLayout.verticalAlign);
+    } else {
+      fieldSignature.width(rectWidth);
+      fieldSignature.height(rectHeight);
     }
-
-    // Force Konva to recalculate text layout
-    fieldSignature.height();
 
     if (fieldLine) {
       fieldLine.scaleX(1);

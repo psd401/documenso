@@ -11,12 +11,7 @@ export interface GetFolderBreadcrumbsOptions {
   type?: TFolderType;
 }
 
-export const getFolderBreadcrumbs = async ({
-  userId,
-  teamId,
-  folderId,
-  type,
-}: GetFolderBreadcrumbsOptions) => {
+export const getFolderBreadcrumbs = async ({ userId, teamId, folderId, type }: GetFolderBreadcrumbsOptions) => {
   const team = await getTeamById({ userId, teamId });
   const userGroupIds = await getUserTeamGroupIds(userId, teamId);
 

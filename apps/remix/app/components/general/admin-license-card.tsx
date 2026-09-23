@@ -1,10 +1,209 @@
-// ABOUTME: Gutted license card component for self-hosted PSD401 deployment.
-// All licensing UI removed; component returns null.
+import { useCopyToClipboard } from '@documenso/lib/client-only/hooks/use-copy-to-clipboard';
+import type { TCachedLicense } from '@documenso/lib/types/license';
+import { SUBSCRIPTION_CLAIM_FEATURE_FLAGS } from '@documenso/lib/types/subscription';
+import { trpc } from '@documenso/trpc/react';
+import { Badge } from '@documenso/ui/primitives/badge';
+import { Button } from '@documenso/ui/primitives/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@documenso/ui/primitives/tooltip';
+import { useToast } from '@documenso/ui/primitives/use-toast';
+import { Trans, useLingui } from '@lingui/react/macro';
+import {
+  CheckCircle2Icon,
+  CopyIcon,
+  EyeIcon,
+  EyeOffIcon,
+  KeyRoundIcon,
+  Loader2Icon,
+  RefreshCwIcon,
+  XCircleIcon,
+} from 'lucide-react';
+import { DateTime } from 'luxon';
+import { useState } from 'react';
+import { useRevalidator } from 'react-router';
+import { match } from 'ts-pattern';
 
 type AdminLicenseCardProps = {
-  licenseData?: unknown;
+  licenseData: TCachedLicense | null;
 };
 
-export const AdminLicenseCard = (_props: AdminLicenseCardProps) => {
-  return null;
+// ABOUTME: PSD401 is self-hosted with no license key configured. Upstream's
+// "no license" state renders a nag card with a "Learn more" enterprise-docs
+// link; we suppress that entirely and render nothing unless a license is
+// actually present (kept for completeness, though never expected here).
+export const AdminLicenseCard = ({ licenseData }: AdminLicenseCardProps) => {
+  const { t, i18n } = useLingui();
+  const { toast } = useToast();
+  const [, copy] = useCopyToClipboard();
+  const [isLicenseKeyVisible, setIsLicenseKeyVisible] = useState(false);
+
+  const { license } = licenseData || {};
+
+  if (!license) {
+    return null;
+  }
+
+  const enabledFlags = Object.entries(license.flags).filter(([, enabled]) => enabled);
+
+  return (
+    <div className="relative max-w-full overflow-hidden rounded-lg border border-border bg-background px-4 pt-4 pb-6 shadow shadow-transparent duration-200 hover:shadow-border/80">
+      <div className="absolute top-3 right-3">
+        <AdminLicenseResyncButton />
+      </div>
+
+      <div className="flex items-start gap-2">
+        <div className="h-4 w-4">
+          <KeyRoundIcon className="h-4 w-4 text-muted-foreground" />
+        </div>
+
+        <h3 className="mb-2 flex items-end font-medium text-foreground text-sm leading-tight">
+          <Trans>Documenso License</Trans>
+        </h3>
+
+        {match(license.status)
+          .with('ACTIVE', () => (
+            <Badge variant="default" size="small">
+              <CheckCircle2Icon className="mr-1 h-3 w-3" />
+              <Trans context="Subscription status">Active</Trans>
+            </Badge>
+          ))
+          .with('PAST_DUE', () => (
+            <Badge variant="warning" size="small">
+              <XCircleIcon className="mr-1 h-3 w-3" />
+              <Trans context="Subscription status">Past Due</Trans>
+            </Badge>
+          ))
+          .with('EXPIRED', () => (
+            <Badge variant="destructive" size="small">
+              <XCircleIcon className="mr-1 h-3 w-3" />
+              <Trans context="Subscription status">Expired</Trans>
+            </Badge>
+          ))
+          .otherwise(() => null)}
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-4">
+        <div>
+          <p className="font-medium text-foreground text-sm">
+            <Trans>License</Trans>
+          </p>
+          <p className="mt-0.5 text-muted-foreground text-xs">{license.name}</p>
+        </div>
+
+        <div>
+          <p className="font-medium text-foreground text-sm">
+            <Trans>Expires</Trans>
+          </p>
+          <p className="mt-0.5 text-muted-foreground text-xs">{i18n.date(license.periodEnd, DateTime.DATE_MED)}</p>
+        </div>
+
+        <div>
+          <p className="font-medium text-foreground text-sm">
+            <Trans>License Key</Trans>
+          </p>
+          <div className="mt-0.5 flex items-center gap-1">
+            <p className="min-w-0 break-all text-muted-foreground text-xs">
+              {isLicenseKeyVisible ? license.licenseKey : '•'.repeat(license.licenseKey.length)}
+            </p>
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0 text-muted-foreground"
+              aria-label={isLicenseKeyVisible ? t`Hide license key` : t`Show license key`}
+              onClick={() => setIsLicenseKeyVisible((prevState) => !prevState)}
+            >
+              {isLicenseKeyVisible ? <EyeOffIcon className="h-3.5 w-3.5" /> : <EyeIcon className="h-3.5 w-3.5" />}
+            </Button>
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0 text-muted-foreground"
+              aria-label={t`Copy license key`}
+              onClick={async () =>
+                copy(license.licenseKey).then(() => {
+                  toast({
+                    title: t`Copied to clipboard`,
+                    description: t`The license key has been copied to your clipboard`,
+                  });
+                })
+              }
+            >
+              <CopyIcon className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
+
+        <div>
+          <p className="font-medium text-foreground text-sm">
+            <Trans>Features</Trans>
+          </p>
+          <p className="mt-0.5 text-muted-foreground text-xs">
+            {enabledFlags.length > 0 ? (
+              enabledFlags
+                .map(
+                  ([flag]) =>
+                    SUBSCRIPTION_CLAIM_FEATURE_FLAGS[
+                      // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+                      flag as keyof typeof SUBSCRIPTION_CLAIM_FEATURE_FLAGS
+                    ]?.label || flag,
+                )
+                .join(', ')
+            ) : (
+              <Trans>No features enabled</Trans>
+            )}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const AdminLicenseResyncButton = () => {
+  const { t } = useLingui();
+  const { toast } = useToast();
+  const { revalidate } = useRevalidator();
+
+  const { mutate: resyncLicense, isPending: isResyncingLicense } = trpc.admin.license.resync.useMutation({
+    onSuccess: async () => {
+      toast({
+        title: t`License synced`,
+      });
+
+      await revalidate();
+    },
+    onError: () => {
+      toast({
+        title: t`Failed to sync license`,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            disabled={isResyncingLicense}
+            onClick={() => resyncLicense()}
+          >
+            {isResyncingLicense ? (
+              <Loader2Icon className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCwIcon className="h-4 w-4" />
+            )}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <Trans>Sync license from server</Trans>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
 };

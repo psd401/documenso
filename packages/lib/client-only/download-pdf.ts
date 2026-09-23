@@ -3,7 +3,7 @@ import type { EnvelopeItem } from '@prisma/client';
 import { getEnvelopeItemPdfUrl } from '../utils/envelope-download';
 import { downloadFile } from './download-file';
 
-type DocumentVersion = 'original' | 'signed' | 'partial';
+type DocumentVersion = 'original' | 'signed' | 'pending';
 
 type DownloadPDFProps = {
   envelopeItem: Pick<EnvelopeItem, 'id' | 'envelopeId'>;
@@ -14,44 +14,57 @@ type DownloadPDFProps = {
    * Specifies which version of the document to download.
    * 'signed': Downloads the signed version (default).
    * 'original': Downloads the original version.
-   * 'partial': Downloads a draft including signatures collected so far. Owner-only.
+   * 'pending': Downloads the original document with currently-inserted fields burned in.
+   *            Only valid while the envelope is in PENDING status. Not supported via
+   *            recipient token.
    */
   version?: DocumentVersion;
 };
 
-const SUFFIX_BY_VERSION: Record<DocumentVersion, string> = {
-  signed: '_signed.pdf',
-  partial: '_partial.pdf',
-  original: '.pdf',
+const versionToFilenameSuffix = (version: DocumentVersion): string => {
+  switch (version) {
+    case 'signed':
+      return '_signed.pdf';
+    case 'pending':
+      return '_pending.pdf';
+    case 'original':
+      return '.pdf';
+  }
 };
 
-export const downloadPDF = async ({
-  envelopeItem,
-  token,
-  fileName,
-  version = 'signed',
-}: DownloadPDFProps) => {
+/**
+ * Fetches a PDF for an envelope item and returns it as a blob alongside the
+ * filename it should be saved as. Throws on non-OK responses.
+ */
+export const fetchPDF = async ({ envelopeItem, token, fileName, version = 'signed' }: DownloadPDFProps) => {
   const downloadUrl = getEnvelopeItemPdfUrl({
     type: 'download',
     envelopeItem: envelopeItem,
-    // Partial downloads must use the session-authenticated owner endpoint, never
-    // the recipient token endpoint.
-    token: version === 'partial' ? undefined : token,
+    token,
     version,
   });
 
   const response = await fetch(downloadUrl);
 
   if (!response.ok) {
-    throw new Error(`Failed to download PDF (${response.status})`);
+    throw new Error(`Failed to download PDF: ${response.status}`);
   }
 
   const blob = await response.blob();
 
   const baseTitle = (fileName ?? 'document').replace(/\.pdf$/, '');
 
+  return {
+    filename: `${baseTitle}${versionToFilenameSuffix(version)}`,
+    blob,
+  };
+};
+
+export const downloadPDF = async (options: DownloadPDFProps) => {
+  const { filename, blob } = await fetchPDF(options);
+
   downloadFile({
-    filename: `${baseTitle}${SUFFIX_BY_VERSION[version]}`,
+    filename,
     data: blob,
   });
 };
