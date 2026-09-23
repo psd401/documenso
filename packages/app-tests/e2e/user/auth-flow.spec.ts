@@ -1,7 +1,6 @@
-import { expect, test } from '@playwright/test';
-
 import { prisma } from '@documenso/prisma';
 import { seedUser } from '@documenso/prisma/seed/users';
+import { expect, test } from '@playwright/test';
 
 import { apiSignin } from '../fixtures/authentication';
 
@@ -19,9 +18,7 @@ test('[USER] password sign-up redirects to the PSD sign-in page', async ({ page 
 test('[USER] sign-in directs users to PSD Google SSO and support', async ({ page }) => {
   await page.goto('/signin');
 
-  await expect(
-    page.getByText('Sign in with your Peninsula School District Google account.'),
-  ).toBeVisible();
+  await expect(page.getByText('Sign in with your Peninsula School District Google account.')).toBeVisible();
   await expect(page.getByText('Google sign-in is not configured')).toBeVisible();
   await expect(page.getByRole('link', { name: 'PSD401 IT Support' })).toHaveAttribute(
     'href',
@@ -46,8 +43,6 @@ test('[USER] teamless non-admin receives an actionable dashboard empty state', a
   });
 
   await expect(page.getByText('No organisations found')).toBeVisible();
-  await expect(
-    page.getByText('Contact your administrator to request organisation access.'),
-  ).toBeVisible();
+  await expect(page.getByText('Contact your administrator to request organisation access.')).toBeVisible();
   await expect(page.getByRole('link', { name: 'Create organisation' })).toHaveCount(0);
 });

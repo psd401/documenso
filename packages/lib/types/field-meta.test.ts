@@ -2,11 +2,7 @@
 // ABOUTME: Covers offsetX/offsetY bounds, custom direction, groupId constraints.
 import { describe, expect, it } from 'vitest';
 
-import {
-  ZBaseFieldMeta,
-  ZCheckboxFieldMeta,
-  ZRadioFieldMeta,
-} from './field-meta';
+import { ZBaseFieldMeta, ZCheckboxFieldMeta, ZRadioFieldMeta } from './field-meta';
 
 describe('ZBaseFieldMeta groupId', () => {
   it('accepts a valid groupId', () => {
@@ -41,18 +37,26 @@ describe('ZCheckboxFieldMeta offsets', () => {
     expect(result.success).toBe(true);
   });
 
-  it('rejects offsetX above 100', () => {
+  it('accepts offsets at the ±2000 boundary', () => {
     const result = ZCheckboxFieldMeta.safeParse({
       ...baseCheckbox,
-      values: [{ id: 1, checked: false, value: 'A', offsetX: 101 }],
+      values: [{ id: 1, checked: false, value: 'A', offsetX: 2000, offsetY: -2000 }],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects offsetX above 2000', () => {
+    const result = ZCheckboxFieldMeta.safeParse({
+      ...baseCheckbox,
+      values: [{ id: 1, checked: false, value: 'A', offsetX: 2001 }],
     });
     expect(result.success).toBe(false);
   });
 
-  it('rejects offsetY below -100', () => {
+  it('rejects offsetY below -2000', () => {
     const result = ZCheckboxFieldMeta.safeParse({
       ...baseCheckbox,
-      values: [{ id: 1, checked: false, value: 'A', offsetY: -101 }],
+      values: [{ id: 1, checked: false, value: 'A', offsetY: -2001 }],
     });
     expect(result.success).toBe(false);
   });
@@ -93,7 +97,7 @@ describe('ZRadioFieldMeta offsets', () => {
   it('rejects out-of-bounds offsets', () => {
     const result = ZRadioFieldMeta.safeParse({
       ...baseRadio,
-      values: [{ id: 1, checked: false, value: 'A', offsetX: 200 }],
+      values: [{ id: 1, checked: false, value: 'A', offsetX: 2001 }],
     });
     expect(result.success).toBe(false);
   });

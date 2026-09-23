@@ -1,16 +1,18 @@
-import { useMemo, useState } from 'react';
-
-import { msg } from '@lingui/core/macro';
-import { useLingui } from '@lingui/react';
-import { Trans } from '@lingui/react/macro';
-import { FcGoogle } from 'react-icons/fc';
-
 import { authClient } from '@documenso/auth/client';
+import { formatPath } from '@documenso/lib/constants/app';
 import { cn } from '@documenso/ui/lib/utils';
 import { Button } from '@documenso/ui/primitives/button';
 import { useToast } from '@documenso/ui/primitives/use-toast';
+import { msg } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react';
+import { Trans } from '@lingui/react/macro';
+import { useMemo, useState } from 'react';
+import { FcGoogle } from 'react-icons/fc';
 
-const LOGIN_REDIRECT_PATH = '/';
+// ABOUTME: PSD401 fork intentionally strips password/2FA/passkey/Microsoft/OIDC
+// signin UI. Signup is Google SSO only, restricted to allowed domains
+// (NEXT_PRIVATE_ALLOWED_SIGNUP_DOMAINS). Do not reintroduce those flows here.
+const LOGIN_REDIRECT_PATH = formatPath('/');
 
 export type SignInFormProps = {
   className?: string;
@@ -54,9 +56,7 @@ export const SignInForm = ({ className, isGoogleSSOEnabled, returnTo }: SignInFo
 
       toast({
         title: _(msg`An unknown error occurred`),
-        description: _(
-          msg`We encountered an unknown error while attempting to sign you in. Please try again later.`,
-        ),
+        description: _(msg`We encountered an unknown error while attempting to sign you in. Please try again later.`),
         variant: 'destructive',
       });
     }
@@ -65,7 +65,7 @@ export const SignInForm = ({ className, isGoogleSSOEnabled, returnTo }: SignInFo
   if (!isGoogleSSOEnabled) {
     return (
       <div className={cn('flex w-full flex-col gap-y-4', className)}>
-        <p className="text-center text-sm text-muted-foreground">
+        <p className="text-center text-muted-foreground text-sm">
           <Trans>Google sign-in is not configured. Please contact your administrator.</Trans>
         </p>
       </div>

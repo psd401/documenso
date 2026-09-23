@@ -1,24 +1,45 @@
 import type { Subscription } from '@documenso/prisma/generated/zod/modelSchema/SubscriptionSchema';
+import { OrganisationType } from '@prisma/client';
 
-import type { StripeOrganisationCreateMetadata } from '../types/subscription';
+import { IS_BILLING_ENABLED } from '../constants/app';
+import { INTERNAL_CLAIM_ID } from '../types/subscription';
 
-export const generateStripeOrganisationCreateMetadata = (
-  organisationName: string,
-  userId: number,
-) => {
-  const metadata: StripeOrganisationCreateMetadata = {
-    organisationName,
-    userId,
-  };
+/**
+ * PSD401: billing is stripped, so a subscription is never required.
+ */
+export const validateIfSubscriptionIsRequired = (subscription?: Subscription | null) => {
+  return subscription;
+};
 
-  return {
-    organisationCreateData: JSON.stringify(metadata),
+type PendingPaymentOrganisation = {
+  type: OrganisationType;
+  subscription?: unknown;
+  organisationClaim: {
+    originalSubscriptionClaimId: string | null;
   };
 };
 
 /**
- * Throws an error if billing is enabled and no subscription is found.
+ * Whether the organisation was created ahead of a paid checkout and is still awaiting
+ * its first successful payment.
+ *
+ * Such organisations have no subscription row and still carry the copied "free" claim,
+ * and must be treated as restricted until the Stripe webhook sync activates them.
+ *
+ * Always returns false when billing is disabled (self-hosted).
  */
-export const validateIfSubscriptionIsRequired = (subscription?: Subscription | null) => {
-  return subscription;
+export const isOrganisationPendingPayment = (organisation: PendingPaymentOrganisation) => {
+  if (!IS_BILLING_ENABLED()) {
+    return false;
+  }
+
+  if (organisation.type !== OrganisationType.ORGANISATION) {
+    return false;
+  }
+
+  if (organisation.subscription) {
+    return false;
+  }
+
+  return organisation.organisationClaim.originalSubscriptionClaimId === INTERNAL_CLAIM_ID.FREE;
 };

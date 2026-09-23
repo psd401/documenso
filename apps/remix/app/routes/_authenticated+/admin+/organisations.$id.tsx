@@ -1,15 +1,3 @@
-import { useMemo } from 'react';
-
-import { zodResolver } from '@hookform/resolvers/zod';
-import { msg } from '@lingui/core/macro';
-import { Trans, useLingui } from '@lingui/react/macro';
-import { OrganisationMemberRole } from '@prisma/client';
-import { Loader } from 'lucide-react';
-import { useForm } from 'react-hook-form';
-import { Link } from 'react-router';
-import { match } from 'ts-pattern';
-import type { z } from 'zod';
-
 import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
 import { AppError } from '@documenso/lib/errors/app-error';
 import { SUBSCRIPTION_CLAIM_FEATURE_FLAGS } from '@documenso/lib/types/subscription';
@@ -17,12 +5,8 @@ import { getHighestOrganisationRoleInGroup } from '@documenso/lib/utils/organisa
 import { trpc } from '@documenso/trpc/react';
 import type { TGetAdminOrganisationResponse } from '@documenso/trpc/server/admin-router/get-admin-organisation.types';
 import { ZUpdateAdminOrganisationRequestSchema } from '@documenso/trpc/server/admin-router/update-admin-organisation.types';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@documenso/ui/primitives/accordion';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@documenso/ui/primitives/accordion';
+import { Alert, AlertDescription, AlertTitle } from '@documenso/ui/primitives/alert';
 import { Badge } from '@documenso/ui/primitives/badge';
 import { Button } from '@documenso/ui/primitives/button';
 import { Checkbox } from '@documenso/ui/primitives/checkbox';
@@ -37,13 +21,26 @@ import {
   FormMessage,
 } from '@documenso/ui/primitives/form/form';
 import { Input } from '@documenso/ui/primitives/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@documenso/ui/primitives/select';
 import { useToast } from '@documenso/ui/primitives/use-toast';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { msg } from '@lingui/core/macro';
+import { Trans, useLingui } from '@lingui/react/macro';
+import { OrganisationMemberRole } from '@prisma/client';
+import { Loader } from 'lucide-react';
+import { useMemo } from 'react';
+import { useForm } from 'react-hook-form';
+import { Link } from 'react-router';
+import { match } from 'ts-pattern';
+import type { z } from 'zod';
 
+import { AdminOrganisationDeleteDialog } from '~/components/dialogs/admin-organisation-delete-dialog';
 import { AdminOrganisationMemberDeleteDialog } from '~/components/dialogs/admin-organisation-member-delete-dialog';
 import { AdminOrganisationMemberUpdateDialog } from '~/components/dialogs/admin-organisation-member-update-dialog';
-import { DetailsCard, DetailsValue } from '~/components/general/admin-details';
 import { AdminGlobalSettingsSection } from '~/components/general/admin-global-settings-section';
+import { ClaimLimitFields } from '~/components/general/claim-limit-fields';
 import { GenericErrorLayout } from '~/components/general/generic-error-layout';
+import { OrganisationUsagePanel } from '~/components/general/organisation-usage-panel';
 import { SettingsHeader } from '~/components/general/settings-header';
 
 import type { Route } from './+types/organisations.$id';
@@ -57,10 +54,14 @@ export default function OrganisationGroupSettingsPage({ params }: Route.Componen
 
   const organisationId = params.id;
 
-  const { data: organisation, isLoading: isLoadingOrganisation } =
-    trpc.admin.organisation.get.useQuery({
+  const { data: organisation, isLoading: isLoadingOrganisation } = trpc.admin.organisation.get.useQuery(
+    {
       organisationId,
-    });
+    },
+    {
+      retry: false,
+    },
+  );
 
   const teamsColumns = useMemo(() => {
     return [
@@ -76,9 +77,7 @@ export default function OrganisationGroupSettingsPage({ params }: Route.Componen
       {
         header: t`Team ID`,
         accessorKey: 'id',
-        cell: ({ row }) => (
-          <span className="font-mono text-xs text-muted-foreground">{row.original.id}</span>
-        ),
+        cell: ({ row }) => <span className="font-mono text-muted-foreground text-xs">{row.original.id}</span>,
       },
       {
         header: t`Team url`,
@@ -90,7 +89,7 @@ export default function OrganisationGroupSettingsPage({ params }: Route.Componen
         accessorKey: 'createdAt',
         cell: ({ row }) => {
           return (
-            <span className="whitespace-nowrap font-mono text-xs text-muted-foreground">
+            <span className="whitespace-nowrap font-mono text-muted-foreground text-xs">
               {i18n.date(row.original.createdAt)}
             </span>
           );
@@ -109,16 +108,11 @@ export default function OrganisationGroupSettingsPage({ params }: Route.Componen
         header: t`Member`,
         cell: ({ row }) => (
           <div className="space-y-1">
-            <Link
-              className="font-medium hover:underline"
-              to={`/admin/users/${row.original.user.id}`}
-            >
+            <Link className="font-medium hover:underline" to={`/admin/users/${row.original.user.id}`}>
               {row.original.user.name ?? row.original.user.email}
             </Link>
             {row.original.user.name && (
-              <div className="font-mono text-xs text-muted-foreground">
-                {row.original.user.email}
-              </div>
+              <div className="font-mono text-muted-foreground text-xs">{row.original.user.email}</div>
             )}
           </div>
         ),
@@ -126,9 +120,7 @@ export default function OrganisationGroupSettingsPage({ params }: Route.Componen
       {
         header: t`User ID`,
         accessorKey: 'userId',
-        cell: ({ row }) => (
-          <span className="font-mono text-xs text-muted-foreground">{row.original.userId}</span>
-        ),
+        cell: ({ row }) => <span className="font-mono text-muted-foreground text-xs">{row.original.userId}</span>,
       },
       {
         header: t`Role`,
@@ -157,7 +149,7 @@ export default function OrganisationGroupSettingsPage({ params }: Route.Componen
         accessorKey: 'createdAt',
         cell: ({ row }) => {
           return (
-            <span className="whitespace-nowrap font-mono text-xs text-muted-foreground">
+            <span className="whitespace-nowrap font-mono text-muted-foreground text-xs">
               {i18n.date(row.original.createdAt)}
             </span>
           );
@@ -233,6 +225,7 @@ export default function OrganisationGroupSettingsPage({ params }: Route.Componen
   return (
     <div>
       <SettingsHeader
+        hideDivider
         title={t`Manage organisation`}
         subtitle={t`Manage the ${organisation.name} organisation`}
       >
@@ -245,48 +238,32 @@ export default function OrganisationGroupSettingsPage({ params }: Route.Componen
 
       <GenericOrganisationAdminForm organisation={organisation} />
 
-      <div className="mt-6 rounded-lg border p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm font-medium">
-              <Trans>Organisation usage</Trans>
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              <Trans>Current usage against organisation limits.</Trans>
-            </p>
-          </div>
-        </div>
+      <SettingsHeader
+        hideDivider
+        title={t`Organisation usage`}
+        subtitle={t`Current usage against organisation limits.`}
+        className="mt-6"
+      />
 
-        <div className="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
-          <DetailsCard label={<Trans>Members</Trans>}>
-            <DetailsValue>
-              {organisation.members.length} /{' '}
-              {organisation.organisationClaim.memberCount === 0
-                ? t`Unlimited`
-                : organisation.organisationClaim.memberCount}
-            </DetailsValue>
-          </DetailsCard>
-
-          <DetailsCard label={<Trans>Teams</Trans>}>
-            <DetailsValue>
-              {organisation.teams.length} /{' '}
-              {organisation.organisationClaim.teamCount === 0
-                ? t`Unlimited`
-                : organisation.organisationClaim.teamCount}
-            </DetailsValue>
-          </DetailsCard>
-        </div>
-      </div>
+      <OrganisationUsagePanel
+        organisationId={organisation.id}
+        monthlyStats={organisation.monthlyStats}
+        organisationClaim={organisation.organisationClaim}
+        capacityUsage={{
+          members: organisation.members.length,
+          teams: organisation.teams.length,
+        }}
+      />
 
       <div className="mt-6 rounded-lg border p-4">
         <Accordion type="single" collapsible>
           <AccordionItem value="global-settings" className="border-b-0">
             <AccordionTrigger className="py-0">
               <div className="text-left">
-                <p className="text-sm font-medium">
+                <p className="font-semibold text-base">
                   <Trans>Global Settings</Trans>
                 </p>
-                <p className="mt-1 text-sm font-normal text-muted-foreground">
+                <p className="mt-1 text-muted-foreground text-sm">
                   <Trans>Default settings applied to this organisation.</Trans>
                 </p>
               </div>
@@ -304,38 +281,67 @@ export default function OrganisationGroupSettingsPage({ params }: Route.Componen
 
       <div className="mt-16 space-y-10">
         <div>
-          <label className="text-sm font-medium leading-none">
+          <h3 className="font-semibold text-base">
             <Trans>Organisation Members</Trans>
-          </label>
+          </h3>
+          <p className="mt-1 text-muted-foreground text-sm">
+            <Trans>People with access to this organisation.</Trans>
+          </p>
 
-          <div className="my-2">
+          <div className="mt-3">
             <DataTable columns={organisationMembersColumns} data={organisation.members} />
           </div>
         </div>
 
         <div>
-          <label className="text-sm font-medium leading-none">
+          <h3 className="font-semibold text-base">
             <Trans>Organisation Teams</Trans>
-          </label>
+          </h3>
+          <p className="mt-1 text-muted-foreground text-sm">
+            <Trans>Teams that belong to this organisation.</Trans>
+          </p>
 
-          <div className="my-2">
+          <div className="mt-3">
             <DataTable columns={teamsColumns} data={organisation.teams} />
           </div>
         </div>
       </div>
+
+      <SettingsHeader
+        hideDivider
+        title={t`Danger Zone`}
+        subtitle={t`Irreversible actions for this organisation`}
+        className="mt-16"
+      />
+
+      <Alert className="my-6 flex flex-col justify-between p-6 sm:flex-row sm:items-center" variant="destructive">
+        <div className="mb-4 sm:mb-0">
+          <AlertTitle>
+            <Trans>Delete organisation</Trans>
+          </AlertTitle>
+
+          <AlertDescription className="mr-2">
+            <Trans>
+              Permanently delete this organisation. Documents will be orphaned (not deleted) so they remain accessible
+              via the deleted-account service account.
+            </Trans>
+          </AlertDescription>
+        </div>
+
+        <div>
+          <AdminOrganisationDeleteDialog organisationId={organisation.id} organisationName={organisation.name} />
+        </div>
+      </Alert>
     </div>
   );
 }
 
-const ZUpdateGenericOrganisationDataFormSchema =
-  ZUpdateAdminOrganisationRequestSchema.shape.data.pick({
-    name: true,
-    url: true,
-  });
+const ZUpdateGenericOrganisationDataFormSchema = ZUpdateAdminOrganisationRequestSchema.shape.data.pick({
+  name: true,
+  url: true,
+});
 
-type TUpdateGenericOrganisationDataFormSchema = z.infer<
-  typeof ZUpdateGenericOrganisationDataFormSchema
->;
+type TUpdateGenericOrganisationDataFormSchema = z.infer<typeof ZUpdateGenericOrganisationDataFormSchema>;
 
 type OrganisationAdminFormOptions = {
   organisation: TGetAdminOrganisationResponse;
@@ -410,7 +416,7 @@ const GenericOrganisationAdminForm = ({ organisation }: OrganisationAdminFormOpt
                 <Input {...field} />
               </FormControl>
               {!form.formState.errors.url && (
-                <span className="text-xs font-normal text-foreground/50">
+                <span className="font-normal text-foreground/50 text-xs">
                   {field.value ? (
                     `${NEXT_PUBLIC_WEBAPP_URL()}/o/${field.value}`
                   ) : (
@@ -446,6 +452,10 @@ const OrganisationClaimsForm = ({ organisation }: OrganisationAdminFormOptions) 
 
   const { mutateAsync: updateOrganisation } = trpc.admin.organisation.update.useMutation();
 
+  const { data: transportsData } = trpc.admin.emailTransport.find.useQuery({ perPage: 100 });
+  const transports = transportsData?.data ?? [];
+  const NONE_VALUE = '__none__';
+
   const form = useForm<TUpdateOrganisationClaimsFormSchema>({
     resolver: zodResolver(ZUpdateOrganisationClaimsFormSchema),
     defaultValues: {
@@ -453,7 +463,24 @@ const OrganisationClaimsForm = ({ organisation }: OrganisationAdminFormOptions) 
         teamCount: organisation.organisationClaim.teamCount,
         memberCount: organisation.organisationClaim.memberCount,
         envelopeItemCount: organisation.organisationClaim.envelopeItemCount,
+        recipientCount: organisation.organisationClaim.recipientCount,
         flags: organisation.organisationClaim.flags,
+        // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+        documentRateLimits: organisation.organisationClaim.documentRateLimits as NonNullable<
+          TUpdateOrganisationClaimsFormSchema['claims']
+        >['documentRateLimits'],
+        documentQuota: organisation.organisationClaim.documentQuota,
+        // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+        emailRateLimits: organisation.organisationClaim.emailRateLimits as NonNullable<
+          TUpdateOrganisationClaimsFormSchema['claims']
+        >['emailRateLimits'],
+        emailQuota: organisation.organisationClaim.emailQuota,
+        // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+        apiRateLimits: organisation.organisationClaim.apiRateLimits as NonNullable<
+          TUpdateOrganisationClaimsFormSchema['claims']
+        >['apiRateLimits'],
+        apiQuota: organisation.organisationClaim.apiQuota,
+        emailTransportId: organisation.organisationClaim.emailTransportId ?? null,
       },
     },
   });
@@ -484,85 +511,114 @@ const OrganisationClaimsForm = ({ organisation }: OrganisationAdminFormOptions) 
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="mt-8 space-y-6">
-        <FormField
-          control={form.control}
-          name="claims.teamCount"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                <Trans>Team Count</Trans>
-              </FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  min={0}
-                  {...field}
-                  onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)}
-                />
-              </FormControl>
-              <FormDescription>
-                <Trans>Number of teams allowed. 0 = Unlimited</Trans>
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="claims.teamCount"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  <Trans>Team Count</Trans>
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min={0}
+                    {...field}
+                    onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)}
+                  />
+                </FormControl>
+                <FormDescription>
+                  <Trans>Number of teams allowed. 0 = Unlimited</Trans>
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-        <FormField
-          control={form.control}
-          name="claims.memberCount"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                <Trans>Member Count</Trans>
-              </FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  min={0}
-                  {...field}
-                  onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)}
-                />
-              </FormControl>
-              <FormDescription>
-                <Trans>Number of members allowed. 0 = Unlimited</Trans>
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+          <FormField
+            control={form.control}
+            name="claims.memberCount"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  <Trans>Member Count</Trans>
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min={0}
+                    {...field}
+                    onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)}
+                  />
+                </FormControl>
+                <FormDescription>
+                  <Trans>Number of members allowed. 0 = Unlimited</Trans>
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-        <FormField
-          control={form.control}
-          name="claims.envelopeItemCount"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                <Trans>Envelope Item Count</Trans>
-              </FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  min={1}
-                  {...field}
-                  onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)}
-                />
-              </FormControl>
-              <FormDescription>
-                <Trans>Maximum number of uploaded files per envelope allowed</Trans>
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+          <FormField
+            control={form.control}
+            name="claims.envelopeItemCount"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  <Trans>Envelope Item Count</Trans>
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min={1}
+                    {...field}
+                    onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)}
+                  />
+                </FormControl>
+                <FormDescription>
+                  <Trans>Maximum number of uploaded files per envelope allowed</Trans>
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="claims.recipientCount"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  <Trans>Recipient Count</Trans>
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min={0}
+                    {...field}
+                    onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)}
+                  />
+                </FormControl>
+                <FormDescription>
+                  <Trans>Maximum number of recipients per document allowed. 0 = Unlimited</Trans>
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         <div>
-          <FormLabel>
+          <h3 className="font-semibold text-base">
             <Trans>Feature Flags</Trans>
-          </FormLabel>
+          </h3>
+          <p className="mt-1 text-muted-foreground text-sm">
+            <Trans>Capabilities enabled for this organisation.</Trans>
+          </p>
 
-          <div className="mt-2 space-y-2 rounded-md border p-4">
+          <div className="mt-3 space-y-2 rounded-md border p-4">
             {Object.values(SUBSCRIPTION_CLAIM_FEATURE_FLAGS).map(({ key, label }) => {
               return (
                 <FormField
@@ -573,14 +629,10 @@ const OrganisationClaimsForm = ({ organisation }: OrganisationAdminFormOptions) 
                     <FormItem className="flex items-center space-x-2">
                       <FormControl>
                         <div className="flex items-center">
-                          <Checkbox
-                            id={`flag-${key}`}
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
+                          <Checkbox id={`flag-${key}`} checked={field.value} onCheckedChange={field.onChange} />
 
                           <label
-                            className="ml-2 flex flex-row items-center text-sm text-muted-foreground"
+                            className="ml-2 flex flex-row items-center text-muted-foreground text-sm"
                             htmlFor={`flag-${key}`}
                           >
                             {label}
@@ -594,6 +646,42 @@ const OrganisationClaimsForm = ({ organisation }: OrganisationAdminFormOptions) 
             })}
           </div>
         </div>
+
+        <ClaimLimitFields control={form.control} prefix="claims." />
+
+        <FormField
+          control={form.control}
+          name="claims.emailTransportId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>
+                <Trans>Email transport</Trans>
+              </FormLabel>
+              <Select
+                value={field.value ?? NONE_VALUE}
+                onValueChange={(value) => field.onChange(value === NONE_VALUE ? null : value)}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder={t`Default (system mailer)`} />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value={NONE_VALUE}>{t`Default (system mailer)`}</SelectItem>
+                  {transports.map((transport) => (
+                    <SelectItem key={transport.id} value={transport.id}>
+                      {transport.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormDescription>
+                <Trans>Organisations without a transport use the system default mailer.</Trans>
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <div className="flex justify-end">
           <Button type="submit" loading={form.formState.isSubmitting}>

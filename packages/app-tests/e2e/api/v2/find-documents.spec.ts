@@ -1,10 +1,13 @@
-import { expect, test } from '@playwright/test';
-import type { Team, User } from '@prisma/client';
-
 import { NEXT_PUBLIC_WEBAPP_URL } from '@documenso/lib/constants/app';
 import { createApiToken } from '@documenso/lib/server-only/public-api/create-api-token';
 import { prisma } from '@documenso/prisma';
-import { DocumentStatus, DocumentVisibility, TeamMemberRole } from '@documenso/prisma/client';
+import {
+  DocumentStatus,
+  DocumentVisibility,
+  RecipientRole,
+  SigningStatus,
+  TeamMemberRole,
+} from '@documenso/prisma/client';
 import {
   seedBlankDocument,
   seedCompletedDocument,
@@ -15,6 +18,8 @@ import {
 import { seedTeam, seedTeamEmail, seedTeamMember } from '@documenso/prisma/seed/teams';
 import { seedUser } from '@documenso/prisma/seed/users';
 import type { TFindDocumentsResponse } from '@documenso/trpc/server/document-router/find-documents.types';
+import { expect, test } from '@playwright/test';
+import type { Team, User } from '@prisma/client';
 
 import { apiSignin } from '../../fixtures/authentication';
 
@@ -78,9 +83,7 @@ test.describe('Find Documents API - Personal Context', () => {
     expect(json!.totalPages).toBe(0);
   });
 
-  test('should return only documents owned by the user and not the other user', async ({
-    request,
-  }) => {
+  test('should return only documents owned by the user and not the other user', async ({ request }) => {
     // The v2 API token scopes to a team. A personal team token only returns
     // docs belonging to that team — cross-team received docs are NOT included.
     await seedDraftDocument(userA, teamA.id, [], {
@@ -287,9 +290,7 @@ test.describe('Find Documents API - Personal Context', () => {
     expect(json!.data[0].title).toBe('Quarterly Report 2024');
   });
 
-  test('should search by recipient email and not return docs with different recipients', async ({
-    request,
-  }) => {
+  test('should search by recipient email and not return docs with different recipients', async ({ request }) => {
     const { user: userC } = await seedUser();
 
     await seedPendingDocument(userA, teamA.id, [userB], {
@@ -404,9 +405,7 @@ test.describe('Find Documents API - Personal Context', () => {
     }
   });
 
-  test('should only show root-level documents when no folderId is provided', async ({
-    request,
-  }) => {
+  test('should only show root-level documents when no folderId is provided', async ({ request }) => {
     const folder = await prisma.folder.create({
       data: {
         name: 'Test Folder',
@@ -499,9 +498,7 @@ test.describe('Find Documents API - Personal Context', () => {
     expect(doc.recipients[0].email).toBe(userB.email);
   });
 
-  test('should not return deleted documents but should return non-deleted ones', async ({
-    request,
-  }) => {
+  test('should not return deleted documents but should return non-deleted ones', async ({ request }) => {
     const deletedDoc = await seedDraftDocument(userA, teamA.id, [], {
       createDocumentOptions: { title: 'Deleted Document' },
     });
@@ -562,9 +559,7 @@ test.describe('Find Documents API - Personal Context', () => {
 });
 
 test.describe('Find Documents API - Team Context', () => {
-  test('should return team documents for team members and exclude non-team docs', async ({
-    request,
-  }) => {
+  test('should return team documents for team members and exclude non-team docs', async ({ request }) => {
     const { team, owner } = await seedTeam();
 
     const member = await seedTeamMember({ teamId: team.id, role: TeamMemberRole.ADMIN });
@@ -723,9 +718,7 @@ test.describe('Find Documents API - Team Context', () => {
     expect(json!.count).toBe(2);
   });
 
-  test('should enforce visibility across admin and manager levels with adequate data', async ({
-    request,
-  }) => {
+  test('should enforce visibility across admin and manager levels with adequate data', async ({ request }) => {
     // Note: MEMBER role cannot create API tokens (requires MANAGE_TEAM permission).
     // MEMBER visibility is tested in the UI test file instead.
     const { team, owner } = await seedTeam();
@@ -978,9 +971,7 @@ test.describe('Find Documents API - Team with Team Email', () => {
     expect(titles).not.toContain('External Noise Doc');
   });
 
-  test('team email documents should respect visibility rules with adequate controls', async ({
-    request,
-  }) => {
+  test('team email documents should respect visibility rules with adequate controls', async ({ request }) => {
     const { team } = await seedTeam();
 
     const teamEmail = `team-vis-email-${team.id}@test.documenso.com`;
@@ -1033,9 +1024,7 @@ test.describe('Find Documents API - Team with Team Email', () => {
 });
 
 test.describe('Find Documents API - Deleted Document Handling', () => {
-  test('should not show soft-deleted documents for owner but show non-deleted ones', async ({
-    request,
-  }) => {
+  test('should not show soft-deleted documents for owner but show non-deleted ones', async ({ request }) => {
     const { user, team } = await seedUser();
 
     const deletedDoc = await seedPendingDocument(user, team.id, [], {
@@ -1068,9 +1057,7 @@ test.describe('Find Documents API - Deleted Document Handling', () => {
     expect(titles).not.toContain('Soft Deleted by Owner');
   });
 
-  test('should not show documents where owner soft-deleted their copy in personal context', async ({
-    request,
-  }) => {
+  test('should not show documents where owner soft-deleted their copy in personal context', async ({ request }) => {
     // In personal context, documentDeletedAt on recipient hides the doc for that user.
     // Note: the v2 API scopes to a team, so we test this by having the owner
     // soft-delete a doc from their own personal team.
@@ -1102,9 +1089,7 @@ test.describe('Find Documents API - Deleted Document Handling', () => {
     expect(titles).not.toContain('Owner Soft Deleted');
   });
 
-  test('should not show deleted team documents for any team member but show non-deleted ones', async ({
-    request,
-  }) => {
+  test('should not show deleted team documents for any team member but show non-deleted ones', async ({ request }) => {
     const { team, owner } = await seedTeam();
     const member = await seedTeamMember({ teamId: team.id, role: TeamMemberRole.ADMIN });
 
@@ -1198,9 +1183,7 @@ test.describe('Find Documents API - Edge Cases', () => {
     expect(res.ok()).toBeFalsy();
   });
 
-  test('personal documents should not appear in team context even with adequate team data', async ({
-    request,
-  }) => {
+  test('personal documents should not appear in team context even with adequate team data', async ({ request }) => {
     const { team, owner } = await seedTeam();
 
     const teamMember = await seedTeamMember({
@@ -1276,9 +1259,7 @@ const trpcQuery = async (
 };
 
 test.describe('Find Documents API - Adversarial: x-team-id Header Spoofing', () => {
-  test('should reject request when user spoofs x-team-id to a team they do not belong to', async ({
-    page,
-  }) => {
+  test('should reject request when user spoofs x-team-id to a team they do not belong to', async ({ page }) => {
     // Setup: two separate teams with documents
     const { team: teamA, owner: ownerA } = await seedTeam();
     const { team: teamB, owner: ownerB } = await seedTeam();
@@ -1365,9 +1346,7 @@ test.describe('Find Documents API - Adversarial: x-team-id Header Spoofing', () 
 });
 
 test.describe('Find Documents API - Adversarial: Cross-Team folderId', () => {
-  test('should NOT return documents from another team when folderId belongs to that team', async ({
-    request,
-  }) => {
+  test('should NOT return documents from another team when folderId belongs to that team', async ({ request }) => {
     // Setup: two teams each with a folder and documents
     const { user: userA, team: teamA } = await seedUser();
     const { user: userB, team: teamB } = await seedUser();
@@ -1452,9 +1431,7 @@ test.describe('Find Documents API - Adversarial: Cross-Team folderId', () => {
 });
 
 test.describe('Find Documents API - Adversarial: Cross-Team senderIds', () => {
-  test('should NOT return documents when senderIds contains users from another team', async ({
-    page,
-  }) => {
+  test('should NOT return documents when senderIds contains users from another team', async ({ page }) => {
     const { team: teamA, owner: ownerA } = await seedTeam();
     const { team: teamB, owner: ownerB } = await seedTeam();
 
@@ -1495,9 +1472,7 @@ test.describe('Find Documents API - Adversarial: Cross-Team senderIds', () => {
     expect(docs2[0].title).toBe('TeamA Doc by OwnerA');
   });
 
-  test('senderIds with mix of valid and cross-team userIds should only return matching team docs', async ({
-    page,
-  }) => {
+  test('senderIds with mix of valid and cross-team userIds should only return matching team docs', async ({ page }) => {
     const { team, owner } = await seedTeam();
     const member = await seedTeamMember({ teamId: team.id, role: TeamMemberRole.ADMIN });
     const { user: outsider } = await seedUser();
@@ -1542,9 +1517,7 @@ test.describe('Find Documents API - Adversarial: Cross-Team senderIds', () => {
 });
 
 test.describe('Find Documents API - Adversarial: Cross-Team templateId', () => {
-  test('should NOT return documents from another team when filtering by their templateId', async ({
-    request,
-  }) => {
+  test('should NOT return documents from another team when filtering by their templateId', async ({ request }) => {
     const { user: userA, team: teamA } = await seedUser();
     const { user: userB, team: teamB } = await seedUser();
 
@@ -1591,5 +1564,309 @@ test.describe('Find Documents API - Adversarial: Cross-Team templateId', () => {
     });
     expect(ownTemplate!.data).toHaveLength(1);
     expect(ownTemplate!.data[0].title).toBe('TeamA Doc from Template');
+  });
+});
+
+test.describe('Find Documents API - Expired Recipient Filter', () => {
+  const PAST = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const FUTURE = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+  test('hasExpiredRecipients=true returns only docs with an expired, unsigned, non-CC recipient', async ({
+    request,
+  }) => {
+    const { user, team } = await seedUser();
+    const { user: recipient } = await seedUser();
+
+    const { token } = await createApiToken({
+      userId: user.id,
+      teamId: team.id,
+      tokenName: 'expired-token',
+      expiresIn: null,
+    });
+
+    const expiredDoc = await seedPendingDocument(user, team.id, [recipient], {
+      createDocumentOptions: { title: 'Expired Recipient Doc' },
+    });
+    await prisma.recipient.updateMany({
+      where: { envelopeId: expiredDoc.id },
+      data: { expiresAt: PAST },
+    });
+
+    const activeDoc = await seedPendingDocument(user, team.id, [recipient], {
+      createDocumentOptions: { title: 'Active Recipient Doc' },
+    });
+    await prisma.recipient.updateMany({
+      where: { envelopeId: activeDoc.id },
+      data: { expiresAt: FUTURE },
+    });
+
+    await seedPendingDocument(user, team.id, [recipient], {
+      createDocumentOptions: { title: 'No Expiry Doc' },
+    });
+
+    const { json } = await findDocuments(request, token, { hasExpiredRecipients: 'true' });
+    const titles = json!.data.map((d) => d.title);
+    expect(titles).toContain('Expired Recipient Doc');
+    expect(titles).not.toContain('Active Recipient Doc');
+    expect(titles).not.toContain('No Expiry Doc');
+    expect(json!.count).toBe(1);
+  });
+
+  test('hasExpiredRecipients=false (and omitted) does not filter by expiry', async ({ request }) => {
+    const { user, team } = await seedUser();
+    const { user: recipient } = await seedUser();
+
+    const { token } = await createApiToken({
+      userId: user.id,
+      teamId: team.id,
+      tokenName: 'expired-false-token',
+      expiresIn: null,
+    });
+
+    const expiredDoc = await seedPendingDocument(user, team.id, [recipient], {
+      createDocumentOptions: { title: 'Expired Doc' },
+    });
+    await prisma.recipient.updateMany({
+      where: { envelopeId: expiredDoc.id },
+      data: { expiresAt: PAST },
+    });
+
+    await seedPendingDocument(user, team.id, [recipient], {
+      createDocumentOptions: { title: 'Active Doc' },
+    });
+
+    // "false" must NOT be coerced to true — both docs should be returned.
+    const { json: falseJson } = await findDocuments(request, token, { hasExpiredRecipients: 'false' });
+    expect(falseJson!.count).toBe(2);
+
+    const { json: omittedJson } = await findDocuments(request, token);
+    expect(omittedJson!.count).toBe(2);
+  });
+
+  test('excludes signed and CC recipients from the expired filter', async ({ request }) => {
+    const { user, team } = await seedUser();
+    const { user: recipient } = await seedUser();
+
+    const { token } = await createApiToken({
+      userId: user.id,
+      teamId: team.id,
+      tokenName: 'expired-exclude-token',
+      expiresIn: null,
+    });
+
+    const signedDoc = await seedPendingDocument(user, team.id, [recipient], {
+      createDocumentOptions: { title: 'Expired but Signed' },
+    });
+    await prisma.recipient.updateMany({
+      where: { envelopeId: signedDoc.id },
+      data: { expiresAt: PAST, signingStatus: SigningStatus.SIGNED },
+    });
+
+    const ccDoc = await seedPendingDocument(user, team.id, [recipient], {
+      createDocumentOptions: { title: 'Expired but CC' },
+    });
+    await prisma.recipient.updateMany({
+      where: { envelopeId: ccDoc.id },
+      data: { expiresAt: PAST, role: RecipientRole.CC },
+    });
+
+    const validDoc = await seedPendingDocument(user, team.id, [recipient], {
+      createDocumentOptions: { title: 'Expired Unsigned Signer' },
+    });
+    await prisma.recipient.updateMany({
+      where: { envelopeId: validDoc.id },
+      data: { expiresAt: PAST },
+    });
+
+    const { json } = await findDocuments(request, token, { hasExpiredRecipients: 'true' });
+    const titles = json!.data.map((d) => d.title);
+    expect(titles).toContain('Expired Unsigned Signer');
+    expect(titles).not.toContain('Expired but Signed');
+    expect(titles).not.toContain('Expired but CC');
+    expect(json!.count).toBe(1);
+  });
+});
+
+// ─── Adversarial: Expired Recipient Filter cross-tenant isolation ────────────
+// The expired filter adds an EXISTS subquery over Recipient. These tests ensure
+// that predicate never widens visibility past the caller's team/access scope.
+
+test.describe('Find Documents API - Adversarial: Cross-Team Expired Recipient Filter', () => {
+  const PAST = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+  test('token scoped to team A must NOT see team B docs with expired recipients', async ({ request }) => {
+    const { user: userA, team: teamA } = await seedUser();
+    const { user: userB, team: teamB } = await seedUser();
+    const { user: recipient } = await seedUser();
+
+    const { token: tokenA } = await createApiToken({
+      userId: userA.id,
+      teamId: teamA.id,
+      tokenName: 'teamA-expired-token',
+      expiresIn: null,
+    });
+
+    // Team A: one expired doc the caller is legitimately allowed to see.
+    const teamADoc = await seedPendingDocument(userA, teamA.id, [recipient], {
+      createDocumentOptions: { title: 'TeamA Expired Doc' },
+    });
+    await prisma.recipient.updateMany({
+      where: { envelopeId: teamADoc.id },
+      data: { expiresAt: PAST },
+    });
+
+    // Team B: an expired doc that must remain invisible to team A's token.
+    const teamBDoc = await seedPendingDocument(userB, teamB.id, [recipient], {
+      createDocumentOptions: { title: 'TeamB Expired Doc' },
+    });
+    await prisma.recipient.updateMany({
+      where: { envelopeId: teamBDoc.id },
+      data: { expiresAt: PAST },
+    });
+
+    const { json } = await findDocuments(request, tokenA, { hasExpiredRecipients: 'true' });
+    const titles = json!.data.map((d) => d.title);
+    expect(titles).toContain('TeamA Expired Doc');
+    expect(titles).not.toContain('TeamB Expired Doc');
+    expect(json!.count).toBe(1);
+  });
+
+  test('shared recipient email across teams does not leak the other team expired docs', async ({ request }) => {
+    // A recipient with the SAME email is on expired docs in both teams. The
+    // filter must still scope strictly to the token's team.
+    const { user: userA, team: teamA } = await seedUser();
+    const { user: userB, team: teamB } = await seedUser();
+    const { user: sharedRecipient } = await seedUser();
+
+    const { token: tokenB } = await createApiToken({
+      userId: userB.id,
+      teamId: teamB.id,
+      tokenName: 'teamB-expired-token',
+      expiresIn: null,
+    });
+
+    const teamADoc = await seedPendingDocument(userA, teamA.id, [sharedRecipient], {
+      createDocumentOptions: { title: 'TeamA Shared-Recipient Expired' },
+    });
+    await prisma.recipient.updateMany({
+      where: { envelopeId: teamADoc.id },
+      data: { expiresAt: PAST },
+    });
+
+    const teamBDoc = await seedPendingDocument(userB, teamB.id, [sharedRecipient], {
+      createDocumentOptions: { title: 'TeamB Shared-Recipient Expired' },
+    });
+    await prisma.recipient.updateMany({
+      where: { envelopeId: teamBDoc.id },
+      data: { expiresAt: PAST },
+    });
+
+    const { json } = await findDocuments(request, tokenB, { hasExpiredRecipients: 'true' });
+    const titles = json!.data.map((d) => d.title);
+    expect(titles).toContain('TeamB Shared-Recipient Expired');
+    expect(titles).not.toContain('TeamA Shared-Recipient Expired');
+    expect(json!.count).toBe(1);
+  });
+
+  test('x-team-id spoofing with status=EXPIRED is rejected for a non-member', async ({ page }) => {
+    const { team: teamA, owner: ownerA } = await seedTeam();
+    const { team: teamB, owner: ownerB } = await seedTeam();
+    const { user: recipient } = await seedUser();
+
+    const teamADoc = await seedPendingDocument(ownerA, teamA.id, [recipient], {
+      createDocumentOptions: { title: 'TeamA Expired Secret' },
+    });
+    await prisma.recipient.updateMany({
+      where: { envelopeId: teamADoc.id },
+      data: { expiresAt: PAST },
+    });
+
+    // ownerB is NOT a member of teamA.
+    await apiSignin({ page, email: ownerB.email });
+
+    const res = await trpcQuery(page, 'document.findDocumentsInternal', teamA.id, {
+      status: 'EXPIRED',
+      page: 1,
+      perPage: 100,
+    });
+
+    expect(res.ok()).toBeFalsy();
+    expect(res.status()).toBe(404);
+  });
+
+  test('EXPIRED pseudo-status via session only returns the caller team expired docs (positive control)', async ({
+    page,
+  }) => {
+    const { team: teamA, owner: ownerA } = await seedTeam();
+    const { team: teamB, owner: ownerB } = await seedTeam();
+    const { user: recipient } = await seedUser();
+
+    const teamADoc = await seedPendingDocument(ownerA, teamA.id, [recipient], {
+      createDocumentOptions: { title: 'TeamA Expired Visible' },
+    });
+    await prisma.recipient.updateMany({
+      where: { envelopeId: teamADoc.id },
+      data: { expiresAt: PAST },
+    });
+
+    const teamBDoc = await seedPendingDocument(ownerB, teamB.id, [recipient], {
+      createDocumentOptions: { title: 'TeamB Expired Hidden' },
+    });
+    await prisma.recipient.updateMany({
+      where: { envelopeId: teamBDoc.id },
+      data: { expiresAt: PAST },
+    });
+
+    await apiSignin({ page, email: ownerA.email });
+
+    const res = await trpcQuery(page, 'document.findDocumentsInternal', teamA.id, {
+      status: 'EXPIRED',
+      page: 1,
+      perPage: 100,
+    });
+
+    expect(res.ok()).toBeTruthy();
+    const data = await res.json();
+    const docs = data.result.data.json.data;
+    const titles = docs.map((d: { title: string }) => d.title);
+    expect(titles).toContain('TeamA Expired Visible');
+    expect(titles).not.toContain('TeamB Expired Hidden');
+  });
+
+  test('EXPIRED stats count is scoped to the caller team and excludes other-team expired docs', async ({ page }) => {
+    const { team: teamA, owner: ownerA } = await seedTeam();
+    const { team: teamB, owner: ownerB } = await seedTeam();
+    const { user: recipient } = await seedUser();
+
+    // One expired doc in team A.
+    const teamADoc = await seedPendingDocument(ownerA, teamA.id, [recipient], {
+      createDocumentOptions: { title: 'TeamA Expired For Stats' },
+    });
+    await prisma.recipient.updateMany({
+      where: { envelopeId: teamADoc.id },
+      data: { expiresAt: PAST },
+    });
+
+    // Two expired docs in team B — must NOT bleed into team A's EXPIRED count.
+    for (const title of ['TeamB Expired For Stats 1', 'TeamB Expired For Stats 2']) {
+      const doc = await seedPendingDocument(ownerB, teamB.id, [recipient], {
+        createDocumentOptions: { title },
+      });
+      await prisma.recipient.updateMany({
+        where: { envelopeId: doc.id },
+        data: { expiresAt: PAST },
+      });
+    }
+
+    await apiSignin({ page, email: ownerA.email });
+
+    const res = await trpcQuery(page, 'document.findDocumentsInternal', teamA.id, {
+      page: 1,
+      perPage: 100,
+    });
+
+    expect(res.ok()).toBeTruthy();
+    const data = await res.json();
+    expect(data.result.data.json.stats.EXPIRED).toBe(1);
   });
 });

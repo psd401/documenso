@@ -1,21 +1,18 @@
+import path from 'node:path';
+import { PDF_VIEWER_PAGE_SELECTOR } from '@documenso/lib/constants/pdf-viewer';
+import { prisma } from '@documenso/prisma';
+import { seedBlankDocument, seedPendingDocumentWithFullFields } from '@documenso/prisma/seed/documents';
+import { seedUser } from '@documenso/prisma/seed/users';
 import { expect, test } from '@playwright/test';
 import {
   DocumentSigningOrder,
   DocumentStatus,
   FieldType,
   RecipientRole,
+  SendStatus,
   SigningStatus,
 } from '@prisma/client';
 import { DateTime } from 'luxon';
-import path from 'node:path';
-
-import { PDF_VIEWER_PAGE_SELECTOR } from '@documenso/lib/constants/pdf-viewer';
-import { prisma } from '@documenso/prisma';
-import {
-  seedBlankDocument,
-  seedPendingDocumentWithFullFields,
-} from '@documenso/prisma/seed/documents';
-import { seedUser } from '@documenso/prisma/seed/users';
 
 import { apiSignin } from '../fixtures/authentication';
 import { signSignaturePad } from '../fixtures/signature';
@@ -121,9 +118,7 @@ test('[DOCUMENT_FLOW]: should be able to create a document', async ({ page }) =>
   await expect(page.getByRole('link', { name: documentTitle })).toBeVisible();
 });
 
-test('[DOCUMENT_FLOW]: should be able to create a document with multiple recipients', async ({
-  page,
-}) => {
+test('[DOCUMENT_FLOW]: should be able to create a document with multiple recipients', async ({ page }) => {
   const { user, team } = await seedUser();
   const document = await seedBlankDocument(user, team.id);
 
@@ -237,15 +232,20 @@ test('[DOCUMENT_FLOW]: should be able to create a document with multiple recipie
   await page.getByLabel('Receives copy').click();
   await page.getByRole('button', { name: 'Add Signer' }).click();
 
-  await page.getByLabel('Email').nth(2).fill('user3@example.com');
-  await page.getByLabel('Name').nth(2).fill('User 3');
-  await page.getByRole('combobox').nth(2).click();
+  // CC recipients are kept last, so new rows are inserted above the CC row.
+  await expect(page.getByLabel('Email')).toHaveCount(3);
+
+  await page.getByLabel('Email').nth(1).fill('user3@example.com');
+  await page.getByLabel('Name').nth(1).fill('User 3');
+  await page.getByRole('combobox').nth(1).click();
   await page.getByLabel('Needs to approve').click();
   await page.getByRole('button', { name: 'Add Signer' }).click();
 
-  await page.getByLabel('Email').nth(3).fill('user4@example.com');
-  await page.getByLabel('Name').nth(3).fill('User 4');
-  await page.getByRole('combobox').nth(3).click();
+  await expect(page.getByLabel('Email')).toHaveCount(4);
+
+  await page.getByLabel('Email').nth(2).fill('user4@example.com');
+  await page.getByLabel('Name').nth(2).fill('User 4');
+  await page.getByRole('combobox').nth(2).click();
   await page.getByLabel('Needs to view').click();
 
   await page.getByRole('button', { name: 'Continue' }).click();
@@ -304,9 +304,7 @@ test('[DOCUMENT_FLOW]: should be able to create a document with multiple recipie
   await expect(page.getByRole('link', { name: 'Test Title' })).toBeVisible();
 });
 
-test('[DOCUMENT_FLOW]: should not be able to create a document without signatures', async ({
-  page,
-}) => {
+test('[DOCUMENT_FLOW]: should not be able to create a document without signatures', async ({ page }) => {
   const { user, team } = await seedUser();
   const document = await seedBlankDocument(user, team.id);
 
@@ -339,9 +337,7 @@ test('[DOCUMENT_FLOW]: should not be able to create a document without signature
 
   const missingSignatureDialog = page.getByRole('dialog');
 
-  await expect(
-    missingSignatureDialog.getByText('No fields assigned to signer').first(),
-  ).toBeVisible();
+  await expect(missingSignatureDialog.getByText('No fields assigned to signer').first()).toBeVisible();
 
   // The signer missing a field should be listed by name.
   await expect(missingSignatureDialog.getByText('User 1')).toBeVisible();
@@ -390,12 +386,8 @@ test('[DOCUMENT_FLOW]: should be able to approve a document', async ({ page }) =
       await expect(page.locator(`#field-${field.id}`)).toHaveAttribute('data-inserted', 'true');
     }
 
-    await page
-      .getByRole('button', { name: role === RecipientRole.SIGNER ? 'Complete' : 'Approve' })
-      .click();
-    await page
-      .getByRole('button', { name: role === RecipientRole.SIGNER ? 'Sign' : 'Approve' })
-      .click();
+    await page.getByRole('button', { name: role === RecipientRole.SIGNER ? 'Complete' : 'Approve' }).click();
+    await page.getByRole('button', { name: role === RecipientRole.SIGNER ? 'Sign' : 'Approve' }).click();
     await page.waitForURL(`${signUrl}/complete`);
   }
 });
@@ -471,9 +463,7 @@ test('[DOCUMENT_FLOW]: should be able to create, send with redirect url, sign a 
   await expect(async () => {
     await page.getByRole('button', { name: 'Approve' }).first().click();
     await expect(
-      approvalDialog
-        .getByText('You are about to complete approving the following document')
-        .first(),
+      approvalDialog.getByText('You are about to complete approving the following document').first(),
     ).toBeVisible({ timeout: 5000 });
   }).toPass({ timeout: 30_000 });
 
@@ -618,9 +608,7 @@ test('[DOCUMENT_FLOW]: should be able to create and sign a document with 3 recip
   expect(createdDocument?.recipients.length).toBe(3);
 
   for (let i = 0; i < 3; i++) {
-    const recipient = createdDocument?.recipients.find(
-      (r) => r.email === `user${i + 1}@example.com`,
-    );
+    const recipient = createdDocument?.recipients.find((r) => r.email === `user${i + 1}@example.com`);
     expect(recipient).not.toBeNull();
 
     const fields = await prisma.field.findMany({
@@ -665,9 +653,7 @@ test('[DOCUMENT_FLOW]: should be able to create and sign a document with 3 recip
   expect(finalDocument?.status).toBe(DocumentStatus.COMPLETED);
 });
 
-test('[DOCUMENT_FLOW]: should prevent out-of-order signing in sequential mode', async ({
-  page,
-}) => {
+test('[DOCUMENT_FLOW]: should prevent out-of-order signing in sequential mode', async ({ page }) => {
   const { user, team } = await seedUser();
 
   const { document, recipients } = await seedPendingDocumentWithFullFields({
@@ -699,4 +685,183 @@ test('[DOCUMENT_FLOW]: should prevent out-of-order signing in sequential mode', 
 
   await expect(page).not.toHaveURL(`/sign/${activeRecipient?.token}/waiting`);
   await expect(page.getByRole('heading', { name: 'Sign Document' })).toBeVisible();
+});
+
+test('[DOCUMENT_FLOW]: should skip CC recipients in sequential signing order', async ({ page }) => {
+  const { user, team } = await seedUser();
+
+  const { document, recipients } = await seedPendingDocumentWithFullFields({
+    teamId: team.id,
+    owner: user,
+    recipients: ['signer1@example.com', 'cc@example.com', 'signer2@example.com'],
+    fields: [FieldType.SIGNATURE],
+    recipientsCreateOptions: [
+      { signingOrder: 1 },
+      {
+        // CC recipients are created pre-signed, mirroring production behaviour.
+        signingOrder: 2,
+        role: RecipientRole.CC,
+        signingStatus: SigningStatus.SIGNED,
+        sendStatus: SendStatus.SENT,
+      },
+      { signingOrder: 3 },
+    ],
+  });
+
+  await prisma.documentMeta.update({
+    where: {
+      id: document.documentMetaId,
+    },
+    data: {
+      signingOrder: DocumentSigningOrder.SEQUENTIAL,
+    },
+  });
+
+  const firstSigner = recipients.find((r) => r.email === 'signer1@example.com');
+  const ccRecipient = recipients.find((r) => r.email === 'cc@example.com');
+  const lastSigner = recipients.find((r) => r.email === 'signer2@example.com');
+
+  // CC recipients cannot have fields.
+  await prisma.field.deleteMany({
+    where: {
+      recipientId: ccRecipient?.id,
+    },
+  });
+
+  // Sequential order is enforced: the last signer must wait while the first signer is pending.
+  await page.goto(`/sign/${lastSigner?.token}`);
+  await expect(page).toHaveURL(`/sign/${lastSigner?.token}/waiting`);
+
+  // Sign as the first signer.
+  await page.goto(`/sign/${firstSigner?.token}`);
+  await expect(page.getByRole('heading', { name: 'Sign Document' })).toBeVisible();
+  await signSignaturePad(page);
+
+  const firstSignerField = await prisma.field.findFirstOrThrow({
+    where: { recipientId: firstSigner?.id },
+  });
+
+  await page.locator(`#field-${firstSignerField.id}`).getByRole('button').click();
+
+  await page.getByRole('button', { name: 'Complete' }).click();
+  await page.getByRole('button', { name: 'Sign' }).click();
+  await page.waitForURL(`/sign/${firstSigner?.token}/complete`);
+
+  // The CC recipient at order 2 must not block the last signer at order 3.
+  await page.goto(`/sign/${lastSigner?.token}`);
+  await expect(page).not.toHaveURL(`/sign/${lastSigner?.token}/waiting`);
+  await expect(page.getByRole('heading', { name: 'Sign Document' })).toBeVisible();
+
+  await signSignaturePad(page);
+
+  const lastSignerField = await prisma.field.findFirstOrThrow({
+    where: { recipientId: lastSigner?.id },
+  });
+
+  await page.locator(`#field-${lastSignerField.id}`).getByRole('button').click();
+
+  await page.getByRole('button', { name: 'Complete' }).click();
+  await page.getByRole('button', { name: 'Sign' }).click();
+  await page.waitForURL(`/sign/${lastSigner?.token}/complete`);
+
+  // The document completes without any action from the CC recipient.
+  await expect
+    .poll(
+      async () => {
+        const finalDocument = await prisma.envelope.findFirstOrThrow({
+          where: { id: document.id },
+        });
+
+        return finalDocument.status;
+      },
+      { timeout: 30_000 },
+    )
+    .toBe(DocumentStatus.COMPLETED);
+});
+
+test('[DOCUMENT_FLOW]: should skip unsigned CC recipients in sequential signing order', async ({ page }) => {
+  const { user, team } = await seedUser();
+
+  const { document, recipients } = await seedPendingDocumentWithFullFields({
+    teamId: team.id,
+    owner: user,
+    recipients: ['signer1@example.com', 'cc@example.com', 'signer2@example.com'],
+    fields: [FieldType.SIGNATURE],
+    recipientsCreateOptions: [
+      { signingOrder: 1 },
+      {
+        // Legacy/inconsistent data: a CC recipient that was never marked as signed.
+        signingOrder: 2,
+        role: RecipientRole.CC,
+        signingStatus: SigningStatus.NOT_SIGNED,
+      },
+      { signingOrder: 3 },
+    ],
+  });
+
+  await prisma.documentMeta.update({
+    where: {
+      id: document.documentMetaId,
+    },
+    data: {
+      signingOrder: DocumentSigningOrder.SEQUENTIAL,
+    },
+  });
+
+  const firstSigner = recipients.find((r) => r.email === 'signer1@example.com');
+  const ccRecipient = recipients.find((r) => r.email === 'cc@example.com');
+  const lastSigner = recipients.find((r) => r.email === 'signer2@example.com');
+
+  // CC recipients cannot have fields.
+  await prisma.field.deleteMany({
+    where: {
+      recipientId: ccRecipient?.id,
+    },
+  });
+
+  // Sign as the first signer.
+  await page.goto(`/sign/${firstSigner?.token}`);
+  await expect(page.getByRole('heading', { name: 'Sign Document' })).toBeVisible();
+  await signSignaturePad(page);
+
+  const firstSignerField = await prisma.field.findFirstOrThrow({
+    where: { recipientId: firstSigner?.id },
+  });
+
+  await page.locator(`#field-${firstSignerField.id}`).getByRole('button').click();
+
+  await page.getByRole('button', { name: 'Complete' }).click();
+  await page.getByRole('button', { name: 'Sign' }).click();
+  await page.waitForURL(`/sign/${firstSigner?.token}/complete`);
+
+  // The unsigned CC recipient at order 2 must not block the last signer at order 3.
+  await page.goto(`/sign/${lastSigner?.token}`);
+  await expect(page).not.toHaveURL(`/sign/${lastSigner?.token}/waiting`);
+  await expect(page.getByRole('heading', { name: 'Sign Document' })).toBeVisible();
+
+  await signSignaturePad(page);
+
+  const lastSignerField = await prisma.field.findFirstOrThrow({
+    where: { recipientId: lastSigner?.id },
+  });
+
+  await page.locator(`#field-${lastSignerField.id}`).getByRole('button').click();
+
+  await page.getByRole('button', { name: 'Complete' }).click();
+  await page.getByRole('button', { name: 'Sign' }).click();
+  await page.waitForURL(`/sign/${lastSigner?.token}/complete`);
+
+  // The document completes without any action from the CC recipient.
+  await expect
+    .poll(
+      async () => {
+        const finalDocument = await prisma.envelope.findFirstOrThrow({
+          where: { id: document.id },
+        });
+
+        return finalDocument.status;
+      },
+      { timeout: 30_000 },
+    )
+    .toBe(DocumentStatus.COMPLETED);
 });

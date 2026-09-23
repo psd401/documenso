@@ -19,6 +19,7 @@ jobs:
     if: false
     name: Force pull translations
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     environment: Translations
     permissions:
       contents: write

@@ -190,7 +190,7 @@ describe('syncGoogleDirectory', () => {
     warnSpy.mockRestore();
   });
 
-  it('catches error, logs warning, and does not throw when Prisma query throws', async () => {
+  it('returns "failed" and logs a warning when Prisma query throws', async () => {
     mockEnv.mockReturnValue('true');
 
     mockFindUnique.mockRejectedValue(new Error('DB connection lost'));
@@ -198,10 +198,65 @@ describe('syncGoogleDirectory', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
     const { syncGoogleDirectory } = await import('./sync-google-directory');
-    await expect(syncGoogleDirectory(42, 'user@example.com')).resolves.toBeUndefined();
+    await expect(syncGoogleDirectory(42, 'user@example.com')).resolves.toBe('failed');
 
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('[directory-sync]'));
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('DB connection lost'));
+
+    warnSpy.mockRestore();
+  });
+
+  it('returns "disabled" when the feature gate is off', async () => {
+    mockEnv.mockReturnValue(undefined);
+
+    const { syncGoogleDirectory } = await import('./sync-google-directory');
+    const status = await syncGoogleDirectory(1, 'user@example.com');
+
+    expect(status).toBe('disabled');
+  });
+
+  it('returns "throttled" when synced within the last hour', async () => {
+    mockEnv.mockReturnValue('true');
+
+    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+    mockFindUnique.mockResolvedValue({ directoryLastSyncedAt: thirtyMinutesAgo });
+
+    const { syncGoogleDirectory } = await import('./sync-google-directory');
+    const status = await syncGoogleDirectory(1, 'user@example.com');
+
+    expect(status).toBe('throttled');
+  });
+
+  it('returns "synced" when the update succeeds', async () => {
+    mockEnv.mockReturnValue('true');
+
+    mockFindUnique.mockResolvedValue({ directoryLastSyncedAt: null });
+    mockGetDirectoryUser.mockResolvedValue({
+      department: 'IT',
+      title: 'Engineer',
+      orgUnitPath: '/Staff',
+    });
+    mockGetDirectoryGroups.mockResolvedValue(['group@example.com']);
+
+    const { syncGoogleDirectory } = await import('./sync-google-directory');
+    const status = await syncGoogleDirectory(1, 'user@example.com');
+
+    expect(status).toBe('synced');
+  });
+
+  it('returns "failed" when both API calls return null', async () => {
+    mockEnv.mockReturnValue('true');
+
+    mockFindUnique.mockResolvedValue({ directoryLastSyncedAt: null });
+    mockGetDirectoryUser.mockResolvedValue(null);
+    mockGetDirectoryGroups.mockResolvedValue(null);
+
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    const { syncGoogleDirectory } = await import('./sync-google-directory');
+    const status = await syncGoogleDirectory(42, 'user@example.com');
+
+    expect(status).toBe('failed');
 
     warnSpy.mockRestore();
   });

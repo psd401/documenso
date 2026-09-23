@@ -1,13 +1,13 @@
-import type { DocumentSource, DocumentStatus, Envelope, EnvelopeType } from '@prisma/client';
-import type { Expression, ExpressionBuilder, SelectQueryBuilder, SqlBool } from 'kysely';
-
 import { kyselyPrisma, prisma, sql } from '@documenso/prisma';
 import type { DB } from '@documenso/prisma/generated/types';
+import type { DocumentSource, DocumentStatus, Envelope, EnvelopeType } from '@prisma/client';
+import type { Expression, ExpressionBuilder, SelectQueryBuilder, SqlBool } from 'kysely';
 
 import { TEAM_DOCUMENT_VISIBILITY_MAP } from '../../constants/teams';
 import type { FindResultResponse } from '../../types/search-params';
 import { maskRecipientTokensForDocument } from '../../utils/mask-recipient-tokens-for-document';
 import { getTeamById } from '../team/get-team';
+import { hasExpiredRecipient } from './query-helpers';
 
 export type FindEnvelopesOptions = {
   userId: number;
@@ -24,6 +24,11 @@ export type FindEnvelopesOptions = {
   };
   query?: string;
   folderId?: string;
+  /**
+   * When true, restrict results to envelopes with at least one recipient whose signing
+   * link has expired. Orthogonal to `status` — applied additively.
+   */
+  hasExpiredRecipients?: boolean;
   /**
    * When true (default), use a windowed count that caps early for faster pagination.
    * When false, use a full COUNT(*) for exact totals — preferred for external API consumers.
@@ -107,6 +112,7 @@ export const findEnvelopes = async ({
   orderBy,
   query = '',
   folderId,
+  hasExpiredRecipients,
   useWindowedCount = true,
 }: FindEnvelopesOptions) => {
   const user = await prisma.user.findFirstOrThrow({
@@ -133,9 +139,7 @@ export const findEnvelopes = async ({
 
   // Folder filter
   qb =
-    folderId !== undefined
-      ? qb.where('Envelope.folderId', '=', folderId)
-      : qb.where('Envelope.folderId', 'is', null);
+    folderId !== undefined ? qb.where('Envelope.folderId', '=', folderId) : qb.where('Envelope.folderId', 'is', null);
 
   // Exclude soft-deleted envelopes
   qb = qb.where('Envelope.deletedAt', 'is', null);
@@ -185,6 +189,11 @@ export const findEnvelopes = async ({
     );
   }
 
+  // Expired recipient filter (orthogonal to status, additive)
+  if (hasExpiredRecipients) {
+    qb = qb.where((eb) => hasExpiredRecipient(eb));
+  }
+
   // ─── Access control ──────────────────────────────────────────────────
   //
   // An envelope is visible if ANY of:
@@ -223,10 +232,7 @@ export const findEnvelopes = async ({
 
   const offset = Math.max(page - 1, 0) * perPage;
 
-  const dataQuery = qb
-    .orderBy(`Envelope.${orderByColumn}`, orderByDirection)
-    .limit(perPage)
-    .offset(offset);
+  const dataQuery = qb.orderBy(`Envelope.${orderByColumn}`, orderByDirection).limit(perPage).offset(offset);
 
   // Count query: either windowed (fast, capped) or full (exact, for API consumers).
   const baseCountQuery = qb.clearSelect().select('Envelope.id');
@@ -239,10 +245,7 @@ export const findEnvelopes = async ({
         .selectFrom(baseCountQuery.as('filtered'))
         .select(({ fn }) => fn.count<number>('id').as('total'));
 
-  const [dataResult, countResult] = await Promise.all([
-    dataQuery.execute(),
-    countQuery.executeTakeFirstOrThrow(),
-  ]);
+  const [dataResult, countResult] = await Promise.all([dataQuery.execute(), countQuery.executeTakeFirstOrThrow()]);
 
   const ids = dataResult.map((row) => row.id);
 

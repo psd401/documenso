@@ -1,9 +1,4 @@
-import { useEffect, useMemo } from 'react';
-
-import { useLingui } from '@lingui/react/macro';
-import { DocumentStatus, type Recipient, SigningStatus } from '@prisma/client';
-import type Konva from 'konva';
-
+import { useAnalytics } from '@documenso/lib/client-only/hooks/use-analytics';
 import { usePageRenderer } from '@documenso/lib/client-only/hooks/use-page-renderer';
 import {
   type PageRenderData,
@@ -13,6 +8,10 @@ import type { TEnvelope } from '@documenso/lib/types/envelope';
 import { renderField } from '@documenso/lib/universal/field-renderer/render-field';
 import { getClientSideFieldTranslations } from '@documenso/lib/utils/fields';
 import { EnvelopeRecipientFieldTooltip } from '@documenso/ui/components/document/envelope-recipient-field-tooltip';
+import { useLingui } from '@lingui/react/macro';
+import { DocumentStatus, type Recipient, SigningStatus } from '@prisma/client';
+import type Konva from 'konva';
+import { useEffect, useMemo } from 'react';
 
 type GenericLocalField = TEnvelope['fields'][number] & {
   recipient: Pick<Recipient, 'id' | 'name' | 'email' | 'signingStatus'>;
@@ -20,23 +19,26 @@ type GenericLocalField = TEnvelope['fields'][number] & {
 
 export const EnvelopeGenericPageRenderer = ({ pageData }: { pageData: PageRenderData }) => {
   const { i18n } = useLingui();
+  const analytics = useAnalytics();
 
   const {
     envelopeStatus,
     currentEnvelopeItem,
     fields,
+    signatures,
     recipients,
     getRecipientColorKey,
     setRenderError,
     overrideSettings,
   } = useCurrentEnvelopeRender();
 
-  const { stage, pageLayer, konvaContainer, unscaledViewport } = usePageRenderer(
-    ({ stage, pageLayer }) => {
-      createPageCanvas(stage, pageLayer);
-    },
-    pageData,
-  );
+  const signaturesByFieldId = useMemo(() => {
+    return new Map(signatures.map((signature) => [signature.fieldId, signature]));
+  }, [signatures]);
+
+  const { stage, pageLayer, konvaContainer, unscaledViewport } = usePageRenderer(({ stage, pageLayer }) => {
+    createPageCanvas(stage, pageLayer);
+  }, pageData);
 
   const { scale, pageNumber } = pageData;
 
@@ -46,9 +48,7 @@ export const EnvelopeGenericPageRenderer = ({ pageData }: { pageData: PageRender
     }
 
     return fields
-      .filter(
-        (field) => field.page === pageNumber && field.envelopeItemId === currentEnvelopeItem?.id,
-      )
+      .filter((field) => field.page === pageNumber && field.envelopeItemId === currentEnvelopeItem?.id)
       .map((field) => {
         const recipient = recipients.find((recipient) => recipient.id === field.recipientId);
 
@@ -67,8 +67,7 @@ export const EnvelopeGenericPageRenderer = ({ pageData }: { pageData: PageRender
       })
       .filter(
         ({ inserted, fieldMeta, recipient }) =>
-          (recipient.signingStatus === SigningStatus.SIGNED ? inserted : true) ||
-          fieldMeta?.readOnly,
+          (recipient.signingStatus === SigningStatus.SIGNED ? inserted : true) || fieldMeta?.readOnly,
       );
   }, [fields, pageNumber, currentEnvelopeItem?.id, recipients, envelopeStatus]);
 
@@ -79,6 +78,16 @@ export const EnvelopeGenericPageRenderer = ({ pageData }: { pageData: PageRender
     }
 
     const fieldTranslations = getClientSideFieldTranslations(i18n);
+
+    // Look up an inserted signature for this field. If we don't have one (e.g.
+    // the signatures haven't been loaded, or the field hasn't been signed yet)
+    // fall back to a placeholder so the field still renders something.
+    const insertedSignature = signaturesByFieldId.get(field.id);
+
+    const signature = insertedSignature ?? {
+      signatureImageAsBase64: '',
+      typedSignature: fieldTranslations.SIGNATURE,
+    };
 
     renderField({
       scale,
@@ -91,10 +100,7 @@ export const EnvelopeGenericPageRenderer = ({ pageData }: { pageData: PageRender
         positionX: Number(field.positionX),
         positionY: Number(field.positionY),
         fieldMeta: field.fieldMeta,
-        signature: {
-          signatureImageAsBase64: '',
-          typedSignature: fieldTranslations.SIGNATURE,
-        },
+        signature,
       },
       translations: fieldTranslations,
       pageWidth: unscaledViewport.width,
@@ -110,6 +116,13 @@ export const EnvelopeGenericPageRenderer = ({ pageData }: { pageData: PageRender
       unsafeRenderFieldOnLayer(field);
     } catch (err) {
       console.error(err);
+
+      analytics.captureException(err, {
+        source: 'editor',
+        location: 'envelope_page_render',
+        envelopeId: currentEnvelopeItem?.envelopeId,
+      });
+
       setRenderError(true);
     }
   };
@@ -136,10 +149,7 @@ export const EnvelopeGenericPageRenderer = ({ pageData }: { pageData: PageRender
 
     // If doesn't exist in localFields, destroy it since it's been deleted.
     pageLayer.current.find('Group').forEach((group) => {
-      if (
-        group.name() === 'field-group' &&
-        !localPageFields.some((field) => field.id.toString() === group.id())
-      ) {
+      if (group.name() === 'field-group' && !localPageFields.some((field) => field.id.toString() === group.id())) {
         group.destroy();
       }
     });
@@ -150,7 +160,7 @@ export const EnvelopeGenericPageRenderer = ({ pageData }: { pageData: PageRender
     });
 
     pageLayer.current.batchDraw();
-  }, [localPageFields]);
+  }, [localPageFields, signaturesByFieldId]);
 
   if (!currentEnvelopeItem) {
     return null;

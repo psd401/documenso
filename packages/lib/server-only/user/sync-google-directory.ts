@@ -7,10 +7,12 @@ import { getDirectoryGroups, getDirectoryUser } from '../google/directory-client
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
-export const syncGoogleDirectory = async (userId: number, email: string): Promise<void> => {
+export type SyncGoogleDirectoryStatus = 'synced' | 'throttled' | 'failed' | 'disabled';
+
+export const syncGoogleDirectory = async (userId: number, email: string): Promise<SyncGoogleDirectoryStatus> => {
   try {
     if (env('GOOGLE_DIRECTORY_SYNC_ENABLED') !== 'true') {
-      return;
+      return 'disabled';
     }
 
     const user = await prisma.user.findUnique({
@@ -21,18 +23,15 @@ export const syncGoogleDirectory = async (userId: number, email: string): Promis
     if (user?.directoryLastSyncedAt != null) {
       const elapsed = Date.now() - user.directoryLastSyncedAt.getTime();
       if (elapsed < ONE_HOUR_MS) {
-        return;
+        return 'throttled';
       }
     }
 
-    const [directoryUser, directoryGroups] = await Promise.all([
-      getDirectoryUser(email),
-      getDirectoryGroups(email),
-    ]);
+    const [directoryUser, directoryGroups] = await Promise.all([getDirectoryUser(email), getDirectoryGroups(email)]);
 
     if (directoryUser === null && directoryGroups === null) {
       console.warn(`[directory-sync] Both API calls returned null for ${email}; skipping update`);
-      return;
+      return 'failed';
     }
 
     const data: Record<string, unknown> = {
@@ -53,7 +52,10 @@ export const syncGoogleDirectory = async (userId: number, email: string): Promis
       where: { id: userId },
       data,
     });
+
+    return 'synced';
   } catch (err) {
     console.warn(`[directory-sync] ${err instanceof Error ? err.message : 'Unknown error'}`);
+    return 'failed';
   }
 };

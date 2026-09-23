@@ -1,11 +1,9 @@
-import { type Page, expect, test } from '@playwright/test';
-import { DocumentSigningOrder, RecipientRole } from '@prisma/client';
-
 import { nanoid } from '@documenso/lib/universal/id';
 import { prisma } from '@documenso/prisma';
+import { expect, type Page, test } from '@playwright/test';
+import { DocumentSigningOrder, RecipientRole } from '@prisma/client';
 
 import {
-  type TEnvelopeEditorSurface,
   addEnvelopeItemPdf,
   clickAddMyselfButton,
   clickAddSignerButton,
@@ -23,6 +21,7 @@ import {
   setRecipientName,
   setRecipientRole,
   setSigningOrderValue,
+  type TEnvelopeEditorSurface,
   toggleAllowDictateSigners,
   toggleSigningOrder,
 } from '../fixtures/envelope-editor';
@@ -79,9 +78,7 @@ const navigateToAddFieldsAndBack = async (root: Page) => {
 
 const getRecipientRowByEmail = async (root: Page, email: string) => {
   const recipientEmailInputs = await getRecipientEmailInputs(root).all();
-  const recipientEmails = await Promise.all(
-    recipientEmailInputs.map(async (input) => input.inputValue()),
-  );
+  const recipientEmails = await Promise.all(recipientEmailInputs.map(async (input) => input.inputValue()));
   const recipientIndex = recipientEmails.indexOf(email);
 
   if (recipientIndex === -1) {
@@ -142,33 +139,19 @@ const runRecipientFlow = async (surface: TEnvelopeEditorSurface): Promise<Recipi
 
   await expect(getRecipientEmailInputs(surface.root)).toHaveCount(2);
   const primaryRecipientRow = await getRecipientRowByEmail(surface.root, primaryRecipient.email);
-  const secondRecipientRow = await getRecipientRowByEmail(
-    surface.root,
-    TEST_RECIPIENT_VALUES.secondRecipient.email,
-  );
+  const secondRecipientRow = await getRecipientRowByEmail(surface.root, TEST_RECIPIENT_VALUES.secondRecipient.email);
 
   await expect(primaryRecipientRow).toHaveCount(1);
   await expect(secondRecipientRow).toHaveCount(1);
-  await expect(primaryRecipientRow.locator('input[placeholder^="Recipient "]')).toHaveValue(
-    primaryRecipient.name,
-  );
+  await expect(primaryRecipientRow.locator('input[placeholder^="Recipient "]')).toHaveValue(primaryRecipient.name);
   await expect(secondRecipientRow.locator('input[placeholder^="Recipient "]')).toHaveValue(
     TEST_RECIPIENT_VALUES.secondRecipient.name,
   );
-  await expect(primaryRecipientRow.locator('button[role="combobox"]').first()).toHaveAttribute(
-    'title',
-    'SIGNER',
-  );
-  await expect(secondRecipientRow.locator('button[role="combobox"]').first()).toHaveAttribute(
-    'title',
-    'APPROVER',
-  );
+  await expect(primaryRecipientRow.locator('button[role="combobox"]').first()).toHaveAttribute('title', 'SIGNER');
+  await expect(secondRecipientRow.locator('button[role="combobox"]').first()).toHaveAttribute('title', 'APPROVER');
 
   await expect(surface.root.locator('#signingOrder')).toHaveAttribute('aria-checked', 'true');
-  await expect(surface.root.locator('#allowDictateNextSigner')).toHaveAttribute(
-    'aria-checked',
-    'true',
-  );
+  await expect(surface.root.locator('#allowDictateNextSigner')).toHaveAttribute('aria-checked', 'true');
 
   // Both recipients share the same signing order slot.
   await expect(primaryRecipientRow.getByTestId('signing-order-input')).toHaveValue('1');
@@ -226,16 +209,12 @@ const assertRecipientsPersistedInDatabase = async ({
   expect(envelope.documentMeta.allowDictateNextSigner).toBe(true);
 
   expectedRecipients.forEach((expectedRecipient) => {
-    const recipient = envelope.recipients.find(
-      (candidate) => candidate.email === expectedRecipient.email,
-    );
+    const recipient = envelope.recipients.find((candidate) => candidate.email === expectedRecipient.email);
 
     expect(recipient).toMatchObject(expectedRecipient);
   });
 
-  expect(envelope.recipients.some((recipient) => recipient.email === removedRecipientEmail)).toBe(
-    false,
-  );
+  expect(envelope.recipients.some((recipient) => recipient.email === removedRecipientEmail)).toBe(false);
 };
 
 test.describe('document editor', () => {

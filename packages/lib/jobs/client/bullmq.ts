@@ -1,14 +1,13 @@
-import { sha256 } from '@noble/hashes/sha2';
-import { BackgroundJobStatus, Prisma } from '@prisma/client';
-import { Queue, Worker } from 'bullmq';
-import type { Job } from 'bullmq';
-import { Hono } from 'hono';
-import type { Context as HonoContext } from 'hono';
-import IORedis from 'ioredis';
 import { createRequire } from 'node:module';
 import path from 'node:path';
-
 import { prisma } from '@documenso/prisma';
+import { sha256 } from '@noble/hashes/sha2';
+import { BackgroundJobStatus, Prisma } from '@prisma/client';
+import type { Job } from 'bullmq';
+import { Queue, Worker } from 'bullmq';
+import type { Context as HonoContext } from 'hono';
+import { Hono } from 'hono';
+import IORedis from 'ioredis';
 
 import { env } from '../../utils/env';
 import type { JobDefinition, JobRunIO, SimpleTriggerJobOptions } from './_internal/job';
@@ -38,9 +37,7 @@ export class BullMQJobProvider extends BaseJobProvider {
     const redisUrl = env('NEXT_PRIVATE_REDIS_URL');
 
     if (!redisUrl) {
-      throw new Error(
-        '[JOBS]: NEXT_PRIVATE_REDIS_URL is required when using the BullMQ jobs provider',
-      );
+      throw new Error('[JOBS]: NEXT_PRIVATE_REDIS_URL is required when using the BullMQ jobs provider');
     }
 
     const prefix = env('NEXT_PRIVATE_REDIS_PREFIX') || 'documenso';
@@ -131,9 +128,7 @@ export class BullMQJobProvider extends BaseJobProvider {
   }
 
   public async triggerJob(options: SimpleTriggerJobOptions) {
-    const eligibleJobs = Object.values(this._jobDefinitions).filter(
-      (job) => job.trigger.name === options.name,
-    );
+    const eligibleJobs = Object.values(this._jobDefinitions).filter((job) => job.trigger.name === options.name);
 
     await Promise.all(
       eligibleJobs.map(async (job) => {
@@ -200,9 +195,7 @@ export class BullMQJobProvider extends BaseJobProvider {
       '@bull-board/api/bullMQAdapter',
     );
     const bullBoardHono: typeof import('@bull-board/hono') = _require('@bull-board/hono');
-    const honoServeStatic: typeof import('@hono/node-server/serve-static') = _require(
-      '@hono/node-server/serve-static',
-    );
+    const honoServeStatic: typeof import('@hono/node-server/serve-static') = _require('@hono/node-server/serve-static');
     const uiPackagePath = path.dirname(_require.resolve('@bull-board/ui/package.json'));
 
     const serverAdapter = new bullBoardHono.HonoAdapter(honoServeStatic.serveStatic);
@@ -242,13 +235,17 @@ export class BullMQJobProvider extends BaseJobProvider {
       backgroundJobId?: string;
     };
 
+    let payload = jobData.payload;
+
     if (definition.trigger.schema) {
-      const result = definition.trigger.schema.safeParse(jobData.payload);
+      const result = definition.trigger.schema.safeParse(payload);
 
       if (!result.success) {
         console.error(`[JOBS]: Payload validation failed for ${definitionId}`, result.error);
         throw new Error(`Payload validation failed for ${definitionId}`);
       }
+
+      payload = result.data;
     }
 
     const backgroundJobId = jobData.backgroundJobId;
@@ -269,11 +266,11 @@ export class BullMQJobProvider extends BaseJobProvider {
         .catch(() => null);
     }
 
-    console.log(`[JOBS]: Processing job ${definitionId} with payload`, jobData.payload);
+    console.log(`[JOBS]: Processing job ${definitionId} with payload`, payload);
 
     try {
       await definition.handler({
-        payload: jobData.payload,
+        payload,
         io: this.createJobRunIO(backgroundJobId ?? job.id ?? definitionId),
       });
 

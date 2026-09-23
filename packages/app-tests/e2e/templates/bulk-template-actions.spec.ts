@@ -1,9 +1,8 @@
-import { expect, test } from '@playwright/test';
-
 import { FolderType } from '@documenso/prisma/client';
 import { seedBlankFolder } from '@documenso/prisma/seed/folders';
 import { seedBlankTemplate } from '@documenso/prisma/seed/templates';
 import { seedUser } from '@documenso/prisma/seed/users';
+import { expect, test } from '@playwright/test';
 
 import { apiSignin } from '../fixtures/authentication';
 import { expectToastTextToBeVisible } from '../fixtures/generic';
@@ -50,10 +49,10 @@ test('[BULK_ACTIONS]: can select multiple templates with checkboxes', async ({ p
   });
 
   await page.locator('tr', { hasText: 'Bulk Test Template 1' }).getByRole('checkbox').click();
-  await expect(page.getByText('1 selected')).toBeVisible();
+  await expect(page.getByText(/1\s*selected/)).toBeVisible();
 
   await page.locator('tr', { hasText: 'Bulk Test Template 2' }).getByRole('checkbox').click();
-  await expect(page.getByText('2 selected')).toBeVisible();
+  await expect(page.getByText(/2\s*selected/)).toBeVisible();
 });
 
 test('[BULK_ACTIONS]: header checkbox selects all templates on page', async ({ page }) => {
@@ -68,7 +67,7 @@ test('[BULK_ACTIONS]: header checkbox selects all templates on page', async ({ p
   await expect(page.getByRole('link', { name: templates[0].title })).toBeVisible();
   await page.locator('thead').getByRole('checkbox').click();
 
-  await expect(page.getByText(`${templates.length} selected`)).toBeVisible();
+  await expect(page.getByText(new RegExp(`${templates.length}\\s*selected`))).toBeVisible();
 });
 
 test('[BULK_ACTIONS]: can clear selection with X button', async ({ page }) => {
@@ -82,11 +81,11 @@ test('[BULK_ACTIONS]: can clear selection with X button', async ({ page }) => {
 
   await expect(page.getByRole('link', { name: templates[0].title })).toBeVisible();
   await page.locator('thead').getByRole('checkbox').click();
-  await expect(page.getByText(/\d+ selected/)).toBeVisible();
+  await expect(page.getByText(/\d+\s*selected/)).toBeVisible();
 
   await page.getByLabel('Clear selection').click();
 
-  await expect(page.getByText(/\d+ selected/)).not.toBeVisible();
+  await expect(page.getByText(/\d+\s*selected/)).not.toBeVisible();
 });
 
 test('[BULK_ACTIONS]: can move multiple templates to a folder', async ({ page }) => {
@@ -100,14 +99,14 @@ test('[BULK_ACTIONS]: can move multiple templates to a folder', async ({ page })
 
   await page.locator('tr', { hasText: 'Bulk Test Template 1' }).getByRole('checkbox').click();
   await page.locator('tr', { hasText: 'Bulk Test Template 2' }).getByRole('checkbox').click();
-  await page.getByRole('button', { name: 'Move to Folder' }).click();
+  await page.getByRole('button', { name: 'Move', exact: true }).click();
 
   await expect(page.getByRole('dialog')).toBeVisible();
   await expect(page.getByText('Move Templates to Folder')).toBeVisible();
 
   await page.getByRole('button', { name: folder.name }).click();
   const moveToast = expectToastTextToBeVisible(page, 'Selected items have been moved.');
-  await page.getByRole('button', { name: 'Move' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Move' }).click();
 
   await moveToast;
 
@@ -163,15 +162,15 @@ test('[BULK_ACTIONS]: selection clears after successful move', async ({ page }) 
   });
 
   await page.locator('tr', { hasText: 'Bulk Test Template 1' }).getByRole('checkbox').click();
-  await expect(page.getByText('1 selected')).toBeVisible();
+  await expect(page.getByText(/1\s*selected/)).toBeVisible();
 
-  await page.getByRole('button', { name: 'Move to Folder' }).click();
+  await page.getByRole('button', { name: 'Move', exact: true }).click();
   await page.getByRole('button', { name: folder.name }).click();
   const moveToast = expectToastTextToBeVisible(page, 'Selected items have been moved.');
-  await page.getByRole('button', { name: 'Move' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Move' }).click();
 
   await moveToast;
-  await expect(page.getByText(/\d+ selected/)).not.toBeVisible();
+  await expect(page.getByText(/\d+\s*selected/)).not.toBeVisible();
 });
 
 test('[BULK_ACTIONS]: selection clears after successful delete', async ({ page }) => {
@@ -184,14 +183,14 @@ test('[BULK_ACTIONS]: selection clears after successful delete', async ({ page }
   });
 
   await page.locator('tr', { hasText: 'Bulk Test Template 1' }).getByRole('checkbox').click();
-  await expect(page.getByText('1 selected')).toBeVisible();
+  await expect(page.getByText(/1\s*selected/)).toBeVisible();
 
   await page.getByRole('button', { name: 'Delete' }).click();
   await page.getByRole('dialog').getByRole('textbox').fill('Delete 1 template');
   await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
 
   await expectToastTextToBeVisible(page, 'Templates deleted');
-  await expect(page.getByText(/\d+ selected/)).not.toBeVisible();
+  await expect(page.getByText(/\d+\s*selected/)).not.toBeVisible();
 });
 
 test('[BULK_ACTIONS]: can search for folders in move dialog', async ({ page }) => {
@@ -213,7 +212,7 @@ test('[BULK_ACTIONS]: can search for folders in move dialog', async ({ page }) =
 
   await page.locator('tr', { hasText: 'Bulk Test Template 1' }).getByRole('checkbox').click();
 
-  await page.getByRole('button', { name: 'Move to Folder' }).click();
+  await page.getByRole('button', { name: 'Move', exact: true }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
 
   await expect(page.getByRole('button', { name: folder.name })).toBeVisible();
@@ -250,15 +249,15 @@ test('[BULK_ACTIONS]: can move templates from folder to home (root)', async ({ p
   await expect(page.getByRole('link', { name: 'Bulk Test Template 1' })).toBeVisible();
 
   await page.locator('tr', { hasText: 'Bulk Test Template 1' }).getByRole('checkbox').click();
-  await expect(page.getByText('1 selected')).toBeVisible();
+  await expect(page.getByText(/1\s*selected/)).toBeVisible();
 
-  await page.getByRole('button', { name: 'Move to Folder' }).click();
+  await page.getByRole('button', { name: 'Move', exact: true }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
 
   await page.getByRole('button', { name: 'Home (No Folder)' }).click();
 
   const moveToast = expectToastTextToBeVisible(page, 'Selected items have been moved.');
-  await page.getByRole('button', { name: 'Move' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Move' }).click();
 
   await moveToast;
 

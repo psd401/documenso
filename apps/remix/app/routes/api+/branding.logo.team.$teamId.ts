@@ -1,6 +1,7 @@
 import { getTeamSettings } from '@documenso/lib/server-only/team/get-team-settings';
 import { sha256 } from '@documenso/lib/universal/crypto';
 import { getFileServerSide } from '@documenso/lib/universal/upload/get-file.server';
+import { parseBrandingLogoFile } from '@documenso/lib/utils/branding';
 import { loadLogo } from '@documenso/lib/utils/images/logo';
 
 import type { Route } from './+types/branding.logo.team.$teamId';
@@ -56,9 +57,13 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     });
   }
 
-  const file = await getFileServerSide(JSON.parse(settings.brandingLogo)).catch((e) => {
-    console.error(e);
-  });
+  const logoFile = parseBrandingLogoFile(settings.brandingLogo);
+
+  const file = logoFile
+    ? await getFileServerSide(logoFile).catch((e) => {
+        console.error(e);
+      })
+    : null;
 
   if (!file) {
     return Response.json(

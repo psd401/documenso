@@ -1,12 +1,6 @@
-import { useLayoutEffect, useState } from 'react';
-
-import { Trans } from '@lingui/react/macro';
-import { OrganisationMemberRole, OrganisationType, TeamMemberRole } from '@prisma/client';
-import { Outlet, isRouteErrorResponse, useLoaderData } from 'react-router';
-import { match } from 'ts-pattern';
-
 import { PAID_PLAN_LIMITS } from '@documenso/ee/server-only/limits/constants';
 import { LimitsProvider } from '@documenso/ee/server-only/limits/provider/client';
+import { useAnalytics } from '@documenso/lib/client-only/hooks/use-analytics';
 import { OrganisationProvider } from '@documenso/lib/client-only/providers/organisation';
 import { APP_I18N_OPTIONS } from '@documenso/lib/constants/i18n';
 import { verifyEmbeddingPresignToken } from '@documenso/lib/server-only/embedding-presign/verify-embedding-presign-token';
@@ -17,6 +11,11 @@ import { dynamicActivate } from '@documenso/lib/utils/i18n';
 import { TrpcProvider } from '@documenso/trpc/react';
 import type { OrganisationSession } from '@documenso/trpc/server/organisation-router/get-organisation-session.types';
 import { Spinner } from '@documenso/ui/primitives/spinner';
+import { Trans } from '@lingui/react/macro';
+import { OrganisationMemberRole, OrganisationType, TeamMemberRole } from '@prisma/client';
+import { useEffect, useLayoutEffect, useState } from 'react';
+import { isRouteErrorResponse, Outlet, useLoaderData } from 'react-router';
+import { match } from 'ts-pattern';
 
 import { TeamProvider } from '~/providers/team';
 import { injectCss } from '~/utils/css-vars';
@@ -144,9 +143,7 @@ export default function AuthoringLayout() {
   return (
     <OrganisationProvider organisation={organisation}>
       <TeamProvider team={team}>
-        <TrpcProvider
-          headers={{ authorization: `Bearer ${token}`, 'x-team-Id': team.id.toString() }}
-        >
+        <TrpcProvider headers={{ authorization: `Bearer ${token}`, 'x-team-Id': team.id.toString() }}>
           <LimitsProvider
             disableLimitsFetch={true}
             initialValue={{
@@ -171,7 +168,16 @@ export default function AuthoringLayout() {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+  const analytics = useAnalytics();
+
   const errorCode = isRouteErrorResponse(error) ? error.status : 500;
+
+  useEffect(() => {
+    analytics.captureException(error, {
+      source: 'embed',
+      location: 'embed_authoring_boundary',
+    });
+  }, [error]);
 
   return (
     <div>
@@ -188,8 +194,8 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
               </li>
               <li>
                 <Trans>
-                  Ensure that you have set the host prop on the embedding component to the correct
-                  domain (https://documenso.psd401.net)
+                  Ensure that you have set the host prop on the embedding component to the correct domain
+                  (https://documenso.psd401.net)
                 </Trans>
               </li>
             </ul>

@@ -20,8 +20,10 @@ type DatabaseIdPrefix =
   | 'envelope'
   | 'envelope_item'
   | 'email_domain'
+  | 'email_transport'
   | 'org'
   | 'org_email'
+  | 'org_monthly_stat'
   | 'org_claim'
   | 'org_group'
   | 'org_sso'
@@ -30,19 +32,14 @@ type DatabaseIdPrefix =
   | 'member_invite'
   | 'group_member'
   | 'team_group'
-  | 'team_setting';
+  | 'team_setting'
+  | 'directory_mapping';
 
 export const generateDatabaseId = (prefix: DatabaseIdPrefix) => prefixedId(prefix, 16);
 
 export const extractLegacyIds = (envelope: Pick<Envelope, 'type' | 'secondaryId'>) => {
   return {
-    documentId:
-      envelope.type === EnvelopeType.DOCUMENT
-        ? mapSecondaryIdToDocumentId(envelope.secondaryId)
-        : null,
-    templateId:
-      envelope.type === EnvelopeType.TEMPLATE
-        ? mapSecondaryIdToTemplateId(envelope.secondaryId)
-        : null,
+    documentId: envelope.type === EnvelopeType.DOCUMENT ? mapSecondaryIdToDocumentId(envelope.secondaryId) : null,
+    templateId: envelope.type === EnvelopeType.TEMPLATE ? mapSecondaryIdToTemplateId(envelope.secondaryId) : null,
   };
 };

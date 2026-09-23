@@ -1,6 +1,5 @@
-import { EnvelopeType } from '@prisma/client';
-
 import { prisma } from '@documenso/prisma';
+import { EnvelopeType } from '@prisma/client';
 
 import type { TFolderType } from '../../types/folder-type';
 import { buildFolderAccessFilter, getUserTeamGroupIds } from '../../utils/folder-access';
@@ -13,12 +12,7 @@ export interface FindFoldersInternalOptions {
   type?: TFolderType;
 }
 
-export const findFoldersInternal = async ({
-  userId,
-  teamId,
-  parentId,
-  type,
-}: FindFoldersInternalOptions) => {
+export const findFoldersInternal = async ({ userId, teamId, parentId, type }: FindFoldersInternalOptions) => {
   const team = await getTeamById({ userId, teamId });
   const userGroupIds = await getUserTeamGroupIds(userId, teamId);
 
