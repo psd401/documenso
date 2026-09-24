@@ -5,7 +5,6 @@ import { lingui } from '@lingui/vite-plugin';
 import { reactRouter } from '@react-router/dev/vite';
 import autoprefixer from 'autoprefixer';
 import serverAdapter from 'hono-react-router-adapter/vite';
-import type { AppLoadContext } from 'react-router';
 import tailwindcss from 'tailwindcss';
 import { defineConfig, normalizePath } from 'vite';
 import macrosPlugin from 'vite-plugin-babel-macros';
@@ -52,10 +51,15 @@ export default defineConfig({
     tsconfigPaths(),
     serverAdapter({
       entry: 'server/router.ts',
-      getLoadContext: async () => {
+      // hono-react-router-adapter@0.6.5 still types `getLoadContext` against
+      // react-router 7's `AppLoadContext`, which no longer exists in
+      // react-router 8 (context is always a `RouterContextProvider`). The
+      // adapter passes the return value through untyped at runtime, so this
+      // cast only works around the stale upstream type.
+      getLoadContext: (async () => {
         const { getLoadContext } = await import('./server/load-context');
-        return getLoadContext() as unknown as AppLoadContext;
-      },
+        return getLoadContext();
+      }) as unknown as Parameters<typeof serverAdapter>[0]['getLoadContext'],
       exclude: [
         // Spread the defaults but replace the /.css$/ rule so that Bull
         // Board's static CSS at /api/jobs/board/static/** passes through to Hono.
