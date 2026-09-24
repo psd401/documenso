@@ -157,13 +157,16 @@
     "fast-xml-builder": "^1.2.0",
     "uuid": "^11.1.1",
     "@rvf/set-get": "^7.0.2",
-    "@opentelemetry/auto-instrumentations-node": "^0.75.0",
-    "@opentelemetry/exporter-prometheus": "^0.217.0",
-    "@opentelemetry/sdk-node": "^0.217.0",
+    "@opentelemetry/auto-instrumentations-node": "^0.80.0",
+    "@opentelemetry/exporter-prometheus": "^0.222.0",
+    "@opentelemetry/sdk-node": "^0.222.0",
     "hono": "^4.12.18",
     "kysely": "0.28.17",
     "hono-react-router-adapter": {
       "react-router": "^8.3.1"
+    },
+    "inngest-cli": {
+      "adm-zip": "^0.6.1"
     },
     "@lingui/core": "5.6.0"
   }
