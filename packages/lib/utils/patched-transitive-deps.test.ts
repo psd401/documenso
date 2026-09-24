@@ -12,6 +12,8 @@ const ADVISORY_RANGES: Record<string, { introducedIn: string; patched: string }>
   'adm-zip': { introducedIn: '0.0.0', patched: '0.6.1' },
   '@opentelemetry/core': { introducedIn: '0.0.0', patched: '2.8.0' },
   '@opentelemetry/propagator-jaeger': { introducedIn: '0.0.0', patched: '2.9.0' },
+  'deepmerge-ts': { introducedIn: '0.0.0', patched: '8.0.0' },
+  'ts-deepmerge': { introducedIn: '0.0.0', patched: '8.0.0' },
 };
 
 const compareVersions = (left: string, right: string): number => {

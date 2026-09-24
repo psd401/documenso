@@ -168,6 +168,12 @@
     "inngest-cli": {
       "adm-zip": "^0.6.1"
     },
+    "@prisma/config": {
+      "deepmerge-ts": "^8.0.2"
+    },
+    "@anatine/zod-openapi": {
+      "ts-deepmerge": "^8.0.0"
+    },
     "@lingui/core": "5.6.0"
   }
 }
