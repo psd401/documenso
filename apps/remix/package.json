@@ -25,7 +25,7 @@
     "@documenso/trpc": "*",
     "@documenso/ui": "*",
     "@epic-web/remember": "^1.1.0",
-    "@faker-js/faker": "^10.1.0",
+    "@faker-js/faker": "^10.5.0",
     "@hono/node-server": "^2.1.1",
     "@hono/standard-validator": "^0.2.0",
     "@hono/trpc-server": "^0.4.0",
