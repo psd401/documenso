@@ -1,0 +1,147 @@
+diff --git a/node_modules/@anatine/zod-openapi/src/lib/zod-openapi.js b/node_modules/@anatine/zod-openapi/src/lib/zod-openapi.js
+index cc71afb..1d4eacd 100644
+--- a/node_modules/@anatine/zod-openapi/src/lib/zod-openapi.js
++++ b/node_modules/@anatine/zod-openapi/src/lib/zod-openapi.js
+@@ -38,7 +38,7 @@ function parseTransformation({ zodRef, schemas, useOutput, }) {
+             }
+         }
+     }
+-    return (0, ts_deepmerge_1.default)(Object.assign(Object.assign(Object.assign({}, (zodRef.description ? { description: zodRef.description } : {})), input), (['number', 'string', 'boolean', 'null'].includes(output)
++    return (0, ts_deepmerge_1.merge)(Object.assign(Object.assign(Object.assign({}, (zodRef.description ? { description: zodRef.description } : {})), input), (['number', 'string', 'boolean', 'null'].includes(output)
+         ? {
+             type: output,
+         }
+@@ -81,7 +81,7 @@ function parseString({ zodRef, schemas, }) {
+                 break;
+         }
+     });
+-    return (0, ts_deepmerge_1.default)(baseSchema, zodRef.description ? { description: zodRef.description } : {}, ...schemas);
++    return (0, ts_deepmerge_1.merge)(baseSchema, zodRef.description ? { description: zodRef.description } : {}, ...schemas);
+ }
+ function parseNumber({ zodRef, schemas, }) {
+     const baseSchema = {
+@@ -108,7 +108,7 @@ function parseNumber({ zodRef, schemas, }) {
+                 baseSchema.multipleOf = item.value;
+         }
+     });
+-    return (0, ts_deepmerge_1.default)(baseSchema, zodRef.description ? { description: zodRef.description } : {}, ...schemas);
++    return (0, ts_deepmerge_1.merge)(baseSchema, zodRef.description ? { description: zodRef.description } : {}, ...schemas);
+ }
+ function parseObject({ zodRef, schemas, useOutput, }) {
+     var _a;
+@@ -131,14 +131,14 @@ function parseObject({ zodRef, schemas, useOutput, }) {
+             item._def.typeName === 'ZodDefault') && !(item instanceof zod_1.z.ZodNever || item._def.typeName === 'ZodDefault'));
+     });
+     const required = requiredProperties.length > 0 ? { required: requiredProperties } : {};
+-    return (0, ts_deepmerge_1.default)(Object.assign(Object.assign({ type: 'object', properties: iterateZodObject({
++    return (0, ts_deepmerge_1.merge)(Object.assign(Object.assign({ type: 'object', properties: iterateZodObject({
+             zodRef: zodRef,
+             schemas,
+             useOutput,
+         }) }, required), additionalProperties), zodRef.description ? { description: zodRef.description } : {}, ...schemas);
+ }
+ function parseRecord({ zodRef, schemas, useOutput, }) {
+-    return (0, ts_deepmerge_1.default)({
++    return (0, ts_deepmerge_1.merge)({
+         type: 'object',
+         additionalProperties: zodRef._def.valueType instanceof zod_1.z.ZodUnknown
+             ? {}
+@@ -146,26 +146,26 @@ function parseRecord({ zodRef, schemas, useOutput, }) {
+     }, zodRef.description ? { description: zodRef.description } : {}, ...schemas);
+ }
+ function parseBigInt({ zodRef, schemas, }) {
+-    return (0, ts_deepmerge_1.default)({ type: 'integer', format: 'int64' }, zodRef.description ? { description: zodRef.description } : {}, ...schemas);
++    return (0, ts_deepmerge_1.merge)({ type: 'integer', format: 'int64' }, zodRef.description ? { description: zodRef.description } : {}, ...schemas);
+ }
+ function parseBoolean({ zodRef, schemas, }) {
+-    return (0, ts_deepmerge_1.default)({ type: 'boolean' }, zodRef.description ? { description: zodRef.description } : {}, ...schemas);
++    return (0, ts_deepmerge_1.merge)({ type: 'boolean' }, zodRef.description ? { description: zodRef.description } : {}, ...schemas);
+ }
+ function parseDate({ zodRef, schemas }) {
+-    return (0, ts_deepmerge_1.default)({ type: 'string', format: 'date-time' }, zodRef.description ? { description: zodRef.description } : {}, ...schemas);
++    return (0, ts_deepmerge_1.merge)({ type: 'string', format: 'date-time' }, zodRef.description ? { description: zodRef.description } : {}, ...schemas);
+ }
+ function parseNull({ zodRef, schemas }) {
+-    return (0, ts_deepmerge_1.default)({
++    return (0, ts_deepmerge_1.merge)({
+         type: 'string',
+         format: 'null',
+         nullable: true,
+     }, zodRef.description ? { description: zodRef.description } : {}, ...schemas);
+ }
+ function parseOptionalNullable({ schemas, zodRef, useOutput, }) {
+-    return (0, ts_deepmerge_1.default)(generateSchema(zodRef.unwrap(), useOutput), zodRef.description ? { description: zodRef.description } : {}, ...schemas);
++    return (0, ts_deepmerge_1.merge)(generateSchema(zodRef.unwrap(), useOutput), zodRef.description ? { description: zodRef.description } : {}, ...schemas);
+ }
+ function parseDefault({ schemas, zodRef, useOutput, }) {
+-    return (0, ts_deepmerge_1.default)(Object.assign({ default: zodRef._def.defaultValue() }, generateSchema(zodRef._def.innerType, useOutput)), zodRef.description ? { description: zodRef.description } : {}, ...schemas);
++    return (0, ts_deepmerge_1.merge)(Object.assign({ default: zodRef._def.defaultValue() }, generateSchema(zodRef._def.innerType, useOutput)), zodRef.description ? { description: zodRef.description } : {}, ...schemas);
+ }
+ function parseArray({ schemas, zodRef, useOutput, }) {
+     const constraints = {};
+@@ -177,22 +177,22 @@ function parseArray({ schemas, zodRef, useOutput, }) {
+         constraints.minItems = zodRef._def.minLength.value;
+     if (zodRef._def.maxLength != null)
+         constraints.maxItems = zodRef._def.maxLength.value;
+-    return (0, ts_deepmerge_1.default)(Object.assign({ type: 'array', items: generateSchema(zodRef.element, useOutput) }, constraints), zodRef.description ? { description: zodRef.description } : {}, ...schemas);
++    return (0, ts_deepmerge_1.merge)(Object.assign({ type: 'array', items: generateSchema(zodRef.element, useOutput) }, constraints), zodRef.description ? { description: zodRef.description } : {}, ...schemas);
+ }
+ function parseLiteral({ schemas, zodRef, }) {
+-    return (0, ts_deepmerge_1.default)({
++    return (0, ts_deepmerge_1.merge)({
+         type: typeof zodRef._def.value,
+         enum: [zodRef._def.value],
+     }, zodRef.description ? { description: zodRef.description } : {}, ...schemas);
+ }
+ function parseEnum({ schemas, zodRef, }) {
+-    return (0, ts_deepmerge_1.default)({
++    return (0, ts_deepmerge_1.merge)({
+         type: typeof Object.values(zodRef._def.values)[0],
+         enum: Object.values(zodRef._def.values),
+     }, zodRef.description ? { description: zodRef.description } : {}, ...schemas);
+ }
+ function parseIntersection({ schemas, zodRef, useOutput, }) {
+-    return (0, ts_deepmerge_1.default)({
++    return (0, ts_deepmerge_1.merge)({
+         allOf: [
+             generateSchema(zodRef._def.left, useOutput),
+             generateSchema(zodRef._def.right, useOutput),
+@@ -209,18 +209,18 @@ function parseUnion({ schemas, zodRef, useOutput, }) {
+             typeof content._def.value :
+             null, null);
+         if (type) {
+-            return (0, ts_deepmerge_1.default)({
++            return (0, ts_deepmerge_1.merge)({
+                 type: type,
+                 enum: literals.map((literal) => literal._def.value)
+             }, zodRef.description ? { description: zodRef.description } : {}, ...schemas);
+         }
+     }
+-    return (0, ts_deepmerge_1.default)({
++    return (0, ts_deepmerge_1.merge)({
+         oneOf: contents.map((schema) => generateSchema(schema, useOutput)),
+     }, zodRef.description ? { description: zodRef.description } : {}, ...schemas);
+ }
+ function parseDiscriminatedUnion({ schemas, zodRef, useOutput, }) {
+-    return (0, ts_deepmerge_1.default)({
++    return (0, ts_deepmerge_1.merge)({
+         discriminator: {
+             propertyName: zodRef._def.discriminator,
+         },
+@@ -228,13 +228,13 @@ function parseDiscriminatedUnion({ schemas, zodRef, useOutput, }) {
+     }, zodRef.description ? { description: zodRef.description } : {}, ...schemas);
+ }
+ function parseNever({ zodRef, schemas, }) {
+-    return (0, ts_deepmerge_1.default)({ readOnly: true }, zodRef.description ? { description: zodRef.description } : {}, ...schemas);
++    return (0, ts_deepmerge_1.merge)({ readOnly: true }, zodRef.description ? { description: zodRef.description } : {}, ...schemas);
+ }
+ function parseBranded({ schemas, zodRef, }) {
+-    return (0, ts_deepmerge_1.default)(generateSchema(zodRef._def.type), ...schemas);
++    return (0, ts_deepmerge_1.merge)(generateSchema(zodRef._def.type), ...schemas);
+ }
+ function catchAllParser({ zodRef, schemas, }) {
+-    return (0, ts_deepmerge_1.default)(zodRef.description ? { description: zodRef.description } : {}, ...schemas);
++    return (0, ts_deepmerge_1.merge)(zodRef.description ? { description: zodRef.description } : {}, ...schemas);
+ }
+ const workerMap = {
+     ZodObject: parseObject,
