@@ -46,7 +46,7 @@
     "ai": "^7.0.58",
     "bullmq": "^5.71.1",
     "colord": "^2.9.3",
-    "csv-parse": "^6.1.0",
+    "csv-parse": "^7.0.2",
     "googleapis": "^171.4.0",
     "inngest": "^3.54.0",
     "ioredis": "^5.10.1",

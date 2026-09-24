@@ -11,6 +11,7 @@ import { CSP_NONCE_KEY } from './security-headers';
 export const getRequestNonce = (): string => getContext<HonoEnv>().var[CSP_NONCE_KEY] ?? '';
 
 /**
- * `future.v8_middleware` requires a `RouterContextProvider` instance here.
+ * React Router's middleware support requires a `RouterContextProvider`
+ * instance here.
  */
 export const getLoadContext = (): RouterContextProvider => new RouterContextProvider();
