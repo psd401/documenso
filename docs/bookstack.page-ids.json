@@ -1,0 +1,315 @@
+{
+  "site": "https://bookstack.psd401.net",
+  "book": {
+    "id": 76,
+    "slug": "documenso",
+    "name": "Documenso"
+  },
+  "pages": {
+    "273": {
+      "name": "What Is Documenso",
+      "slug": "what-is-documenso",
+      "chapter": "Overview & Architecture"
+    },
+    "276": {
+      "name": "Architecture",
+      "slug": "architecture",
+      "chapter": "Overview & Architecture"
+    },
+    "280": {
+      "name": "Document Signing Data Flow",
+      "slug": "document-signing-data-flow",
+      "chapter": "Overview & Architecture"
+    },
+    "274": {
+      "name": "Dev Environment",
+      "slug": "dev-environment",
+      "chapter": "Deployment"
+    },
+    "275": {
+      "name": "Production Environment",
+      "slug": "production-environment",
+      "chapter": "Deployment"
+    },
+    "277": {
+      "name": "Docker Configuration",
+      "slug": "docker-configuration",
+      "chapter": "Deployment"
+    },
+    "278": {
+      "name": "Updating & Redeploying",
+      "slug": "updating-redeploying",
+      "chapter": "Deployment"
+    },
+    "367": {
+      "name": "Network Access: n8n IP Gate & SSH Lockdown",
+      "slug": "network-access-n8n-ip-gate-ssh-lockdown",
+      "chapter": "Deployment"
+    },
+    "279": {
+      "name": "Environment Variables",
+      "slug": "environment-variables",
+      "chapter": "Configuration Reference"
+    },
+    "282": {
+      "name": "Storage Configuration",
+      "slug": "storage-configuration",
+      "chapter": "Configuration Reference"
+    },
+    "285": {
+      "name": "Email Configuration",
+      "slug": "email-configuration",
+      "chapter": "Configuration Reference"
+    },
+    "288": {
+      "name": "Background Jobs",
+      "slug": "background-jobs",
+      "chapter": "Configuration Reference"
+    },
+    "295": {
+      "name": "Authentication & SSO",
+      "slug": "authentication-sso",
+      "chapter": "Configuration Reference"
+    },
+    "281": {
+      "name": "Certificate Overview",
+      "slug": "certificate-overview",
+      "chapter": "Signing & Certificates"
+    },
+    "283": {
+      "name": "Creating & Rotating Certificates",
+      "slug": "creating-rotating-certificates",
+      "chapter": "Signing & Certificates"
+    },
+    "286": {
+      "name": "Timestamp Authority & Long-Term Validation",
+      "slug": "timestamp-authority-long-term-validation",
+      "chapter": "Signing & Certificates"
+    },
+    "293": {
+      "name": "Troubleshooting Signing Failures",
+      "slug": "troubleshooting-signing-failures",
+      "chapter": "Signing & Certificates"
+    },
+    "284": {
+      "name": "Fork Overview",
+      "slug": "fork-overview",
+      "chapter": "PSD401 Fork — Customizations & Gotchas"
+    },
+    "289": {
+      "name": "Known Gotchas",
+      "slug": "known-gotchas",
+      "chapter": "PSD401 Fork — Customizations & Gotchas"
+    },
+    "292": {
+      "name": "Google SSO & Auto-Join Configuration",
+      "slug": "google-sso-auto-join-configuration",
+      "chapter": "PSD401 Fork — Customizations & Gotchas"
+    },
+    "298": {
+      "name": "Feature Backlog",
+      "slug": "feature-backlog",
+      "chapter": "PSD401 Fork — Customizations & Gotchas"
+    },
+    "368": {
+      "name": "Directory Sync & Team Membership",
+      "slug": "directory-sync-team-membership",
+      "chapter": "PSD401 Fork — Customizations & Gotchas"
+    },
+    "287": {
+      "name": "API V2 (tRPC — Current)",
+      "slug": "api-v2-trpc-current",
+      "chapter": "API Reference"
+    },
+    "290": {
+      "name": "API V1 (ts-rest — Deprecated)",
+      "slug": "api-v1-ts-rest-deprecated",
+      "chapter": "API Reference"
+    },
+    "291": {
+      "name": "Common API Patterns",
+      "slug": "common-api-patterns",
+      "chapter": "API Reference"
+    },
+    "294": {
+      "name": "Common Errors & Fixes",
+      "slug": "common-errors-fixes",
+      "chapter": "Troubleshooting & Maintenance"
+    },
+    "296": {
+      "name": "Database Management",
+      "slug": "database-management",
+      "chapter": "Troubleshooting & Maintenance"
+    },
+    "297": {
+      "name": "Log Analysis",
+      "slug": "log-analysis",
+      "chapter": "Troubleshooting & Maintenance"
+    },
+    "299": {
+      "name": "Health Endpoints",
+      "slug": "health-endpoints",
+      "chapter": "Troubleshooting & Maintenance"
+    },
+    "337": {
+      "name": "User Support Playbook (Admin Panel)",
+      "slug": "user-support-playbook-admin-panel",
+      "chapter": "Troubleshooting & Maintenance"
+    },
+    "300": {
+      "name": "Monorepo & Build System",
+      "slug": "monorepo-build-system",
+      "chapter": "Codebase Internals"
+    },
+    "301": {
+      "name": "Data Model (Prisma Schema)",
+      "slug": "data-model-prisma-schema",
+      "chapter": "Codebase Internals"
+    },
+    "302": {
+      "name": "tRPC Router Catalog",
+      "slug": "trpc-router-catalog",
+      "chapter": "Codebase Internals"
+    },
+    "303": {
+      "name": "Document & Field System",
+      "slug": "document-field-system",
+      "chapter": "Codebase Internals"
+    },
+    "304": {
+      "name": "Signing Pipeline Internals",
+      "slug": "signing-pipeline-internals",
+      "chapter": "Codebase Internals"
+    },
+    "305": {
+      "name": "Authentication Internals",
+      "slug": "authentication-internals",
+      "chapter": "Codebase Internals"
+    },
+    "306": {
+      "name": "Job System Internals",
+      "slug": "job-system-internals",
+      "chapter": "Codebase Internals"
+    },
+    "307": {
+      "name": "Email System Internals",
+      "slug": "email-system-internals",
+      "chapter": "Codebase Internals"
+    },
+    "308": {
+      "name": "Upload & Conversion Pipeline",
+      "slug": "upload-conversion-pipeline",
+      "chapter": "Codebase Internals"
+    },
+    "309": {
+      "name": "Frontend Architecture",
+      "slug": "frontend-architecture",
+      "chapter": "Codebase Internals"
+    },
+    "311": {
+      "name": "AutoDev Pipeline Overview",
+      "slug": "autodev-pipeline-overview",
+      "chapter": "AutoDev Pipeline: Overview & Architecture"
+    },
+    "312": {
+      "name": "System Topology & Hosts",
+      "slug": "system-topology-hosts",
+      "chapter": "AutoDev Pipeline: Overview & Architecture"
+    },
+    "313": {
+      "name": "The Three Daemons and the \"Hermes\" Name",
+      "slug": "the-three-daemons-and-the-hermes-name",
+      "chapter": "AutoDev Pipeline: Overview & Architecture"
+    },
+    "314": {
+      "name": "Pipeline Daemon and the Main Loop",
+      "slug": "pipeline-daemon-and-the-main-loop",
+      "chapter": "AutoDev Pipeline: Runtime & Supervision"
+    },
+    "315": {
+      "name": "Single-Instance Locking and State",
+      "slug": "single-instance-locking-and-state",
+      "chapter": "AutoDev Pipeline: Runtime & Supervision"
+    },
+    "316": {
+      "name": "Health, Status, Watchdog and Logs",
+      "slug": "health-status-watchdog-and-logs",
+      "chapter": "AutoDev Pipeline: Runtime & Supervision"
+    },
+    "317": {
+      "name": "The Responder Daemon and Cycle",
+      "slug": "the-responder-daemon-and-cycle",
+      "chapter": "AutoDev Pipeline: Triage Front Door (documenso-responder)"
+    },
+    "318": {
+      "name": "Ticket Triage and Classification",
+      "slug": "ticket-triage-and-classification",
+      "chapter": "AutoDev Pipeline: Triage Front Door (documenso-responder)"
+    },
+    "319": {
+      "name": "The Detect Kill-Switch and Front-Door Handoff",
+      "slug": "the-detect-kill-switch-and-front-door-handoff",
+      "chapter": "AutoDev Pipeline: Triage Front Door (documenso-responder)"
+    },
+    "320": {
+      "name": "Dispatch Cycle and the Priority Ladder",
+      "slug": "dispatch-cycle-and-the-priority-ladder",
+      "chapter": "AutoDev Pipeline: Stages"
+    },
+    "321": {
+      "name": "Builder Polecat: Implementing Features",
+      "slug": "builder-polecat-implementing-features",
+      "chapter": "AutoDev Pipeline: Stages"
+    },
+    "322": {
+      "name": "Validator Polecat: Evidence-Based Validation",
+      "slug": "validator-polecat-evidence-based-validation",
+      "chapter": "AutoDev Pipeline: Stages"
+    },
+    "323": {
+      "name": "Merge Gate and Re-Validation",
+      "slug": "merge-gate-and-re-validation",
+      "chapter": "AutoDev Pipeline: Stages"
+    },
+    "324": {
+      "name": "Build Image and Deploy to Dev",
+      "slug": "build-image-and-deploy-to-dev",
+      "chapter": "AutoDev Pipeline: Stages"
+    },
+    "325": {
+      "name": "The GitHub Label State Machine",
+      "slug": "the-github-label-state-machine",
+      "chapter": "AutoDev Pipeline: Stages"
+    },
+    "326": {
+      "name": "Configuration and Secrets",
+      "slug": "configuration-and-secrets",
+      "chapter": "AutoDev Pipeline: Config, Security & Reference"
+    },
+    "327": {
+      "name": "Google Chat Notifications",
+      "slug": "google-chat-notifications",
+      "chapter": "AutoDev Pipeline: Config, Security & Reference"
+    },
+    "328": {
+      "name": "The Worker Model: Polecats, Skills and Billing",
+      "slug": "the-worker-model-polecats-skills-and-billing",
+      "chapter": "AutoDev Pipeline: Config, Security & Reference"
+    },
+    "329": {
+      "name": "Testing the Pipeline",
+      "slug": "testing-the-pipeline",
+      "chapter": "AutoDev Pipeline: Config, Security & Reference"
+    },
+    "330": {
+      "name": "Operations and Recovery Runbook",
+      "slug": "operations-and-recovery-runbook",
+      "chapter": "AutoDev Pipeline: Config, Security & Reference"
+    },
+    "336": {
+      "name": "Documenso — Emergency Operations Runbook (dev + AWS prod)",
+      "slug": "documenso-emergency-operations-runbook-dev-aws-prod",
+      "chapter": null
+    }
+  }
+}
