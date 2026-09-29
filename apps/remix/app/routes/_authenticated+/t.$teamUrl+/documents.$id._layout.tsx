@@ -3,6 +3,7 @@ import { useAnalytics } from '@documenso/lib/client-only/hooks/use-analytics';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { getEnvelopeById } from '@documenso/lib/server-only/envelope/get-envelope-by-id';
 import { getTeamByUrl } from '@documenso/lib/server-only/team/get-team';
+import { getRequestPathname } from '@documenso/lib/utils/get-request-pathname';
 import { Button } from '@documenso/ui/primitives/button';
 import { msg } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
@@ -57,9 +58,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
       throw err;
     });
 
-    const url = new URL(request.url);
-
-    throw redirect(url.pathname.replace(`/documents/${id}`, `/documents/${envelope.id}`));
+    throw redirect(getRequestPathname(request).replace(`/documents/${id}`, `/documents/${envelope.id}`));
   }
 }
 
