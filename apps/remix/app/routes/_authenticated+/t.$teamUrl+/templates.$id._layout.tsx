@@ -4,6 +4,7 @@ import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
 import { getEnvelopeById } from '@documenso/lib/server-only/envelope/get-envelope-by-id';
 import { getTeamByUrl } from '@documenso/lib/server-only/team/get-team';
 import { getOrganisationTemplateById } from '@documenso/lib/server-only/template/get-organisation-template-by-id';
+import { getRequestPathname } from '@documenso/lib/utils/get-request-pathname';
 import { Button } from '@documenso/ui/primitives/button';
 import { msg } from '@lingui/core/macro';
 import { Trans } from '@lingui/react/macro';
@@ -56,9 +57,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     });
 
     if (envelope) {
-      const url = new URL(request.url);
-
-      throw redirect(url.pathname.replace(`/templates/${id}`, `/templates/${envelope.id}`));
+      throw redirect(getRequestPathname(request).replace(`/templates/${id}`, `/templates/${envelope.id}`));
     }
 
     const orgEnvelope = await getOrganisationTemplateById({
@@ -75,9 +74,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
       throw err;
     });
 
-    const url = new URL(request.url);
-
-    throw redirect(url.pathname.replace(`/templates/${id}`, `/templates/${orgEnvelope.id}`));
+    throw redirect(getRequestPathname(request).replace(`/templates/${id}`, `/templates/${orgEnvelope.id}`));
   }
 }
 
