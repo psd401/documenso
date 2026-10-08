@@ -19,8 +19,10 @@ integration branch, not that feature branch.
 
 Stripe is **not deleted from the codebase** — it's gated. Full Stripe
 client code still lives under
+<!-- openwiki: broken internal link [../../packages/ee/server-only/stripe] file "../../packages/ee/server-only/stripe" does not exist. Fix the href or restore the target, then delete this comment. -->
 [`packages/ee/server-only/stripe/`](../../packages/ee/server-only/stripe)
 (customer creation, subscription lookups, webhook handlers) and is wired
+<!-- openwiki: broken internal link [../../packages/trpc/server/enterprise-router] file "../../packages/trpc/server/enterprise-router" does not exist. Fix the href or restore the target, then delete this comment. -->
 into [`packages/trpc/server/enterprise-router/`](../../packages/trpc/server/enterprise-router)
 and `admin-router/create-stripe-customer.ts`. `createOrganisation()`
 (`packages/lib/server-only/organisation/create-organisation.ts`) still
@@ -88,6 +90,7 @@ hardcoded claim, not a DB default.
 
 ## What "Enterprise Edition unlocked" means in practice
 
+<!-- openwiki: broken internal link [../../packages/ee] file "../../packages/ee" does not exist. Fix the href or restore the target, then delete this comment. -->
 The [`packages/ee`](../../packages/ee) package (`FEATURES`,
 `server-only/`) gates enterprise-tier functionality (advanced
 organisation/group management, some field types, etc.) behind claim

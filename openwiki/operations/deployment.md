@@ -53,6 +53,7 @@ values, safe to read from the compose file itself):
 The district's actual on-prem dev environment
 (`documenso-dev.psd401.net`, Proxmox VM, Docker Compose with Caddy +
 Postgres + the published `ghcr.io/psd401/documenso:latest` image) is
+<!-- openwiki: broken internal link [../../CLAUDE.md#dev-on-prem] heading anchor "dev-on-prem" does not exist in "../../CLAUDE.md". Fix the href or restore the target, then delete this comment. -->
 documented in the root [`CLAUDE.md`](../../CLAUDE.md#dev-on-prem)
 Environments section — access details, SSH, and DB commands live there
 rather than duplicated here, since they involve internal hostnames/IPs.
@@ -106,6 +107,7 @@ Production runs on an EC2 host in the INFRA-CORE VPC, digest-pinned (not
 `docker-compose.yml` on the host and runs
 `docker compose pull && docker compose up -d documenso`). Full
 host/SSH/deploy details are in root
+<!-- openwiki: broken internal link [../../CLAUDE.md#prod-aws] heading anchor "prod-aws" does not exist in "../../CLAUDE.md". Fix the href or restore the target, then delete this comment. -->
 [`CLAUDE.md`](../../CLAUDE.md#prod-aws), since they include internal
 hostnames and access paths not appropriate to duplicate here.
 

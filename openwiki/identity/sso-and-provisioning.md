@@ -81,6 +81,7 @@ org membership but no team/document access.
 ### Admin UI
 
 `admin.directoryMappings` tRPC namespace:
+<!-- openwiki: broken internal link [../../packages/trpc/server/admin-router] file "../../packages/trpc/server/admin-router" does not exist. Fix the href or restore the target, then delete this comment. -->
 [`packages/trpc/server/admin-router/{create,update,delete,find}-directory-mapping*.ts`](../../packages/trpc/server/admin-router)
 and `list-directory-mapping-groups.ts` (group picker). UI route:
 [`apps/remix/app/routes/_authenticated+/admin+/directory-mappings.tsx`](../../apps/remix/app/routes/_authenticated+/admin+/directory-mappings.tsx).
@@ -88,6 +89,7 @@ and `list-directory-mapping-groups.ts` (group picker). UI route:
 ### Schema
 
 Migration
+<!-- openwiki: broken internal link [../../packages/prisma/migrations/20260812000000_add_directory_group_mapping] file "../../packages/prisma/migrations/20260812000000_add_directory_group_mapping" does not exist. Fix the href or restore the target, then delete this comment. -->
 [`packages/prisma/migrations/20260812000000_add_directory_group_mapping/migration.sql`](../../packages/prisma/migrations/20260812000000_add_directory_group_mapping)
 added: enum `DirectoryMappingSourceField` (`GROUP`, `DEPARTMENT`,
 `ORG_UNIT`); table `DirectoryGroupMapping` (`sourceField`, `sourceValue`,
@@ -103,6 +105,8 @@ Design docs: [`docs/superpowers/plans/2026-05-19-google-directory-sync.md`](../.
 ## Source references
 
 - [`packages/lib/server-only/user/create-user.ts`](../../packages/lib/server-only/user/create-user.ts)
+<!-- openwiki: broken internal link [../../packages/lib/server-only/directory-sync] file "../../packages/lib/server-only/directory-sync" does not exist. Fix the href or restore the target, then delete this comment. -->
 - [`packages/lib/server-only/directory-sync/`](../../packages/lib/server-only/directory-sync) (apply, matching, CRUD)
 - [`packages/lib/jobs/definitions/internal/directory-sync-sweep.ts`](../../packages/lib/jobs/definitions/internal/directory-sync-sweep.ts)
+<!-- openwiki: broken internal link [../../packages/trpc/server/admin-router] file "../../packages/trpc/server/admin-router" does not exist. Fix the href or restore the target, then delete this comment. -->
 - [`packages/trpc/server/admin-router/`](../../packages/trpc/server/admin-router) (`*directory-mapping*.ts`)

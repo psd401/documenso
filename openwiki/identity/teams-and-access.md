@@ -82,6 +82,7 @@ team-role visibility above. [`packages/lib/utils/folder-access.ts`](../../packag
 This filter is wired into `find-folders`, `find-folders-internal`,
 `get-folder-by-id`, `get-folder-breadcrumbs`, `update-folder`, and
 `delete-folder` under
+<!-- openwiki: broken internal link [../../packages/lib/server-only/folder] file "../../packages/lib/server-only/folder" does not exist. Fix the href or restore the target, then delete this comment. -->
 [`packages/lib/server-only/folder/`](../../packages/lib/server-only/folder) —
 i.e. it governs **folder** listing and lookup.
 
