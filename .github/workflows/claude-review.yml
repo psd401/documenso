@@ -15,4 +15,5 @@ jobs:
     # @main is deliberate: org-owned reusable; central bumps must propagate
     # (psd-dev-standards standards/06). zizmor: ignore[unpinned-uses]
     uses: PSD401/.github/.github/workflows/reusable-claude-review.yml@main # zizmor: ignore[unpinned-uses]
-    secrets: inherit
+    secrets:
+      BEDROCK_API_KEY: ${{ secrets.BEDROCK_API_KEY }}
