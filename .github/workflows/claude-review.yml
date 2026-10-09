@@ -1,0 +1,18 @@
+name: Claude Review
+on:
+  pull_request:
+    types: [opened, ready_for_review, reopened]
+jobs:
+  claude-review:
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+      id-token: write # caller must grant; org default token is read-only and reusables cannot elevate
+    # Dependabot-triggered callers cannot grant id-token: write to the
+    # reusable — startup_failure. The reusable also self-guards; both needed.
+    if: github.actor != 'dependabot[bot]'
+    # @main is deliberate: org-owned reusable; central bumps must propagate
+    # (psd-dev-standards standards/06). zizmor: ignore[unpinned-uses]
+    uses: PSD401/.github/.github/workflows/reusable-claude-review.yml@main # zizmor: ignore[unpinned-uses]
+    secrets: inherit
