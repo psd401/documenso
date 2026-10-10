@@ -86,7 +86,10 @@ dev-environment credentials.
   [fork/changes.md](fork/changes.md).
 - **Operations**: on-prem dev then AWS production, GHCR image builds,
   digest-pinned prod deploys, nightly S3 backups. See
-  [operations/deployment.md](operations/deployment.md).
+  [operations/deployment.md](operations/deployment.md). The GitHub Actions
+  workflows (CI, E2E, image publishing, release-branch sync, security scan,
+  Claude review, and this wiki's scheduled refresh) are in
+  [operations/ci-and-automation.md](operations/ci-and-automation.md).
 - **Integrations**: public API v2 (team-scoped tokens), n8n automation.
   See [integrations/api-and-n8n.md](integrations/api-and-n8n.md).
 

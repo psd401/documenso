@@ -53,10 +53,11 @@ values, safe to read from the compose file itself):
 The district's actual on-prem dev environment
 (`documenso-dev.psd401.net`, Proxmox VM, Docker Compose with Caddy +
 Postgres + the published `ghcr.io/psd401/documenso:latest` image) is
-<!-- openwiki: broken internal link [../../CLAUDE.md#dev-on-prem] heading anchor "dev-on-prem" does not exist in "../../CLAUDE.md". Fix the href or restore the target, then delete this comment. -->
-documented in the root [`CLAUDE.md`](../../CLAUDE.md#dev-on-prem)
-Environments section — access details, SSH, and DB commands live there
-rather than duplicated here, since they involve internal hostnames/IPs.
+documented in the root `CLAUDE.md` Environments section — access details,
+SSH, and DB commands live there rather than duplicated here, since they
+involve internal hostnames/IPs. `CLAUDE.md` is gitignored (see `.gitignore`)
+and is not in the committed tree, so this wiki cannot link to its sections;
+a clean checkout will not have it.
 
 ### Playwright E2E credentials (dev only)
 
@@ -84,7 +85,9 @@ against shipping a build that can't convert DOCX (no soffice / no
 Liberation fonts) or decrypt encrypted PDFs (no qpdf), referencing past
 regressions (issues #95/#96, #28). The same three-command smoke test also
 runs in normal CI, in the `build_docker` job of
-[`.github/workflows/ci.yml`](../../.github/workflows/ci.yml).
+[`.github/workflows/ci.yml`](../../.github/workflows/ci.yml). The full
+workflow inventory, including the org-owned security scan and Claude review
+callers, is in [operations/ci-and-automation.md](ci-and-automation.md).
 
 ## Docker image build stages
 
