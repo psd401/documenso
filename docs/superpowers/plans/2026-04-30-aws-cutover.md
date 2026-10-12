@@ -51,7 +51,7 @@ license.documenso.com → 127.0.0.1 (via extra_hosts)
    - `20260408052212_add_set_null_for_audit_log_foreign_key` — changes audit log FK to SET NULL on delete (backward-compatible)
 5. **Org ID alignment** — `create-user.ts` hardcodes `PSD401_ORG_ID = 'org_psd401'` but the AWS prod database uses `org_psd401district`. Update the code constant to `'org_psd401district'` and `PSD401_MEMBER_GROUP_ID` to `'org_group_psd401_member'` (verify this group ID matches prod). Rebuild the image after this change.
 6. **SMTP config** — currently uses `smtp-relay.gmail.com`. On-prem uses PMG relay. Decide whether to keep Gmail relay for prod or switch to PMG. (Gmail is simpler since it doesn't depend on VPN.)
-7. **Signing passphrase** — `NEXT_PRIVATE_SIGNING_PASSPHRASE` is the upstream default `documenso-demo`. Generate a strong replacement, re-export cert.p12, and update docker-compose.yml.
+7. **Signing passphrase** — `NEXT_PRIVATE_SIGNING_PASSPHRASE` is the upstream default `documenso-demo`. Generate a strong replacement, re-export cert.p12, and update docker-compose.yml. (Done 2026-10-12, together with the encryption keys, which were also still the committed dev values.)
 
 ---
 
