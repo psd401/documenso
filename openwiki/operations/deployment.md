@@ -38,11 +38,13 @@ values, safe to read from the compose file itself):
   Postgres, matching prod's storage choice.
 - `NEXT_PRIVATE_SIGNING_LOCAL_FILE_PATH: /opt/documenso/cert.p12`,
   bind-mounted from `./cert.p12` — local P12 signing, not Google KMS.
-  `NEXT_PRIVATE_SIGNING_PASSPHRASE: 'documenso-demo'` (a placeholder,
-  rotated for real environments).
+  `NEXT_PRIVATE_SIGNING_PASSPHRASE: 'documenso-demo'` (upstream's public
+  placeholder).
   `NEXT_PRIVATE_ENCRYPTION_KEY`/`NEXT_PRIVATE_ENCRYPTION_SECONDARY_KEY`
-  are inline dev-only test values in this file — not the values used
-  anywhere real.
+  are inline test values in this public file. A real environment must
+  never reuse any of these three values: the encryption key signs
+  `/api/jobs` requests and encrypts 2FA secrets. Prod and on-prem dev ran
+  with all three until they were rotated on 2026-10-12.
 - `NEXT_PUBLIC_FEATURE_BILLING_ENABLED: 'true'` — deliberately left on
   in this compose file so the enterprise feature gates can be exercised
   during testing (contrast with prod, which runs it `false`; see
