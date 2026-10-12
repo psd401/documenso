@@ -42,8 +42,9 @@ values, safe to read from the compose file itself):
   placeholder).
   `NEXT_PRIVATE_ENCRYPTION_KEY`/`NEXT_PRIVATE_ENCRYPTION_SECONDARY_KEY`
   are inline test values in this public file. A real environment must
-  never reuse any of these three values: the encryption key signs
-  `/api/jobs` requests and encrypts 2FA secrets. Prod and on-prem dev ran
+  never reuse any of these three values: the secondary key signs and
+  verifies `/api/jobs` requests (`packages/lib/server-only/crypto/sign.ts`),
+  and the primary key encrypts 2FA secrets. Prod and on-prem dev ran
   with all three until they were rotated on 2026-10-12.
 - `NEXT_PUBLIC_FEATURE_BILLING_ENABLED: 'true'` — deliberately left on
   in this compose file so the enterprise feature gates can be exercised
@@ -55,10 +56,10 @@ values, safe to read from the compose file itself):
 The district's actual on-prem dev environment
 (`documenso-dev.psd401.net`, Proxmox VM, Docker Compose with Caddy +
 Postgres + the published `ghcr.io/psd401/documenso:latest` image) is
-<!-- openwiki: broken internal link [../../CLAUDE.md#dev-on-prem] heading anchor "dev-on-prem" does not exist in "../../CLAUDE.md". Fix the href or restore the target, then delete this comment. -->
-documented in the root [`CLAUDE.md`](../../CLAUDE.md#dev-on-prem)
-Environments section — access details, SSH, and DB commands live there
-rather than duplicated here, since they involve internal hostnames/IPs.
+documented in the root `CLAUDE.md` Environments section — access details,
+SSH, and DB commands live there rather than duplicated here, since they
+involve internal hostnames/IPs. `CLAUDE.md` is gitignored (`.gitignore`) and
+is not part of the tracked tree, so this page cannot verify its contents.
 
 ### Playwright E2E credentials (dev only)
 
@@ -86,7 +87,9 @@ against shipping a build that can't convert DOCX (no soffice / no
 Liberation fonts) or decrypt encrypted PDFs (no qpdf), referencing past
 regressions (issues #95/#96, #28). The same three-command smoke test also
 runs in normal CI, in the `build_docker` job of
-[`.github/workflows/ci.yml`](../../.github/workflows/ci.yml).
+[`.github/workflows/ci.yml`](../../.github/workflows/ci.yml). The other CI,
+security-scan, and release workflows are described in
+[ci-and-security.md](ci-and-security.md).
 
 ## Docker image build stages
 
@@ -108,10 +111,9 @@ Production runs on an EC2 host in the INFRA-CORE VPC, digest-pinned (not
 `:latest` — the operator edits the pinned `sha256` digest in
 `docker-compose.yml` on the host and runs
 `docker compose pull && docker compose up -d documenso`). Full
-host/SSH/deploy details are in root
-<!-- openwiki: broken internal link [../../CLAUDE.md#prod-aws] heading anchor "prod-aws" does not exist in "../../CLAUDE.md". Fix the href or restore the target, then delete this comment. -->
-[`CLAUDE.md`](../../CLAUDE.md#prod-aws), since they include internal
-hostnames and access paths not appropriate to duplicate here.
+host/SSH/deploy details are in the local, untracked `CLAUDE.md` Prod
+Environment section, since they include internal hostnames and access paths
+not appropriate to duplicate here.
 
 The cutover from upstream's published image to this fork's custom-built
 image is documented in
@@ -130,6 +132,10 @@ config) to `s3://psd401-documenso-backups/` via a cron job on the prod
 EC2 host — this is the recovery source for accidental data loss (e.g. a
 hard-deleted pending envelope; see the bulk-delete gotcha in
 [`docs/feature-backlog.md`](../../docs/feature-backlog.md)). No backup
+script lives in this repository to link to directly; treat root
+`CLAUDE.md`'s Prod Environment section as the source of truth for the
+exact schedule and script path.
+og.md)). No backup
 script lives in this repository to link to directly; treat root
 `CLAUDE.md`'s Prod Environment section as the source of truth for the
 exact schedule and script path.
