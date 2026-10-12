@@ -1,0 +1,66 @@
+# gitleaks findings reviewed and accepted (gitleaks reads this file by default).
+# Format: <commit>:<file>:<rule>:<line>. A new finding anywhere still fails security-scan.
+#
+# Upstream documenso/documenso history (50): example tokens, keys and auth headers
+# in upstream's public docs, blog, dev config and a patch file. Every commit below is
+# in upstream's history (checked 2026-10-11 with git branch -r --contains), so this is
+# public upstream content, not PSD's.
+b92c53dbb23b89d3cfd89a6b38d2282cf273dfba:apps/docs/content/docs/developers/api/recipients.mdx:generic-api-key:204
+b92c53dbb23b89d3cfd89a6b38d2282cf273dfba:apps/docs/content/docs/developers/api/recipients.mdx:generic-api-key:217
+b92c53dbb23b89d3cfd89a6b38d2282cf273dfba:apps/docs/content/docs/developers/getting-started/first-api-call.mdx:curl-auth-header:44
+b92c53dbb23b89d3cfd89a6b38d2282cf273dfba:apps/docs/content/docs/developers/getting-started/first-api-call.mdx:curl-auth-header:94
+b92c53dbb23b89d3cfd89a6b38d2282cf273dfba:apps/docs/content/docs/developers/getting-started/first-api-call.mdx:curl-auth-header:226
+70fb834a6a5a58df3a6203fc892b30014f8647cc:apps/docs/content/docs/developers/webhooks/events.mdx:generic-api-key:152
+70fb834a6a5a58df3a6203fc892b30014f8647cc:apps/docs/content/docs/developers/webhooks/events.mdx:generic-api-key:244
+70fb834a6a5a58df3a6203fc892b30014f8647cc:apps/docs/content/docs/developers/webhooks/events.mdx:generic-api-key:436
+70fb834a6a5a58df3a6203fc892b30014f8647cc:apps/docs/content/docs/developers/webhooks/events.mdx:generic-api-key:458
+70fb834a6a5a58df3a6203fc892b30014f8647cc:apps/docs/content/docs/developers/webhooks/events.mdx:generic-api-key:613
+b92c53dbb23b89d3cfd89a6b38d2282cf273dfba:apps/docs/content/docs/developers/webhooks/events.mdx:generic-api-key:146
+b92c53dbb23b89d3cfd89a6b38d2282cf273dfba:apps/docs/content/docs/developers/webhooks/events.mdx:generic-api-key:214
+b92c53dbb23b89d3cfd89a6b38d2282cf273dfba:apps/docs/content/docs/developers/webhooks/events.mdx:generic-api-key:282
+b92c53dbb23b89d3cfd89a6b38d2282cf273dfba:apps/docs/content/docs/developers/webhooks/events.mdx:generic-api-key:303
+b92c53dbb23b89d3cfd89a6b38d2282cf273dfba:apps/docs/content/docs/developers/webhooks/events.mdx:generic-api-key:374
+b92c53dbb23b89d3cfd89a6b38d2282cf273dfba:apps/docs/content/docs/developers/webhooks/events.mdx:generic-api-key:443
+b92c53dbb23b89d3cfd89a6b38d2282cf273dfba:apps/docs/content/docs/developers/webhooks/events.mdx:generic-api-key:517
+b92c53dbb23b89d3cfd89a6b38d2282cf273dfba:apps/docs/content/docs/developers/webhooks/events.mdx:generic-api-key:585
+b92c53dbb23b89d3cfd89a6b38d2282cf273dfba:apps/docs/content/docs/self-hosting/configuration/signing-certificate/google-cloud-hsm.mdx:generic-api-key:60
+9da2db2e676a161dd9fb49c164a6fd29a24e0274:apps/docs/content/docs/self-hosting/configuration/storage.mdx:generic-api-key:376
+9da2db2e676a161dd9fb49c164a6fd29a24e0274:apps/docs/content/docs/self-hosting/configuration/storage.mdx:generic-api-key:384
+b92c53dbb23b89d3cfd89a6b38d2282cf273dfba:apps/docs/content/docs/self-hosting/deployment/kubernetes.mdx:generic-api-key:713
+b92c53dbb23b89d3cfd89a6b38d2282cf273dfba:apps/docs/content/docs/self-hosting/deployment/kubernetes.mdx:generic-api-key:714
+4304fc1d354022ab46a0ed36d656ba003111b460:apps/documentation/pages/developers/public-api/reference.mdx:generic-api-key:62
+75d73367632babbd1ab4a00c1b3497882611687d:apps/documentation/pages/developers/webhooks.mdx:generic-api-key:583
+75d73367632babbd1ab4a00c1b3497882611687d:apps/documentation/pages/developers/webhooks.mdx:generic-api-key:603
+7e4faef95fd315832e5631a5222012de44d205e3:apps/documentation/pages/developers/webhooks.mdx:generic-api-key:583
+7e4faef95fd315832e5631a5222012de44d205e3:apps/documentation/pages/developers/webhooks.mdx:generic-api-key:603
+8367878395a40a560e87783cb4e0274736a66fc1:apps/documentation/pages/developers/webhooks.mdx:generic-api-key:149
+8367878395a40a560e87783cb4e0274736a66fc1:apps/documentation/pages/developers/webhooks.mdx:generic-api-key:167
+8367878395a40a560e87783cb4e0274736a66fc1:apps/documentation/pages/developers/webhooks.mdx:generic-api-key:211
+8367878395a40a560e87783cb4e0274736a66fc1:apps/documentation/pages/developers/webhooks.mdx:generic-api-key:261
+8367878395a40a560e87783cb4e0274736a66fc1:apps/documentation/pages/developers/webhooks.mdx:generic-api-key:311
+8367878395a40a560e87783cb4e0274736a66fc1:apps/documentation/pages/developers/webhooks.mdx:generic-api-key:329
+8ec69388a594a8cca10a02c29c37a75d02c541c6:apps/documentation/pages/developers/webhooks.mdx:generic-api-key:154
+8ec69388a594a8cca10a02c29c37a75d02c541c6:apps/documentation/pages/developers/webhooks.mdx:generic-api-key:509
+b0f8c83134404f0230c144a7555ec43da617ef3a:apps/documentation/pages/developers/webhooks.mdx:generic-api-key:583
+b0f8c83134404f0230c144a7555ec43da617ef3a:apps/documentation/pages/developers/webhooks.mdx:generic-api-key:603
+442e88cff8f6d8ae41010ecb1fdacd168e62bbfb:apps/documentation/pages/webhooks/intro.mdx:generic-api-key:104
+442e88cff8f6d8ae41010ecb1fdacd168e62bbfb:apps/documentation/pages/webhooks/intro.mdx:generic-api-key:122
+442e88cff8f6d8ae41010ecb1fdacd168e62bbfb:apps/documentation/pages/webhooks/intro.mdx:generic-api-key:166
+442e88cff8f6d8ae41010ecb1fdacd168e62bbfb:apps/documentation/pages/webhooks/intro.mdx:generic-api-key:216
+442e88cff8f6d8ae41010ecb1fdacd168e62bbfb:apps/documentation/pages/webhooks/intro.mdx:generic-api-key:266
+442e88cff8f6d8ae41010ecb1fdacd168e62bbfb:apps/documentation/pages/webhooks/intro.mdx:generic-api-key:284
+21056fb39c340b2ef478a633447133bb66b9973a:apps/marketing/content/blog/launch-week-2-day-1.mdx:aws-access-token:17
+ffebefbcd0a6515b4c62a9d051a589ff3650490b:apps/web/build/cache/next-server.js.nft.json:generic-api-key:1
+fe2219dcd2a50c47d47a2b26d8e6de108ba5db87:apps/web/pages/api/auth/[...nextauth].ts:generic-api-key:8
+0ba316111bd1352848ae61c182b2e6ab85497d69:apps/web/pages/documents/[id]/sign.tsx:generic-api-key:11
+7a94ee3b8384fb0547db4b80ae84661b1228bac9:patches/@ai-sdk+google-vertex+3.0.81.patch:private-key:91
+7a94ee3b8384fb0547db4b80ae84661b1228bac9:patches/@ai-sdk+google-vertex+3.0.81.patch:private-key:121
+#
+# PSD fork (4): NEXT_PRIVATE_ENCRYPTION_KEY / _SECONDARY_KEY in
+# deploy/docker-compose.dev.yml, local-dev values next to NEXTAUTH_SECRET
+# 'dev-secret-do-not-use-in-production'. Production reads both keys from the environment
+# (docker/production/compose.yml). They must never be used in production.
+435757eae2db944cc80fe91eac03a4be93bc6aa8:deploy/docker-compose.dev.yml:generic-api-key:38
+435757eae2db944cc80fe91eac03a4be93bc6aa8:deploy/docker-compose.dev.yml:generic-api-key:39
+a7601053a020bedfc35469598c6eb8214fb97cec:deploy/docker-compose.dev.yml:generic-api-key:38
+a7601053a020bedfc35469598c6eb8214fb97cec:deploy/docker-compose.dev.yml:generic-api-key:39
