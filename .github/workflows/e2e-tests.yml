@@ -11,9 +11,13 @@ concurrency:
 
 jobs:
   e2e_tests:
-    name: 'E2E Tests'
+    name: 'E2E Tests (${{ matrix.shard }}/8)'
     timeout-minutes: 60
-    runs-on: warp-ubuntu-2204-x64-8x
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -42,11 +46,13 @@ jobs:
           # Needed since we use next start which will set the NODE_ENV to production
           NEXT_PRIVATE_SIGNING_LOCAL_FILE_PATH: './example/cert.p12'
           DANGEROUS_BYPASS_RATE_LIMITS: 'true'
+          # Discovery run: report every failure instead of stopping at the first.
+          E2E_TEST_PATH: '--shard=${{ matrix.shard }}/8 --max-failures=0 --retries=1'
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
-          name: test-results
+          name: test-results-${{ matrix.shard }}
           path: 'packages/app-tests/**/test-results/*'
           retention-days: 7
     env:
