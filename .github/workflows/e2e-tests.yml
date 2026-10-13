@@ -48,6 +48,8 @@ jobs:
           DANGEROUS_BYPASS_RATE_LIMITS: 'true'
           # Prod stores uploads in Postgres; MinIO is not started (see docker/development/compose.yml).
           NEXT_PUBLIC_UPLOAD_TRANSPORT: database
+          # Prod disables password signup (/signup redirects to /signin); auth-flow.spec.ts asserts it.
+          NEXT_PUBLIC_DISABLE_SIGNUP: 'true'
           # Discovery run: report every failure instead of stopping at the first.
           E2E_TEST_PATH: '--shard=${{ matrix.shard }}/8 --max-failures=0 --retries=1'
 
