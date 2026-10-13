@@ -50,8 +50,7 @@ jobs:
           NEXT_PUBLIC_UPLOAD_TRANSPORT: database
           # Prod disables password signup (/signup redirects to /signin); auth-flow.spec.ts asserts it.
           NEXT_PUBLIC_DISABLE_SIGNUP: 'true'
-          # Discovery run: report every failure instead of stopping at the first.
-          E2E_TEST_PATH: '--shard=${{ matrix.shard }}/8 --max-failures=0 --retries=1'
+          E2E_TEST_PATH: '--shard=${{ matrix.shard }}/8'
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
