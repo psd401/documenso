@@ -42,7 +42,8 @@ test('[USER] teamless non-admin receives an actionable dashboard empty state', a
     email: user.email,
   });
 
-  await expect(page.getByText('No organisations found')).toBeVisible();
-  await expect(page.getByText('Contact your administrator to request organisation access.')).toBeVisible();
+  // The en catalog renders the upstream msgid "No organisations found" in US spelling.
+  await expect(page.getByText('No organizations found')).toBeVisible();
+  await expect(page.getByText('Contact your administrator to request organization access.')).toBeVisible();
   await expect(page.getByRole('link', { name: 'Create organisation' })).toHaveCount(0);
 });
