@@ -19,11 +19,9 @@ integration branch, not that feature branch.
 
 Stripe is **not deleted from the codebase** — it's gated. Full Stripe
 client code still lives under
-<!-- openwiki: broken internal link [../../packages/ee/server-only/stripe] file "../../packages/ee/server-only/stripe" does not exist. Fix the href or restore the target, then delete this comment. -->
-[`packages/ee/server-only/stripe/`](../../packages/ee/server-only/stripe)
+[`packages/ee/server-only/stripe/`](../../packages/ee/server-only/stripe/create-customer.ts)
 (customer creation, subscription lookups, webhook handlers) and is wired
-<!-- openwiki: broken internal link [../../packages/trpc/server/enterprise-router] file "../../packages/trpc/server/enterprise-router" does not exist. Fix the href or restore the target, then delete this comment. -->
-into [`packages/trpc/server/enterprise-router/`](../../packages/trpc/server/enterprise-router)
+into [`packages/trpc/server/enterprise-router/`](../../packages/trpc/server/enterprise-router/router.ts)
 and `admin-router/create-stripe-customer.ts`. `createOrganisation()`
 (`packages/lib/server-only/organisation/create-organisation.ts`) still
 calls Stripe's `createCustomer` when `IS_BILLING_ENABLED()` is true —
@@ -70,7 +68,7 @@ do land at 0 for orgs created this way, but via a hardcoded object, not a
 schema default. **`envelopeItemCount` is `10` in that same object, not
 0** — any limit check reading `envelopeItemCount` on a non-Stripe org
 sees 10, not zero. Any code path relying on the "all three fields are
-zero" framing from CLAUDE.md's gotcha list should be corrected: only
+zero" framing (the gotcha list the wiki previously attributed to root `CLAUDE.md`, which is not in this checkout) should be corrected: only
 `teamCount`/`memberCount` are zero, and even then it's because of this
 hardcoded claim, not a DB default.
 
@@ -90,8 +88,7 @@ hardcoded claim, not a DB default.
 
 ## What "Enterprise Edition unlocked" means in practice
 
-<!-- openwiki: broken internal link [../../packages/ee] file "../../packages/ee" does not exist. Fix the href or restore the target, then delete this comment. -->
-The [`packages/ee`](../../packages/ee) package (`FEATURES`,
+The [`packages/ee`](../../packages/ee/package.json) package (`FEATURES`,
 `server-only/`) gates enterprise-tier functionality (advanced
 organisation/group management, some field types, etc.) behind claim
 flags. Because self-hosted orgs get the `ENTERPRISE` internal claim by

@@ -10,7 +10,12 @@ tags: [operations, deployment, docker, aws, ghcr]
 # Deployment
 
 PSD401 always deploys to on-prem dev first, verifies, then promotes to
-AWS production — never skip dev (`CLAUDE.md`).
+AWS production — never skip dev. This is operator policy; the root
+`CLAUDE.md` in this checkout is a pointer to `AGENTS.md`, so the policy is
+not stated in the repository itself.
+
+Workflow triggers and the release chain that feed these steps are described
+in [CI, security scanning, and release workflows](ci-and-security.md).
 
 ## Local development
 
@@ -55,17 +60,18 @@ values, safe to read from the compose file itself):
 The district's actual on-prem dev environment
 (`documenso-dev.psd401.net`, Proxmox VM, Docker Compose with Caddy +
 Postgres + the published `ghcr.io/psd401/documenso:latest` image) is
-<!-- openwiki: broken internal link [../../CLAUDE.md#dev-on-prem] heading anchor "dev-on-prem" does not exist in "../../CLAUDE.md". Fix the href or restore the target, then delete this comment. -->
-documented in the root [`CLAUDE.md`](../../CLAUDE.md#dev-on-prem)
-Environments section — access details, SSH, and DB commands live there
-rather than duplicated here, since they involve internal hostnames/IPs.
+described in the environment notes the wiki previously cited from root
+`CLAUDE.md`. Those notes are not in this checkout (evidence gap, see
+[quickstart](../quickstart.md#backlog)). Access details, SSH, and DB commands
+should not be copied into this repository in any case, since they involve
+internal hostnames and IPs.
 
 ### Playwright E2E credentials (dev only)
 
 `packages/app-tests/e2e/fixtures/authentication.ts`'s `apiSignin()` posts
 to `/api/auth/email-password/authorize`, bypassing Google OAuth — used by
-Playwright specs against the dev environment. Credentials are documented
-in root `CLAUDE.md`.
+Playwright specs against the dev environment. The credentials themselves are
+not in this repository.
 
 ## Building and publishing the image
 
@@ -108,10 +114,8 @@ Production runs on an EC2 host in the INFRA-CORE VPC, digest-pinned (not
 `:latest` — the operator edits the pinned `sha256` digest in
 `docker-compose.yml` on the host and runs
 `docker compose pull && docker compose up -d documenso`). Full
-host/SSH/deploy details are in root
-<!-- openwiki: broken internal link [../../CLAUDE.md#prod-aws] heading anchor "prod-aws" does not exist in "../../CLAUDE.md". Fix the href or restore the target, then delete this comment. -->
-[`CLAUDE.md`](../../CLAUDE.md#prod-aws), since they include internal
-hostnames and access paths not appropriate to duplicate here.
+host/SSH/deploy details are not in this repository; the root `CLAUDE.md`
+that was cited for them is a pointer in this checkout.
 
 The cutover from upstream's published image to this fork's custom-built
 image is documented in
@@ -125,11 +129,10 @@ and the Prisma migrations that had to be applied as part of the cutover.
 
 ## Backups
 
-Root `CLAUDE.md` documents a nightly `pg_dump` (plus n8n data and stack
-config) to `s3://psd401-documenso-backups/` via a cron job on the prod
-EC2 host — this is the recovery source for accidental data loss (e.g. a
-hard-deleted pending envelope; see the bulk-delete gotcha in
-[`docs/feature-backlog.md`](../../docs/feature-backlog.md)). No backup
-script lives in this repository to link to directly; treat root
-`CLAUDE.md`'s Prod Environment section as the source of truth for the
-exact schedule and script path.
+Backups are a nightly `pg_dump` taken on the prod EC2 host, per the
+operator notes the wiki previously cited from `CLAUDE.md`; the schedule and
+script path are not in this repository. The recovery need is real: the
+bulk-delete incident in [`docs/feature-backlog.md`](../../docs/feature-backlog.md)
+says a hard-deleted pending envelope was recovered by restoring rows from
+the nightly dump. No backup script lives in this repository to link to
+directly.
