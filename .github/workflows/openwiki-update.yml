@@ -17,9 +17,7 @@ jobs:
     permissions:
       contents: write # caller must grant; org default token is read-only
       pull-requests: write
-    # @main is deliberate: org-owned reusable; central bumps must propagate
-    # (drift-kill design, standards/06). zizmor: ignore[unpinned-uses]
-    uses: PSD401/.github/.github/workflows/reusable-openwiki.yml@main # zizmor: ignore[unpinned-uses]
+    uses: PSD401/.github/.github/workflows/reusable-openwiki.yml@1aa5f5351a78b15f5c71668037f5d35b9613ae41 # v1.0.0
     with:
       base_branch: main
       auto_merge: false
