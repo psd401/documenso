@@ -28,9 +28,10 @@ session-based (browser) requests — there is no code path where a
 bearer-token request's team can be overridden by that header. A single
 API key therefore only ever sees its one team's envelopes; cross-team or
 district-wide access needs system `Role.ADMIN` via the admin panel
-instead (`adminFindDocuments` has no team filter) — see root `CLAUDE.md`
-for the operational tradeoffs of that (PSD docs span 40+ teams, so no
-single key can serve them all).
+instead (`adminFindDocuments` has no team filter). The operational
+tradeoffs of that were recorded in root `CLAUDE.md` notes that are not in
+this checkout; the underlying constraint is that PSD docs span 40+ teams, so
+no single key can serve them all.
 
 ## The folderId contract every external caller must respect
 
@@ -51,7 +52,7 @@ integration that looks up an envelope by title or other criteria (an n8n
 webhook handler, for example) must pass the correct `folderId` once
 envelopes are being filed into folders, or the search silently returns
 zero rows with no error. This is the exact mechanism that broke transfer
-completion handling described in root `CLAUDE.md`: creator workflows
+completion handling recorded in the root `CLAUDE.md` notes (not in this checkout): creator workflows
 started filing into named folders (e.g. `tsd_folder_transfers_in/out`)
 before the completion-handler search was updated to pass that same
 `folderId`.
@@ -64,9 +65,12 @@ lives in the `packages/lib/server-only/envelope/` version cited above.
 ## n8n
 
 There is no n8n integration code in this repository — n8n runs as a
-separate service (`n8n.psd401.net`, documented in root `CLAUDE.md`) that
-calls into Documenso's public API v2 as an external client, and receives
-webhooks/form submissions independently of this codebase. The only thing
+separate service (`n8n.psd401.net`; its environment notes are not in this
+checkout) that calls into Documenso's public API v2 as an external client,
+and receives webhooks/form submissions independently of this codebase.
+Events flowing the other way, from Documenso to external receivers such as
+n8n, go through the outbound webhook system described in
+[Outbound webhooks](webhooks.md). The only thing
 this repo needs to get right for n8n workflows to work is the API
 contract above (team-scoped tokens, explicit `folderId` on every
 folder-scoped query) — there's nothing else n8n-specific to document

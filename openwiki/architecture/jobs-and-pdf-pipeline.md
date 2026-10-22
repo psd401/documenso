@@ -20,6 +20,12 @@ with pluggable providers in `packages/lib/jobs/client/`: `local.ts`
 (id, trigger, optional cron, payload schema) paired with a
 `<name>.handler.ts` that's lazy-imported at execution time.
 
+Outbound webhook delivery is one of these internal jobs
+(`internal.execute-webhook`, defined in
+[`execute-webhook.ts`](../../packages/lib/jobs/definitions/internal/execute-webhook.ts)).
+Domain code enqueues it through `triggerWebhook()`; the job makes the HTTP
+call and records the result. See [Outbound webhooks](../integrations/webhooks.md).
+
 ### Local provider mechanics
 
 [`packages/lib/jobs/client/local.ts`](../../packages/lib/jobs/client/local.ts):
