@@ -35,6 +35,9 @@ services:
       - redis:/data
 
   minio:
+    # minio/minio was deleted from Docker Hub in September 2026 and quay.io no longer
+    # serves anonymous pulls. Opt-in only (--profile s3); PSD401 uses database uploads.
+    profiles: ['s3']
     image: minio/minio
     container_name: minio
     ports:

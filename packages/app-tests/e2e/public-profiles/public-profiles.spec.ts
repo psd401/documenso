@@ -80,7 +80,8 @@ test('[PUBLIC_PROFILE]: create team profile', async ({ page }) => {
     throw new Error('Expected seeded direct template signature field to exist');
   }
 
-  await page.getByRole('link', { name: 'Sign' }).click();
+  // exact: the fork's "PSD Document Signing" logo link also matches a substring 'Sign'.
+  await page.getByRole('link', { name: 'Sign', exact: true }).click();
   await page.getByRole('button', { name: 'Continue' }).click();
 
   await signSignaturePad(page);
