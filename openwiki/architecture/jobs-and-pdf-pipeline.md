@@ -11,8 +11,7 @@ tags: [architecture, jobs, pdf, libreoffice, qpdf]
 
 ## Job system
 
-<!-- openwiki: broken internal link [../../packages/lib/jobs] file "../../packages/lib/jobs" does not exist. Fix the href or restore the target, then delete this comment. -->
-Custom in-house job runner under [`packages/lib/jobs/`](../../packages/lib/jobs),
+Custom in-house job runner under `packages/lib/jobs/`,
 with pluggable providers in `packages/lib/jobs/client/`: `local.ts`
 (Postgres-backed queue + HTTP self-call, PSD401's choice), `bullmq.ts`
 (Redis-backed), `inngest.ts` (managed cloud). Job definitions live in
@@ -40,6 +39,10 @@ with pluggable providers in `packages/lib/jobs/client/`: `local.ts`
   jitter) and uses deterministic per-slot job IDs so concurrent instances
   collide on a Postgres unique constraint instead of double-running a cron
   job.
+- Outbound webhook delivery is one of these jobs (`internal.execute-webhook`):
+  domain actions enqueue it through `triggerWebhook()`, and the job performs
+  the HTTP POST and records each attempt. See
+  [outbound webhooks](../integrations/outbound-webhooks.md) for that flow.
 
 ### Seal-document sweep
 

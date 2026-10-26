@@ -55,10 +55,9 @@ values, safe to read from the compose file itself):
 The district's actual on-prem dev environment
 (`documenso-dev.psd401.net`, Proxmox VM, Docker Compose with Caddy +
 Postgres + the published `ghcr.io/psd401/documenso:latest` image) is
-<!-- openwiki: broken internal link [../../CLAUDE.md#dev-on-prem] heading anchor "dev-on-prem" does not exist in "../../CLAUDE.md". Fix the href or restore the target, then delete this comment. -->
-documented in the root [`CLAUDE.md`](../../CLAUDE.md#dev-on-prem)
-Environments section — access details, SSH, and DB commands live there
-rather than duplicated here, since they involve internal hostnames/IPs.
+documented in the root [`CLAUDE.md`](../../CLAUDE.md) (an untracked local
+file, not in the git checkout) — access details, SSH, and DB commands live
+there rather than duplicated here, since they involve internal hostnames/IPs.
 
 ### Playwright E2E credentials (dev only)
 
@@ -84,9 +83,10 @@ docker run --rm "$IMAGE:$GIT_SHA" sh -c 'fc-list | grep -iq liberation'
 If any of the three fail, the image is never pushed — this guards
 against shipping a build that can't convert DOCX (no soffice / no
 Liberation fonts) or decrypt encrypted PDFs (no qpdf), referencing past
-regressions (issues #95/#96, #28). The same three-command smoke test also
-runs in normal CI, in the `build_docker` job of
-[`.github/workflows/ci.yml`](../../.github/workflows/ci.yml).
+regressions (issues #95/#96, #28). The same smoke test also runs in normal
+CI, in the `build_docker` job of
+[`.github/workflows/ci.yml`](../../.github/workflows/ci.yml); the rest of the
+workflow set is described in [CI workflows and security](ci-and-security.md).
 
 ## Docker image build stages
 
@@ -109,8 +109,7 @@ Production runs on an EC2 host in the INFRA-CORE VPC, digest-pinned (not
 `docker-compose.yml` on the host and runs
 `docker compose pull && docker compose up -d documenso`). Full
 host/SSH/deploy details are in root
-<!-- openwiki: broken internal link [../../CLAUDE.md#prod-aws] heading anchor "prod-aws" does not exist in "../../CLAUDE.md". Fix the href or restore the target, then delete this comment. -->
-[`CLAUDE.md`](../../CLAUDE.md#prod-aws), since they include internal
+[`CLAUDE.md`](../../CLAUDE.md), since they include internal
 hostnames and access paths not appropriate to duplicate here.
 
 The cutover from upstream's published image to this fork's custom-built
