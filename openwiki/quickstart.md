@@ -86,9 +86,15 @@ dev-environment credentials.
   [fork/changes.md](fork/changes.md).
 - **Operations**: on-prem dev then AWS production, GHCR image builds,
   digest-pinned prod deploys, nightly S3 backups. See
-  [operations/deployment.md](operations/deployment.md).
+  [operations/deployment.md](operations/deployment.md). GitHub Actions
+  workflows, SHA-pinned actions, gitleaks/zizmor scanning, and the
+  Dependabot review-check shim are in
+  [operations/ci-and-security.md](operations/ci-and-security.md).
 - **Integrations**: public API v2 (team-scoped tokens), n8n automation.
-  See [integrations/api-and-n8n.md](integrations/api-and-n8n.md).
+  See [integrations/api-and-n8n.md](integrations/api-and-n8n.md). Outbound
+  webhook dispatch (in-process job delivery, SSRF guard, the removed inbound
+  `/api/webhook/trigger` route) is in
+  [integrations/outbound-webhooks.md](integrations/outbound-webhooks.md).
 
 ## Repo-level docs worth knowing about
 

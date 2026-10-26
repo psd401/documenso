@@ -66,7 +66,10 @@ lives in the `packages/lib/server-only/envelope/` version cited above.
 There is no n8n integration code in this repository — n8n runs as a
 separate service (`n8n.psd401.net`, documented in root `CLAUDE.md`) that
 calls into Documenso's public API v2 as an external client, and receives
-webhooks/form submissions independently of this codebase. The only thing
+webhooks/form submissions independently of this codebase. Documenso's own
+event delivery to registered webhook URLs is a separate, in-process path
+described in [outbound webhooks](outbound-webhooks.md); there is no inbound
+trigger endpoint for it. The only thing
 this repo needs to get right for n8n workflows to work is the API
 contract above (team-scoped tokens, explicit `folderId` on every
 folder-scoped query) — there's nothing else n8n-specific to document
