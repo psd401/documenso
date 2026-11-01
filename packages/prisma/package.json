@@ -28,7 +28,7 @@
     "prisma": "^6.19.0",
     "prisma-extension-kysely": "^3.0.0",
     "ts-pattern": "^5.9.0",
-    "zod": "^3.25.76"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "dotenv": "^17.2.3",

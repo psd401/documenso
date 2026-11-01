@@ -21,7 +21,7 @@
     "superjson": "^2.2.5",
     "trpc-to-openapi": "^2.1.5",
     "ts-pattern": "^5.9.0",
-    "zod": "^3.25.76",
+    "zod": "^4.6.6",
     "zod-form-data": "^2.0.8",
     "zod-openapi": "^4.2.4"
   },
