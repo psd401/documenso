@@ -46,9 +46,29 @@ A nightly job re-syncs each user's Google Workspace attributes (`department`,
 apply engine grants org-group membership based on admin-managed mapping
 rules — both gated behind `GOOGLE_DIRECTORY_SYNC_ENABLED=true`.
 
+```mermaid
+flowchart TD
+    login["Google login (handle-oauth-callback-url)"] --> applyLogin["applyDirectoryMappings source login"]
+    sweep["Nightly sweep (directory-sync-sweep.handler)"] --> applySweep["applyDirectoryMappings source sweep with deferRevocations"]
+    applyLogin --> grant["Grant matched mapping groups, audit MEMBERSHIP_GRANTED"]
+    applySweep --> grant
+    applyLogin --> stop["Login returns here: no revocations"]
+    applySweep --> plan["planDirectoryMembership builds planned revocations"]
+    plan --> breaker{"Circuit breaker tripped?"}
+    breaker -- yes --> skipped["Skip every revocation, one REVOKE_CIRCUIT_BREAKER row"]
+    breaker -- no --> mode{"DIRECTORY_SYNC_REVOKE_MODE"}
+    mode -- enforce --> deleted["Delete rows, audit MEMBERSHIP_REVOKED"]
+    mode -- log --> dryRun["Delete nothing, audit MEMBERSHIP_REVOKE_DRY_RUN"]
+```
+
+Caption: how the two triggers reach the same apply engine. Login can only grant;
+revocation exists only on the sweep path.
+
 - **Sweep job**: [`packages/lib/jobs/definitions/internal/directory-sync-sweep.ts`](../../packages/lib/jobs/definitions/internal/directory-sync-sweep.ts),
   cron `0 9 * * *` (09:00 UTC, ~1am Pacific), handler in
-  `directory-sync-sweep.handler.ts`.
+  [`directory-sync-sweep.handler.ts`](../../packages/lib/jobs/definitions/internal/directory-sync-sweep.handler.ts),
+  which calls `applyDirectoryMappings(user.id, 'sweep', ..., { deferRevocations: true })`
+  per user and then applies revocations under the circuit breaker.
 - **Apply engine**: [`packages/lib/server-only/directory-sync/apply-directory-mappings.ts`](../../packages/lib/server-only/directory-sync/apply-directory-mappings.ts) —
   reads a user's synced `department`/`orgUnitPath`/`googleGroups` and all
   `active: true` `DirectoryGroupMapping` rows, matches via
@@ -63,11 +83,22 @@ rules — both gated behind `GOOGLE_DIRECTORY_SYNC_ENABLED=true`.
   revocations exceed both 10 and 5%, org-wide or within one group.
 - **Admin groups are off limits**: a mapping whose target group has
   organisation role ADMIN or any `TeamGroup.teamRole` ADMIN never grants or
-  revokes, and the admin create/update routes reject it
-  ([`assert-mapping-target-allowed.ts`](../../packages/lib/server-only/directory-sync/assert-mapping-target-allowed.ts)).
-  The reverse also holds: a group an active mapping targets cannot be given
-  organisation or team ADMIN (deactivate the mapping first), and the sweep logs
-  an error naming any active mapping it ignores for this reason.
+  revokes. The planner skips these mappings through `groupGrantsAdmin` in
+  [`plan-directory-membership.ts`](../../packages/lib/server-only/directory-sync/plan-directory-membership.ts),
+  and the sweep's Prisma filter `ADMIN_GRANTING_GROUP_WHERE` (in
+  [`assert-mapping-target-allowed.ts`](../../packages/lib/server-only/directory-sync/assert-mapping-target-allowed.ts))
+  excludes these groups from managed-membership counts. The create and update
+  mapping paths call `assertMappingTargetAllowed` (update only when the mapping
+  stays active), so they reject such a target.
+  The reverse also holds: `assertGroupsNotDirectoryMapped` rejects giving a
+  mapped group ADMIN. It runs in
+  [`update-organisation-group.ts`](../../packages/trpc/server/organisation-router/update-organisation-group.ts)
+  when the org role becomes ADMIN, and in
+  [`create-team-groups.ts`](../../packages/trpc/server/team-router/create-team-groups.ts)
+  and [`update-team-group.ts`](../../packages/trpc/server/team-router/update-team-group.ts)
+  when a team role becomes ADMIN. The sweep logs an error naming any active
+  mapping it ignores for this reason (`reportIgnoredAdminMappings` in
+  `directory-sync-sweep.handler.ts`, only when the sync flag is on).
 - **Matching rules** (`DirectoryMappingSourceField` enum:
   `GROUP | DEPARTMENT | ORG_UNIT`): `GROUP` does a case-insensitive match
   against the user's Google group list; `DEPARTMENT` is an exact string
@@ -90,17 +121,17 @@ org membership but no team/document access.
 
 ### Admin UI
 
-`admin.directoryMappings` tRPC namespace:
-<!-- openwiki: broken internal link [../../packages/trpc/server/admin-router] file "../../packages/trpc/server/admin-router" does not exist. Fix the href or restore the target, then delete this comment. -->
-[`packages/trpc/server/admin-router/{create,update,delete,find}-directory-mapping*.ts`](../../packages/trpc/server/admin-router)
-and `list-directory-mapping-groups.ts` (group picker). UI route:
+`admin.directoryMappings` tRPC namespace: `create-directory-mapping.ts`,
+`update-directory-mapping.ts`, `delete-directory-mapping.ts`,
+`find-directory-mappings.ts` and `list-directory-mapping-groups.ts` (group
+picker) under `packages/trpc/server/admin-router/` (start with
+[`create-directory-mapping.ts`](../../packages/trpc/server/admin-router/create-directory-mapping.ts)). UI route:
 [`apps/remix/app/routes/_authenticated+/admin+/directory-mappings.tsx`](../../apps/remix/app/routes/_authenticated+/admin+/directory-mappings.tsx).
 
 ### Schema
 
 Migration
-<!-- openwiki: broken internal link [../../packages/prisma/migrations/20260812000000_add_directory_group_mapping] file "../../packages/prisma/migrations/20260812000000_add_directory_group_mapping" does not exist. Fix the href or restore the target, then delete this comment. -->
-[`packages/prisma/migrations/20260812000000_add_directory_group_mapping/migration.sql`](../../packages/prisma/migrations/20260812000000_add_directory_group_mapping)
+[`packages/prisma/migrations/20260812000000_add_directory_group_mapping/migration.sql`](../../packages/prisma/migrations/20260812000000_add_directory_group_mapping/migration.sql)
 added: enum `DirectoryMappingSourceField` (`GROUP`, `DEPARTMENT`,
 `ORG_UNIT`); table `DirectoryGroupMapping` (`sourceField`, `sourceValue`,
 `organisationGroupId`, `active`, unique on
@@ -112,11 +143,30 @@ Design docs: [`docs/superpowers/plans/2026-05-19-google-directory-sync.md`](../.
 (Phase 1: sync), [`docs/superpowers/plans/2026-08-12-directory-sync-phase2.md`](../../docs/superpowers/plans/2026-08-12-directory-sync-phase2.md)
 (Phase 2: mapping + apply engine. Its additive-only invariant was replaced by sweep revocation in PR #172).
 
+## Change guidance
+
+- Start with `applyDirectoryMappings` in
+  [`apply-directory-mappings.ts`](../../packages/lib/server-only/directory-sync/apply-directory-mappings.ts)
+  for any grant or revoke change, and with `planDirectoryMembership` in
+  [`plan-directory-membership.ts`](../../packages/lib/server-only/directory-sync/plan-directory-membership.ts)
+  for matching or circuit-breaker logic. The planner is pure (no Prisma).
+- Invariants to keep: login never revokes; no directory-mapped path confers
+  ADMIN; a mapping whose target grants ADMIN is inert, never managed.
+- Focused tests: `apply-directory-mappings.test.ts` (login versus sweep,
+  "does not grant a matched mapping whose target group grants admin"),
+  `plan-directory-membership.test.ts` (`groupGrantsAdmin`, circuit breaker),
+  `assert-mapping-target-allowed.test.ts`, `create-directory-mapping.test.ts`
+  and `update-directory-mapping.test.ts` (admin-target rejection), and
+  `directory-sync-sweep.handler.test.ts`. Run them with
+  `cd packages/lib && npx vitest run --project unit server-only/directory-sync`.
+- Not covered by a shared test: the tRPC guards in the organisation and team
+  routers. Check those routes directly if you change `assertGroupsNotDirectoryMapped`
+  callers.
+
 ## Source references
 
 - [`packages/lib/server-only/user/create-user.ts`](../../packages/lib/server-only/user/create-user.ts)
-<!-- openwiki: broken internal link [../../packages/lib/server-only/directory-sync] file "../../packages/lib/server-only/directory-sync" does not exist. Fix the href or restore the target, then delete this comment. -->
-- [`packages/lib/server-only/directory-sync/`](../../packages/lib/server-only/directory-sync) (apply, matching, CRUD)
+- [`packages/lib/server-only/directory-sync/apply-directory-mappings.ts`](../../packages/lib/server-only/directory-sync/apply-directory-mappings.ts) and [`plan-directory-membership.ts`](../../packages/lib/server-only/directory-sync/plan-directory-membership.ts) (apply, matching, CRUD)
 - [`packages/lib/jobs/definitions/internal/directory-sync-sweep.ts`](../../packages/lib/jobs/definitions/internal/directory-sync-sweep.ts)
-<!-- openwiki: broken internal link [../../packages/trpc/server/admin-router] file "../../packages/trpc/server/admin-router" does not exist. Fix the href or restore the target, then delete this comment. -->
-- [`packages/trpc/server/admin-router/`](../../packages/trpc/server/admin-router) (`*directory-mapping*.ts`)
+- [`packages/trpc/server/admin-router/create-directory-mapping.ts`](../../packages/trpc/server/admin-router/create-directory-mapping.ts) and the other `*directory-mapping*.ts` files beside it
+- [`packages/trpc/server/organisation-router/update-organisation-group.ts`](../../packages/trpc/server/organisation-router/update-organisation-group.ts), [`team-router/create-team-groups.ts`](../../packages/trpc/server/team-router/create-team-groups.ts), [`team-router/update-team-group.ts`](../../packages/trpc/server/team-router/update-team-group.ts) (ADMIN guards)

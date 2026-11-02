@@ -55,10 +55,11 @@ values, safe to read from the compose file itself):
 The district's actual on-prem dev environment
 (`documenso-dev.psd401.net`, Proxmox VM, Docker Compose with Caddy +
 Postgres + the published `ghcr.io/psd401/documenso:latest` image) is
-<!-- openwiki: broken internal link [../../CLAUDE.md#dev-on-prem] heading anchor "dev-on-prem" does not exist in "../../CLAUDE.md". Fix the href or restore the target, then delete this comment. -->
-documented in the root [`CLAUDE.md`](../../CLAUDE.md#dev-on-prem)
-Environments section — access details, SSH, and DB commands live there
-rather than duplicated here, since they involve internal hostnames/IPs.
+described in the root `CLAUDE.md` Environments section. In the current
+checkout, [`CLAUDE.md`](../../CLAUDE.md) is only an OpenWiki pointer stub, so
+those access details are an evidence gap here, not something this wiki can
+confirm. Access details, SSH, and DB commands belong there rather than in
+this wiki, since they involve internal hostnames and IPs.
 
 ### Playwright E2E credentials (dev only)
 
@@ -73,7 +74,8 @@ in root `CLAUDE.md`.
 **manual dispatch only** (`workflow_dispatch`, not triggered by push).
 Builds `docker/Dockerfile`, tags `ghcr.io/psd401/documenso:latest` and
 `:$GIT_SHA` (short SHA), then runs a regression guard **before** pushing
-either tag:
+either tag (workflow inventory and other CI controls are in
+[ci-and-workflows.md](ci-and-workflows.md)):
 
 ```bash
 docker run --rm "$IMAGE:$GIT_SHA" sh -c 'command -v soffice'
@@ -86,7 +88,8 @@ against shipping a build that can't convert DOCX (no soffice / no
 Liberation fonts) or decrypt encrypted PDFs (no qpdf), referencing past
 regressions (issues #95/#96, #28). The same three-command smoke test also
 runs in normal CI, in the `build_docker` job of
-[`.github/workflows/ci.yml`](../../.github/workflows/ci.yml).
+[`.github/workflows/ci.yml`](../../.github/workflows/ci.yml)
+(see [ci-and-workflows.md](ci-and-workflows.md)).
 
 ## Docker image build stages
 
@@ -108,10 +111,10 @@ Production runs on an EC2 host in the INFRA-CORE VPC, digest-pinned (not
 `:latest` — the operator edits the pinned `sha256` digest in
 `docker-compose.yml` on the host and runs
 `docker compose pull && docker compose up -d documenso`). Full
-host/SSH/deploy details are in root
-<!-- openwiki: broken internal link [../../CLAUDE.md#prod-aws] heading anchor "prod-aws" does not exist in "../../CLAUDE.md". Fix the href or restore the target, then delete this comment. -->
-[`CLAUDE.md`](../../CLAUDE.md#prod-aws), since they include internal
-hostnames and access paths not appropriate to duplicate here.
+host/SSH/deploy details are in
+root `CLAUDE.md`'s Prod section, which is not present in the current
+checkout (see the on-prem note above). They include internal hostnames and
+access paths that are not appropriate to duplicate here.
 
 The cutover from upstream's published image to this fork's custom-built
 image is documented in
@@ -132,4 +135,9 @@ hard-deleted pending envelope; see the bulk-delete gotcha in
 [`docs/feature-backlog.md`](../../docs/feature-backlog.md)). No backup
 script lives in this repository to link to directly; treat root
 `CLAUDE.md`'s Prod Environment section as the source of truth for the
+exact schedule and script path.
+rce of truth for the
+exact schedule and script path.
+
+rce of truth for the
 exact schedule and script path.

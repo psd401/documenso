@@ -61,6 +61,22 @@ There is a second `find-envelopes.ts`, in
 that one is the thin tRPC router wrapper; the filtering logic itself
 lives in the `packages/lib/server-only/envelope/` version cited above.
 
+## Removed: unauthenticated `/api/webhook/trigger`
+
+The `/api/webhook/trigger` route was deleted in the security fix PR #201
+(`apps/remix/app/routes/api+/webhook.trigger.ts`, plus the handler and schema
+under `packages/lib/server-only/webhooks/trigger/`). Per the header of its
+guard test, its only check was a signature keyed on
+`NEXT_PRIVATE_ENCRYPTION_KEY`, and no app code called it. The Stripe route
+[`stripe.webhook.ts`](../../apps/remix/app/routes/api+/stripe.webhook.ts)
+now types itself against its own module instead.
+
+Do not reintroduce this route. The guard test
+[`webhook-trigger-route-removed.test.ts`](../../packages/lib/utils/webhook-trigger-route-removed.test.ts)
+fails if the route module or handler comes back, or if the Stripe route
+references `webhook.trigger`. Run it with
+`cd packages/lib && npx vitest run --project unit webhook-trigger-route-removed`.
+
 ## n8n
 
 There is no n8n integration code in this repository — n8n runs as a

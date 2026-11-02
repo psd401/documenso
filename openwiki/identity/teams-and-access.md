@@ -30,6 +30,9 @@ Schema: [`packages/prisma/schema.prisma`](../../packages/prisma/schema.prisma).
   This is the only path from org-group membership to team access — see
   the directory-mapping note in
   [sso-and-provisioning.md](sso-and-provisioning.md#what-a-mapping-actually-grants--correcting-a-common-shorthand).
+  A `teamRole: ADMIN` link cannot be created or set on a group that an active
+  directory mapping targets (`create-team-groups.ts` and `update-team-group.ts`
+  call `assertGroupsNotDirectoryMapped`; see [sso-and-provisioning.md](sso-and-provisioning.md)).
 
 Not every team has just the standard three `INTERNAL_TEAM` groups. A
 multi-site team can have one `CUSTOM` group per building instead (e.g.
@@ -81,10 +84,9 @@ team-role visibility above. [`packages/lib/utils/folder-access.ts`](../../packag
 
 This filter is wired into `find-folders`, `find-folders-internal`,
 `get-folder-by-id`, `get-folder-breadcrumbs`, `update-folder`, and
-`delete-folder` under
-<!-- openwiki: broken internal link [../../packages/lib/server-only/folder] file "../../packages/lib/server-only/folder" does not exist. Fix the href or restore the target, then delete this comment. -->
-[`packages/lib/server-only/folder/`](../../packages/lib/server-only/folder) —
-i.e. it governs **folder** listing and lookup.
+`delete-folder` under `packages/lib/server-only/folder/` (for example
+[`find-folders-internal.ts`](../../packages/lib/server-only/folder/find-folders-internal.ts))
+— i.e. it governs **folder** listing and lookup.
 
 **Confirmed gap: folder ACLs are not enforced on the documents inside a
 folder.** `find-envelopes.ts` filters strictly by
