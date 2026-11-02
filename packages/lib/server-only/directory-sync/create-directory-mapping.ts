@@ -4,6 +4,7 @@ import { prisma } from '@documenso/prisma';
 import type { DirectoryMappingSourceField } from '@prisma/client';
 
 import { generateDatabaseId } from '../../universal/id';
+import { assertMappingTargetAllowed } from './assert-mapping-target-allowed';
 import { normalizeMappingSourceValue } from './mapping-matching';
 
 export type CreateDirectoryMappingOptions = {
@@ -18,6 +19,8 @@ export const createDirectoryMapping = async (options: CreateDirectoryMappingOpti
   const { sourceField, sourceValue, organisationGroupId, active = true, actor } = options;
 
   const normalizedValue = normalizeMappingSourceValue(sourceField, sourceValue);
+
+  await assertMappingTargetAllowed(organisationGroupId);
 
   return await prisma.$transaction(async (tx) => {
     const mapping = await tx.directoryGroupMapping.create({

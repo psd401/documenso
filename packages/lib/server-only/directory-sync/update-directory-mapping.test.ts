@@ -7,9 +7,11 @@ const mockFindFirst = vi.fn();
 const mockUpdate = vi.fn();
 const mockAuditLogCreate = vi.fn();
 const mockTransaction = vi.fn();
+const mockGroupFindUnique = vi.fn();
 
 vi.mock('@documenso/prisma', () => ({
   prisma: {
+    organisationGroup: { findUnique: mockGroupFindUnique },
     directoryGroupMapping: { findFirst: mockFindFirst },
     $transaction: mockTransaction,
   },
@@ -19,6 +21,8 @@ describe('updateDirectoryMapping', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.resetModules();
+
+    mockGroupFindUnique.mockResolvedValue({ organisationRole: 'MEMBER', teamGroups: [{ teamRole: 'MEMBER' }] });
 
     mockTransaction.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) =>
       callback({
@@ -173,5 +177,65 @@ describe('updateDirectoryMapping', () => {
     });
 
     expect(mockAuditLogCreate).not.toHaveBeenCalled();
+  });
+});
+
+describe('updateDirectoryMapping admin-target guard', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
+
+  it('rejects pointing an active mapping at a group that grants organisation ADMIN and writes nothing', async () => {
+    mockFindFirst.mockResolvedValue({
+      id: 'directory_mapping_1',
+      sourceField: 'GROUP',
+      sourceValue: 'tech-staff@psd401.net',
+      organisationGroupId: 'org_group_1',
+      active: true,
+    });
+    mockGroupFindUnique.mockResolvedValue({ organisationRole: 'ADMIN', teamGroups: [] });
+
+    const { updateDirectoryMapping } = await import('./update-directory-mapping');
+    const { AppErrorCode } = await import('../../errors/app-error');
+
+    await expect(
+      updateDirectoryMapping({
+        id: 'directory_mapping_1',
+        data: { organisationGroupId: 'org_group_psd401_admin' },
+        actor: { userId: 1, name: 'Admin', email: 'admin@psd401.net' },
+      }),
+    ).rejects.toMatchObject({ code: AppErrorCode.INVALID_REQUEST });
+    expect(mockGroupFindUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'org_group_psd401_admin' } }),
+    );
+    expect(mockTransaction).not.toHaveBeenCalled();
+  });
+
+  it('allows deactivating a mapping that already targets an admin group', async () => {
+    mockFindFirst.mockResolvedValue({
+      id: 'directory_mapping_1',
+      sourceField: 'GROUP',
+      sourceValue: 'tech-staff@psd401.net',
+      organisationGroupId: 'org_group_psd401_admin',
+      active: true,
+    });
+    mockGroupFindUnique.mockResolvedValue({ organisationRole: 'ADMIN', teamGroups: [] });
+    mockTransaction.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) =>
+      callback({
+        directoryGroupMapping: { update: mockUpdate },
+        directorySyncAuditLog: { create: mockAuditLogCreate },
+      }),
+    );
+    mockUpdate.mockResolvedValue({ id: 'directory_mapping_1', active: false });
+
+    const { updateDirectoryMapping } = await import('./update-directory-mapping');
+    await updateDirectoryMapping({
+      id: 'directory_mapping_1',
+      data: { active: false },
+      actor: { userId: 1, name: 'Admin', email: 'admin@psd401.net' },
+    });
+
+    expect(mockUpdate).toHaveBeenCalledTimes(1);
   });
 });

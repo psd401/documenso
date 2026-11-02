@@ -38,12 +38,19 @@ const jane = {
   googleGroups: [],
 };
 
-const mapping = (id: string, sourceValue: string, organisationGroupId: string, active = true) => ({
+const mapping = (
+  id: string,
+  sourceValue: string,
+  organisationGroupId: string,
+  active = true,
+  organisationRole = 'MEMBER',
+) => ({
   id,
   sourceField: 'DEPARTMENT',
   sourceValue,
   organisationGroupId,
   active,
+  organisationGroup: { organisationRole, teamGroups: [] },
 });
 
 const memberRow = (id: string, createdAt: string, groupIds: string[]) => ({
@@ -186,6 +193,19 @@ describe('applyDirectoryMappings', () => {
 
       expect(result).toEqual({ granted: 0, deferredRevocations: [] });
       expect(mockAuditLogCreateMany).not.toHaveBeenCalled();
+    });
+
+    it('does not grant a matched mapping whose target group grants admin', async () => {
+      mockMappingFindMany.mockResolvedValue([
+        mapping('directory_mapping_1', 'Technology', 'org_group_admin', true, 'ADMIN'),
+      ]);
+      mockMemberFindMany.mockResolvedValue([memberRow('member_1', '2026-01-01', BASELINE_GROUP_IDS)]);
+
+      const { applyDirectoryMappings } = await import('./apply-directory-mappings');
+      const result = await applyDirectoryMappings(1, 'sweep', 'synced');
+
+      expect(result).toEqual({ granted: 0, deferredRevocations: [] });
+      expect(mockCreateManyAndReturn).not.toHaveBeenCalled();
     });
 
     it('uses a system actor (userId null, name "directory-sync") for source "sweep"', async () => {
