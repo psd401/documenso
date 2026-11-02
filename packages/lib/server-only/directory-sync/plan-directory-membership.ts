@@ -1,6 +1,6 @@
 // ABOUTME: Pure membership planning for directory sync: which mapped groups to grant and which managed rows to revoke,
 // ABOUTME: plus the sweep's revocation circuit-breaker threshold. No I/O, no Prisma.
-import type { DirectoryMappingSourceField } from '@prisma/client';
+import type { DirectoryMappingSourceField, OrganisationMemberRole, TeamMemberRole } from '@prisma/client';
 
 import { PSD401_BASELINE_GROUP_IDS } from '../../constants/psd401';
 import { matchDirectoryMapping } from './mapping-matching';
@@ -19,8 +19,8 @@ export type PlannableDirectoryMapping = {
 };
 
 export type MappingTargetGroupRoles = {
-  organisationRole: string;
-  teamGroups: { teamRole: string }[];
+  organisationRole: OrganisationMemberRole;
+  teamGroups: { teamRole: TeamMemberRole }[];
 };
 
 /**
