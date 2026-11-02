@@ -65,6 +65,9 @@ rules — both gated behind `GOOGLE_DIRECTORY_SYNC_ENABLED=true`.
   organisation role ADMIN or any `TeamGroup.teamRole` ADMIN never grants or
   revokes, and the admin create/update routes reject it
   ([`assert-mapping-target-allowed.ts`](../../packages/lib/server-only/directory-sync/assert-mapping-target-allowed.ts)).
+  The reverse also holds: a group an active mapping targets cannot be given
+  organisation or team ADMIN (deactivate the mapping first), and the sweep logs
+  an error naming any active mapping it ignores for this reason.
 - **Matching rules** (`DirectoryMappingSourceField` enum:
   `GROUP | DEPARTMENT | ORG_UNIT`): `GROUP` does a case-insensitive match
   against the user's Google group list; `DEPARTMENT` is an exact string
