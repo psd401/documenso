@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import {
   exceedsRevokeCircuitBreaker,
   findGroupsExceedingRevokeCircuitBreaker,
+  groupGrantsAdmin,
   type PlannableDirectoryMapping,
   planDirectoryMembership,
 } from './plan-directory-membership';
@@ -15,6 +16,7 @@ const GROUP_MAPPING: PlannableDirectoryMapping = {
   sourceValue: 'tsd-staff@psd401.net',
   organisationGroupId: 'org_group_tsd',
   active: true,
+  targetGrantsAdmin: false,
 };
 
 const ORG_UNIT_MAPPING: PlannableDirectoryMapping = {
@@ -23,6 +25,7 @@ const ORG_UNIT_MAPPING: PlannableDirectoryMapping = {
   sourceValue: '/Staff/TSD',
   organisationGroupId: 'org_group_ou',
   active: true,
+  targetGrantsAdmin: false,
 };
 
 const DEPARTMENT_MAPPING: PlannableDirectoryMapping = {
@@ -31,6 +34,7 @@ const DEPARTMENT_MAPPING: PlannableDirectoryMapping = {
   sourceValue: 'TSD',
   organisationGroupId: 'org_group_dept',
   active: true,
+  targetGrantsAdmin: false,
 };
 
 const held = (groupId: string) => ({
@@ -122,5 +126,48 @@ describe('findGroupsExceedingRevokeCircuitBreaker', () => {
     );
 
     expect(tripped).toEqual([]);
+  });
+});
+
+describe('planDirectoryMembership admin-target guard', () => {
+  const ADMIN_MAPPING: PlannableDirectoryMapping = {
+    ...GROUP_MAPPING,
+    id: 'map_admin',
+    organisationGroupId: 'org_group_admin',
+    targetGrantsAdmin: true,
+  };
+
+  it('never grants a group that grants admin, even when the mapping matches', () => {
+    const plan = planDirectoryMembership({
+      mappings: [GROUP_MAPPING, ADMIN_MAPPING],
+      profile: { department: null, orgUnitPath: '/Staff', googleGroups: ['tsd-staff@psd401.net'] },
+      heldMemberships: [],
+    });
+
+    expect(plan.grants.map((grant) => grant.organisationGroupId)).toEqual(['org_group_tsd']);
+  });
+
+  it('never revokes from a group that grants admin, because the mapping does not make it managed', () => {
+    const plan = planDirectoryMembership({
+      mappings: [ADMIN_MAPPING],
+      profile: { department: null, orgUnitPath: '/Staff', googleGroups: [] },
+      heldMemberships: [held('org_group_admin')],
+    });
+
+    expect(plan.revocations).toEqual([]);
+  });
+});
+
+describe('groupGrantsAdmin', () => {
+  it('is true for an organisation ADMIN group or a group linked to any team as ADMIN', () => {
+    expect(groupGrantsAdmin({ organisationRole: 'ADMIN', teamGroups: [] })).toBe(true);
+    expect(
+      groupGrantsAdmin({ organisationRole: 'MEMBER', teamGroups: [{ teamRole: 'MEMBER' }, { teamRole: 'ADMIN' }] }),
+    ).toBe(true);
+  });
+
+  it('is false for MEMBER and MANAGER groups with no ADMIN team link', () => {
+    expect(groupGrantsAdmin({ organisationRole: 'MEMBER', teamGroups: [{ teamRole: 'MEMBER' }] })).toBe(false);
+    expect(groupGrantsAdmin({ organisationRole: 'MANAGER', teamGroups: [{ teamRole: 'MANAGER' }] })).toBe(false);
   });
 });

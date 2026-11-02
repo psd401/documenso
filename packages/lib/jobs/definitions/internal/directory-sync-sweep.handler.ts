@@ -8,6 +8,7 @@ import {
   DIRECTORY_SYNC_SYSTEM_ACTOR,
   getDirectorySyncRevokeMode,
 } from '../../../server-only/directory-sync/apply-directory-mappings';
+import { ADMIN_GRANTING_GROUP_WHERE } from '../../../server-only/directory-sync/assert-mapping-target-allowed';
 import {
   exceedsRevokeCircuitBreaker,
   findGroupsExceedingRevokeCircuitBreaker,
@@ -41,9 +42,32 @@ const chunk = <T>(items: T[], size: number): T[][] => {
   return chunks;
 };
 
+/**
+ * The planner silently skips mappings whose target group grants admin. Name them in the error log so a
+ * mapping that went inert (e.g. its group was promoted, or it was inserted by SQL) gets noticed.
+ */
+const reportIgnoredAdminMappings = async (io: JobRunIO) => {
+  const ignoredMappings = await prisma.directoryGroupMapping.findMany({
+    where: { active: true, organisationGroup: ADMIN_GRANTING_GROUP_WHERE },
+    select: { id: true, organisationGroupId: true },
+  });
+
+  if (ignoredMappings.length === 0) {
+    return;
+  }
+
+  io.logger.error(
+    `[directory-sync-sweep] Ignoring active mappings whose target group grants admin: ${ignoredMappings
+      .map(({ id, organisationGroupId }) => `${id} -> ${organisationGroupId}`)
+      .join(', ')}`,
+  );
+};
+
 export const run = async ({ io }: { payload: TDirectorySyncSweepJobDefinition; io: JobRunIO }) => {
   if (env('GOOGLE_DIRECTORY_SYNC_ENABLED') !== 'true') {
     io.logger.info('[directory-sync-sweep] Directory sync disabled; ensuring baseline membership only');
+  } else {
+    await reportIgnoredAdminMappings(io);
   }
 
   const users = await prisma.user.findMany({
@@ -117,7 +141,9 @@ export const run = async ({ io }: { payload: TDirectorySyncSweepJobDefinition; i
 
   if (counters.plannedRevocations > 0) {
     const managedMembershipCount = await prisma.organisationGroupMember.count({
-      where: { group: { directoryGroupMappings: { some: { active: true } } } },
+      where: {
+        group: { directoryGroupMappings: { some: { active: true } }, NOT: ADMIN_GRANTING_GROUP_WHERE },
+      },
     });
 
     const plannedRevocationsByGroup = new Map<string, number>();

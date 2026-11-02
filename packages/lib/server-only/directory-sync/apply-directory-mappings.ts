@@ -1,12 +1,12 @@
 // ABOUTME: Directory sync apply engine. Ensures PSD401 baseline groups, grants groups from matched mapping rules, and
-// ABOUTME: revokes managed groups the user no longer matches per DIRECTORY_SYNC_REVOKE_MODE. Throws on real errors.
+// ABOUTME: revokes (sweep only) managed groups the user no longer matches per DIRECTORY_SYNC_REVOKE_MODE.
 import { prisma } from '@documenso/prisma';
 
 import type { TDirectorySyncAuditLogType } from '../../types/directory-sync-audit-logs';
 import { generateDatabaseId } from '../../universal/id';
 import { env } from '../../utils/env';
 import type { SyncGoogleDirectoryStatus } from '../user/sync-google-directory';
-import { type PlannedRevocation, planDirectoryMembership } from './plan-directory-membership';
+import { groupGrantsAdmin, type PlannedRevocation, planDirectoryMembership } from './plan-directory-membership';
 import { ensurePsd401BaselineMembership, findPsd401MemberRows, pickPrimaryMemberRow } from './psd401-membership';
 
 const MEMBERSHIP_GRANTED: TDirectorySyncAuditLogType = 'MEMBERSHIP_GRANTED';
@@ -82,15 +82,21 @@ export const applyDirectoryMappings = async (
     return noChanges;
   }
 
-  const mappings = await prisma.directoryGroupMapping.findMany({
+  const mappingRows = await prisma.directoryGroupMapping.findMany({
     select: {
       id: true,
       sourceField: true,
       sourceValue: true,
       organisationGroupId: true,
       active: true,
+      organisationGroup: { select: { organisationRole: true, teamGroups: { select: { teamRole: true } } } },
     },
   });
+
+  const mappings = mappingRows.map(({ organisationGroup, ...mapping }) => ({
+    ...mapping,
+    targetGrantsAdmin: groupGrantsAdmin(organisationGroup),
+  }));
 
   const memberRows = await findPsd401MemberRows(userId);
   const primaryMemberRow = pickPrimaryMemberRow(memberRows);
@@ -147,6 +153,12 @@ export const applyDirectoryMappings = async (
 
       return inserted.length;
     });
+  }
+
+  // Login only grants. Revocations run in the nightly sweep, behind its circuit breaker, so a bad
+  // mapping cannot strip access from each user the moment they sign in.
+  if (source === 'login') {
+    return { granted, deferredRevocations: [] };
   }
 
   const revocations =

@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mockFindMany = vi.fn();
 const mockGroupMemberCount = vi.fn();
 const mockGroupMemberGroupBy = vi.fn();
+const mockMappingFindMany = vi.fn();
 const mockAuditLogCreate = vi.fn();
 const mockSyncGoogleDirectory = vi.fn();
 const mockApplyDirectoryMappings = vi.fn();
@@ -18,6 +19,7 @@ vi.mock('@documenso/prisma', () => ({
   prisma: {
     user: { findMany: mockFindMany },
     organisationGroupMember: { count: mockGroupMemberCount, groupBy: mockGroupMemberGroupBy },
+    directoryGroupMapping: { findMany: mockMappingFindMany },
     directorySyncAuditLog: { create: mockAuditLogCreate },
   },
 }));
@@ -56,6 +58,28 @@ describe('directory-sync-sweep handler', () => {
     vi.resetModules();
     mockEnv.mockReturnValue('true');
     mockApplyDirectoryRevocations.mockResolvedValue({ revoked: 0, dryRun: 0 });
+    mockMappingFindMany.mockResolvedValue([]);
+  });
+
+  it('logs an error naming active mappings it ignores because their target group grants admin', async () => {
+    mockFindMany.mockResolvedValue([]);
+    mockMappingFindMany.mockResolvedValue([
+      { id: 'directory_mapping_admins', organisationGroupId: 'org_group_admins' },
+    ]);
+
+    const { run } = await import('./directory-sync-sweep.handler');
+    await run({ payload: {}, io });
+
+    expect(mockMappingFindMany).toHaveBeenCalledWith({
+      where: {
+        active: true,
+        organisationGroup: {
+          OR: [{ organisationRole: 'ADMIN' }, { teamGroups: { some: { teamRole: 'ADMIN' } } }],
+        },
+      },
+      select: { id: true, organisationGroupId: true },
+    });
+    expect(mockLoggerError).toHaveBeenCalledWith(expect.stringContaining('directory_mapping_admins'));
   });
 
   it('still walks every scoped user so baseline membership is ensured when directory sync is disabled', async () => {
@@ -172,7 +196,12 @@ describe('directory-sync-sweep handler', () => {
       await run({ payload: {}, io });
 
       expect(mockGroupMemberCount).toHaveBeenCalledWith({
-        where: { group: { directoryGroupMappings: { some: { active: true } } } },
+        where: {
+          group: {
+            directoryGroupMappings: { some: { active: true } },
+            NOT: { OR: [{ organisationRole: 'ADMIN' }, { teamGroups: { some: { teamRole: 'ADMIN' } } }] },
+          },
+        },
       });
       expect(mockApplyDirectoryRevocations).toHaveBeenCalledWith({
         targetUserId: 1,

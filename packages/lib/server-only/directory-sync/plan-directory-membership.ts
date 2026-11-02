@@ -1,6 +1,6 @@
 // ABOUTME: Pure membership planning for directory sync: which mapped groups to grant and which managed rows to revoke,
 // ABOUTME: plus the sweep's revocation circuit-breaker threshold. No I/O, no Prisma.
-import type { DirectoryMappingSourceField } from '@prisma/client';
+import type { DirectoryMappingSourceField, OrganisationMemberRole, TeamMemberRole } from '@prisma/client';
 
 import { PSD401_BASELINE_GROUP_IDS } from '../../constants/psd401';
 import { matchDirectoryMapping } from './mapping-matching';
@@ -14,7 +14,21 @@ export type PlannableDirectoryMapping = {
   sourceValue: string;
   organisationGroupId: string;
   active: boolean;
+  /** The target group carries ADMIN rights (see groupGrantsAdmin); the planner ignores such mappings. */
+  targetGrantsAdmin: boolean;
 };
+
+export type MappingTargetGroupRoles = {
+  organisationRole: OrganisationMemberRole;
+  teamGroups: { teamRole: TeamMemberRole }[];
+};
+
+/**
+ * True when membership in the group grants ADMIN on the organisation or on any team. Directory
+ * data (a Google group anyone with list rights can edit) must never confer admin access.
+ */
+export const groupGrantsAdmin = (group: MappingTargetGroupRoles): boolean =>
+  group.organisationRole === 'ADMIN' || group.teamGroups.some((teamGroup) => teamGroup.teamRole === 'ADMIN');
 
 export type DirectoryProfile = {
   department: string | null;
@@ -57,6 +71,7 @@ const dependsOnUnfetchedData = (mapping: PlannableDirectoryMapping, profile: Dir
  * user holds on none of their member rows. Revocations are rows in managed, non-baseline groups
  * that no active mapping matches. Inactive mappings neither grant nor make a group managed.
  * A group is never revoked while any of its active mappings depends on unfetched directory data.
+ * Mappings whose target group grants admin are ignored like inactive ones: no grant, not managed.
  */
 export const planDirectoryMembership = ({
   mappings,
@@ -72,7 +87,7 @@ export const planDirectoryMembership = ({
   const matchedMappingIdsByGroup = new Map<string, string[]>();
 
   for (const mapping of mappings) {
-    if (!mapping.active) {
+    if (!mapping.active || mapping.targetGrantsAdmin) {
       continue;
     }
 

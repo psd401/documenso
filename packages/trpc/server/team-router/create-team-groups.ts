@@ -1,5 +1,6 @@
 import { ALLOWED_TEAM_GROUP_TYPES, TEAM_MEMBER_ROLE_PERMISSIONS_MAP } from '@documenso/lib/constants/teams';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
+import { assertGroupsNotDirectoryMapped } from '@documenso/lib/server-only/directory-sync/assert-mapping-target-allowed';
 import { getMemberRoles } from '@documenso/lib/server-only/team/get-member-roles';
 import { generateDatabaseId } from '@documenso/lib/universal/id';
 import { buildTeamWhereQuery, isTeamRoleWithinUserHierarchy } from '@documenso/lib/utils/teams';
@@ -100,6 +101,12 @@ export const createTeamGroupsRoute = authenticatedProcedure
     if (filteredGroups.length === 0) {
       return;
     }
+
+    await assertGroupsNotDirectoryMapped(
+      filteredGroups
+        .filter((group) => group.teamRole === TeamMemberRole.ADMIN)
+        .map((group) => group.organisationGroupId),
+    );
 
     await prisma.teamGroup.createMany({
       data: filteredGroups.map((group) => ({

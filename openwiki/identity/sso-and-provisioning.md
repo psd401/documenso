@@ -53,11 +53,21 @@ rules — both gated behind `GOOGLE_DIRECTORY_SYNC_ENABLED=true`.
   reads a user's synced `department`/`orgUnitPath`/`googleGroups` and all
   `active: true` `DirectoryGroupMapping` rows, matches via
   [`mapping-matching.ts`](../../packages/lib/server-only/directory-sync/mapping-matching.ts),
-  and **additively inserts** any missing `OrganisationGroupMember` rows —
-  it never removes a membership. Each grant writes a
-  `DirectorySyncAuditLog` row (`type: MEMBERSHIP_GRANTED`), tagged with
-  `source: 'login' | 'sweep'` depending on whether it ran right after an
-  OAuth login or from the nightly sweep.
+  and inserts any missing `OrganisationGroupMember` rows. Each grant writes a
+  `DirectorySyncAuditLog` row (`type: MEMBERSHIP_GRANTED`). Login only grants.
+  The nightly sweep also plans revocations: rows in groups an active mapping
+  targets that the user no longer matches. `DIRECTORY_SYNC_REVOKE_MODE`
+  (`enforce` / `log` / `off`, default `log`) decides whether they are deleted
+  or only audited as `MEMBERSHIP_REVOKE_DRY_RUN`. The sweep's circuit breaker
+  skips every revocation (one `REVOKE_CIRCUIT_BREAKER` row) when planned
+  revocations exceed both 10 and 5%, org-wide or within one group.
+- **Admin groups are off limits**: a mapping whose target group has
+  organisation role ADMIN or any `TeamGroup.teamRole` ADMIN never grants or
+  revokes, and the admin create/update routes reject it
+  ([`assert-mapping-target-allowed.ts`](../../packages/lib/server-only/directory-sync/assert-mapping-target-allowed.ts)).
+  The reverse also holds: a group an active mapping targets cannot be given
+  organisation or team ADMIN (deactivate the mapping first), and the sweep logs
+  an error naming any active mapping it ignores for this reason.
 - **Matching rules** (`DirectoryMappingSourceField` enum:
   `GROUP | DEPARTMENT | ORG_UNIT`): `GROUP` does a case-insensitive match
   against the user's Google group list; `DEPARTMENT` is an exact string
@@ -100,7 +110,7 @@ added: enum `DirectoryMappingSourceField` (`GROUP`, `DEPARTMENT`,
 
 Design docs: [`docs/superpowers/plans/2026-05-19-google-directory-sync.md`](../../docs/superpowers/plans/2026-05-19-google-directory-sync.md)
 (Phase 1: sync), [`docs/superpowers/plans/2026-08-12-directory-sync-phase2.md`](../../docs/superpowers/plans/2026-08-12-directory-sync-phase2.md)
-(Phase 2: mapping + apply engine, additive-only invariant).
+(Phase 2: mapping + apply engine. Its additive-only invariant was replaced by sweep revocation in PR #172).
 
 ## Source references
 

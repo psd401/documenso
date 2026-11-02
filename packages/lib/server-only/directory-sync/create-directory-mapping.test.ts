@@ -5,9 +5,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mockCreate = vi.fn();
 const mockAuditLogCreate = vi.fn();
 const mockTransaction = vi.fn();
+const mockGroupFindUnique = vi.fn();
 
 vi.mock('@documenso/prisma', () => ({
   prisma: {
+    organisationGroup: { findUnique: mockGroupFindUnique },
     $transaction: mockTransaction,
   },
 }));
@@ -16,6 +18,8 @@ describe('createDirectoryMapping', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.resetModules();
+
+    mockGroupFindUnique.mockResolvedValue({ organisationRole: 'MEMBER', teamGroups: [{ teamRole: 'MEMBER' }] });
 
     mockTransaction.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) =>
       callback({
@@ -101,5 +105,30 @@ describe('createDirectoryMapping', () => {
         }),
       }),
     });
+  });
+});
+
+describe('createDirectoryMapping admin-target guard', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
+
+  it('rejects a target group that grants team ADMIN and writes nothing', async () => {
+    mockGroupFindUnique.mockResolvedValue({ organisationRole: 'MEMBER', teamGroups: [{ teamRole: 'ADMIN' }] });
+
+    const { createDirectoryMapping } = await import('./create-directory-mapping');
+    const { AppError, AppErrorCode } = await import('../../errors/app-error');
+
+    const error = await createDirectoryMapping({
+      sourceField: 'GROUP',
+      sourceValue: 'sped-admins@psd401.net',
+      organisationGroupId: 'org_group_sped_admin',
+      actor: { userId: 1, name: 'Admin', email: 'admin@psd401.net' },
+    }).catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(AppError);
+    expect(error).toMatchObject({ code: AppErrorCode.INVALID_REQUEST });
+    expect(mockTransaction).not.toHaveBeenCalled();
   });
 });

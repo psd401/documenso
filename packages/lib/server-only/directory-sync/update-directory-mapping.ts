@@ -5,6 +5,7 @@ import { prisma } from '@documenso/prisma';
 import type { DirectoryMappingSourceField } from '@prisma/client';
 
 import { AppError, AppErrorCode } from '../../errors/app-error';
+import { assertMappingTargetAllowed } from './assert-mapping-target-allowed';
 import { normalizeMappingSourceValue } from './mapping-matching';
 
 export type UpdateDirectoryMappingData = Partial<{
@@ -27,6 +28,10 @@ export const updateDirectoryMapping = async (options: UpdateDirectoryMappingOpti
 
   if (!existing) {
     throw new AppError(AppErrorCode.NOT_FOUND, { message: 'Directory mapping not found' });
+  }
+
+  if (data.active ?? existing.active) {
+    await assertMappingTargetAllowed(data.organisationGroupId ?? existing.organisationGroupId);
   }
 
   const effectiveSourceField = data.sourceField ?? existing.sourceField;
