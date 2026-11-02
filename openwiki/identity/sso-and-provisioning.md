@@ -44,7 +44,8 @@ trimmed); an empty value allows all domains. Production sets this to
 A nightly job re-syncs each user's Google Workspace attributes (`department`,
 `orgUnitPath`, `googleGroups`) and, separately from the sync itself, an
 apply engine grants org-group membership based on admin-managed mapping
-rules — both gated behind `GOOGLE_DIRECTORY_SYNC_ENABLED=true`.
+rules, gated behind `GOOGLE_DIRECTORY_SYNC_ENABLED=true`. When it is off,
+the sweep still ensures baseline membership.
 
 - **Sweep job**: [`packages/lib/jobs/definitions/internal/directory-sync-sweep.ts`](../../packages/lib/jobs/definitions/internal/directory-sync-sweep.ts),
   cron `0 9 * * *` (09:00 UTC, ~1am Pacific), handler in
