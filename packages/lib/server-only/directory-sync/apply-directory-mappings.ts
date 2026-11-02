@@ -1,5 +1,5 @@
 // ABOUTME: Directory sync apply engine. Ensures PSD401 baseline groups, grants groups from matched mapping rules, and
-// ABOUTME: revokes managed groups the user no longer matches per DIRECTORY_SYNC_REVOKE_MODE. Throws on real errors.
+// ABOUTME: revokes (sweep only) managed groups the user no longer matches per DIRECTORY_SYNC_REVOKE_MODE.
 import { prisma } from '@documenso/prisma';
 
 import type { TDirectorySyncAuditLogType } from '../../types/directory-sync-audit-logs';
@@ -147,6 +147,12 @@ export const applyDirectoryMappings = async (
 
       return inserted.length;
     });
+  }
+
+  // Login only grants. Revocations run in the nightly sweep, behind its circuit breaker, so a bad
+  // mapping cannot strip access from each user the moment they sign in.
+  if (source === 'login') {
+    return { granted, deferredRevocations: [] };
   }
 
   const revocations =
