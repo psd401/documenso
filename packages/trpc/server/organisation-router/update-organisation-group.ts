@@ -1,10 +1,11 @@
 import { ORGANISATION_MEMBER_ROLE_PERMISSIONS_MAP } from '@documenso/lib/constants/organisations';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
+import { assertGroupsNotDirectoryMapped } from '@documenso/lib/server-only/directory-sync/assert-mapping-target-allowed';
 import { getMemberOrganisationRole } from '@documenso/lib/server-only/team/get-member-roles';
 import { generateDatabaseId } from '@documenso/lib/universal/id';
 import { buildOrganisationWhereQuery, isOrganisationRoleWithinUserHierarchy } from '@documenso/lib/utils/organisations';
 import { prisma } from '@documenso/prisma';
-import { OrganisationGroupType } from '@documenso/prisma/generated/types';
+import { OrganisationGroupType, OrganisationMemberRole } from '@documenso/prisma/generated/types';
 import { unique } from 'remeda';
 
 import { authenticatedProcedure } from '../trpc';
@@ -83,6 +84,10 @@ export const updateOrganisationGroupRoute = authenticatedProcedure
       throw new AppError(AppErrorCode.UNAUTHORIZED, {
         message: 'You are not allowed to set an organisation role higher than your own',
       });
+    }
+
+    if (data.organisationRole === OrganisationMemberRole.ADMIN) {
+      await assertGroupsNotDirectoryMapped([organisationGroup.id]);
     }
 
     const groupMemberIds = unique(data.memberIds || []);

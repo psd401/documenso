@@ -1,9 +1,10 @@
 import { TEAM_MEMBER_ROLE_PERMISSIONS_MAP } from '@documenso/lib/constants/teams';
 import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
+import { assertGroupsNotDirectoryMapped } from '@documenso/lib/server-only/directory-sync/assert-mapping-target-allowed';
 import { getMemberRoles } from '@documenso/lib/server-only/team/get-member-roles';
 import { buildTeamWhereQuery, isTeamRoleWithinUserHierarchy } from '@documenso/lib/utils/teams';
 import { prisma } from '@documenso/prisma';
-import { OrganisationGroupType } from '@documenso/prisma/generated/types';
+import { OrganisationGroupType, TeamMemberRole } from '@documenso/prisma/generated/types';
 
 import { authenticatedProcedure } from '../trpc';
 import { ZUpdateTeamGroupRequestSchema, ZUpdateTeamGroupResponseSchema } from './update-team-group.types';
@@ -72,6 +73,10 @@ export const updateTeamGroupRoute = authenticatedProcedure
       throw new AppError(AppErrorCode.UNAUTHORIZED, {
         message: 'You are not allowed to set a team role higher than your own',
       });
+    }
+
+    if (data.teamRole === TeamMemberRole.ADMIN) {
+      await assertGroupsNotDirectoryMapped([teamGroup.organisationGroupId]);
     }
 
     await prisma.teamGroup.update({
