@@ -69,7 +69,7 @@ export default function DashboardPage() {
                 {isAdmin(user) ? (
                   <Trans>Create an organisation to get started.</Trans>
                 ) : (
-                  <Trans>Contact your administrator to request organisation access.</Trans>
+                  <Trans>Contact your administrator to request organization access.</Trans>
                 )}
               </p>
             </div>

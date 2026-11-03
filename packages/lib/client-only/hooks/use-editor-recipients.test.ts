@@ -3,7 +3,7 @@
 import { DocumentSigningOrder, RecipientRole } from '@prisma/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { validateEditorRecipientsForm } from './use-editor-recipients';
+import { toEditorFormRecipients, validateEditorRecipientsForm } from './use-editor-recipients';
 
 const baseSigner = {
   formId: 'signer-1',
@@ -67,5 +67,30 @@ describe('validateEditorRecipientsForm', () => {
     });
 
     expect(result).not.toBeNull();
+  });
+});
+
+describe('toEditorFormRecipients', () => {
+  const recipient = (id: number, signingOrder: number | null, role: RecipientRole = RecipientRole.SIGNER) =>
+    ({ id, name: `R${id}`, email: `r${id}@example.com`, role, signingOrder, authOptions: null }) as never;
+
+  it('keeps recipients that share a signing-order slot in the same slot', () => {
+    const result = toEditorFormRecipients([recipient(1, 1), recipient(2, 1), recipient(3, 2)]);
+
+    expect(result.map((r) => [r.id, r.signingOrder])).toEqual([
+      [1, 1],
+      [2, 1],
+      [3, 2],
+    ]);
+  });
+
+  it('closes gaps between slots and leaves CC recipients without an order', () => {
+    const result = toEditorFormRecipients([recipient(1, 2), recipient(2, 5), recipient(3, 3, RecipientRole.CC)]);
+
+    expect(result.map((r) => [r.id, r.signingOrder])).toEqual([
+      [1, 1],
+      [2, 2],
+      [3, undefined],
+    ]);
   });
 });

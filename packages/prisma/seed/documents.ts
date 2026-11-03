@@ -68,7 +68,12 @@ export const seedDocuments = async (documents: DocumentToSeed[]) => {
             key: i,
             createDocumentOptions: document.documentOptions,
           }),
-        ),
+        )
+        // Without a terminal call the chain returns the match object, not the handler's
+        // promise, so Promise.all would resolve before the seed writes finish.
+        .otherwise((type) => {
+          throw new Error(`seedDocuments does not support ${type} documents`);
+        }),
     ),
   );
 };
