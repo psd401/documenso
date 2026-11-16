@@ -55,10 +55,10 @@ values, safe to read from the compose file itself):
 The district's actual on-prem dev environment
 (`documenso-dev.psd401.net`, Proxmox VM, Docker Compose with Caddy +
 Postgres + the published `ghcr.io/psd401/documenso:latest` image) is
-<!-- openwiki: broken internal link [../../CLAUDE.md#dev-on-prem] heading anchor "dev-on-prem" does not exist in "../../CLAUDE.md". Fix the href or restore the target, then delete this comment. -->
-documented in the root [`CLAUDE.md`](../../CLAUDE.md#dev-on-prem)
-Environments section — access details, SSH, and DB commands live there
+documented in the root `CLAUDE.md` Environments section — access details, SSH, and DB commands live there
 rather than duplicated here, since they involve internal hostnames/IPs.
+`CLAUDE.md` is gitignored (`.gitignore`), so its contents are not in the
+tracked tree and this wiki cannot verify them.
 
 ### Playwright E2E credentials (dev only)
 
@@ -73,7 +73,8 @@ in root `CLAUDE.md`.
 **manual dispatch only** (`workflow_dispatch`, not triggered by push).
 Builds `docker/Dockerfile`, tags `ghcr.io/psd401/documenso:latest` and
 `:$GIT_SHA` (short SHA), then runs a regression guard **before** pushing
-either tag:
+either tag. Its trigger, SHA pinning, and the other repo workflows are covered
+in [ci-and-automation.md](ci-and-automation.md):
 
 ```bash
 docker run --rm "$IMAGE:$GIT_SHA" sh -c 'command -v soffice'
@@ -108,10 +109,9 @@ Production runs on an EC2 host in the INFRA-CORE VPC, digest-pinned (not
 `:latest` — the operator edits the pinned `sha256` digest in
 `docker-compose.yml` on the host and runs
 `docker compose pull && docker compose up -d documenso`). Full
-host/SSH/deploy details are in root
-<!-- openwiki: broken internal link [../../CLAUDE.md#prod-aws] heading anchor "prod-aws" does not exist in "../../CLAUDE.md". Fix the href or restore the target, then delete this comment. -->
-[`CLAUDE.md`](../../CLAUDE.md#prod-aws), since they include internal
-hostnames and access paths not appropriate to duplicate here.
+host/SSH/deploy details are in the root `CLAUDE.md` Prod section (a
+gitignored local file, not verifiable from the tracked tree), since they
+include internal hostnames and access paths not appropriate to duplicate here.
 
 The cutover from upstream's published image to this fork's custom-built
 image is documented in

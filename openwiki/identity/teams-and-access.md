@@ -30,6 +30,13 @@ Schema: [`packages/prisma/schema.prisma`](../../packages/prisma/schema.prisma).
   This is the only path from org-group membership to team access — see
   the directory-mapping note in
   [sso-and-provisioning.md](sso-and-provisioning.md#what-a-mapping-actually-grants--correcting-a-common-shorthand).
+- Granting ADMIN is guarded in the other direction too. Setting
+  `organisationRole: ADMIN` on an `OrganisationGroup`, or `teamRole: ADMIN`
+  on a `TeamGroup`, is rejected while an active directory mapping targets
+  that group. The org/team group routers call `assertGroupsNotDirectoryMapped`
+  from [`assert-mapping-target-allowed.ts`](../../packages/lib/server-only/directory-sync/assert-mapping-target-allowed.ts);
+  directory data never confers admin. See
+  [sso-and-provisioning.md](sso-and-provisioning.md) (Directory Sync, "Admin groups are off limits").
 
 Not every team has just the standard three `INTERNAL_TEAM` groups. A
 multi-site team can have one `CUSTOM` group per building instead (e.g.
@@ -81,9 +88,7 @@ team-role visibility above. [`packages/lib/utils/folder-access.ts`](../../packag
 
 This filter is wired into `find-folders`, `find-folders-internal`,
 `get-folder-by-id`, `get-folder-breadcrumbs`, `update-folder`, and
-`delete-folder` under
-<!-- openwiki: broken internal link [../../packages/lib/server-only/folder] file "../../packages/lib/server-only/folder" does not exist. Fix the href or restore the target, then delete this comment. -->
-[`packages/lib/server-only/folder/`](../../packages/lib/server-only/folder) —
+`delete-folder` under `packages/lib/server-only/folder/` —
 i.e. it governs **folder** listing and lookup.
 
 **Confirmed gap: folder ACLs are not enforced on the documents inside a
@@ -95,8 +100,8 @@ visibility access can see envelopes filed into a folder they are not on
 the allow-list for, as long as the `folderId` is known/matched — the
 allow-list only gates browsing to the folder itself, not the documents
 it contains once you know (or guess) the folder ID or otherwise reach an
-envelope's folderId. This matches the `reference_known_issues` memory
-note and is unresolved as of this writing.
+envelope's folderId. No change in this update's range addresses it, and
+it is unresolved as of this writing.
 
 ## `isAdmin` vs. organisation role
 
