@@ -9,7 +9,8 @@ tags: [fork, billing, enterprise, limits]
 
 # Fork-specific changes
 
-Base version: `2.9.1` (`package.json`). PSD401's active development
+The root `package.json` version field is `2.18.0`; the upstream base version is
+not recorded in the manifest, so do not cite a base version from it. PSD401's active development
 branch is `main` — `feature/psd401-unlock-enterprise` still exists in the
 repo but is stale (its tip predates several commits already merged to
 `main`, e.g. the 2026-09 session-cookie fix); treat `main` as the fork's
@@ -18,12 +19,9 @@ integration branch, not that feature branch.
 ## Enterprise Edition unlocked, billing gated off (not removed)
 
 Stripe is **not deleted from the codebase** — it's gated. Full Stripe
-client code still lives under
-<!-- openwiki: broken internal link [../../packages/ee/server-only/stripe] file "../../packages/ee/server-only/stripe" does not exist. Fix the href or restore the target, then delete this comment. -->
-[`packages/ee/server-only/stripe/`](../../packages/ee/server-only/stripe)
+client code still lives under `packages/ee/server-only/stripe/`
 (customer creation, subscription lookups, webhook handlers) and is wired
-<!-- openwiki: broken internal link [../../packages/trpc/server/enterprise-router] file "../../packages/trpc/server/enterprise-router" does not exist. Fix the href or restore the target, then delete this comment. -->
-into [`packages/trpc/server/enterprise-router/`](../../packages/trpc/server/enterprise-router)
+into `packages/trpc/server/enterprise-router/`
 and `admin-router/create-stripe-customer.ts`. `createOrganisation()`
 (`packages/lib/server-only/organisation/create-organisation.ts`) still
 calls Stripe's `createCustomer` when `IS_BILLING_ENABLED()` is true —
@@ -90,8 +88,7 @@ hardcoded claim, not a DB default.
 
 ## What "Enterprise Edition unlocked" means in practice
 
-<!-- openwiki: broken internal link [../../packages/ee] file "../../packages/ee" does not exist. Fix the href or restore the target, then delete this comment. -->
-The [`packages/ee`](../../packages/ee) package (`FEATURES`,
+The `packages/ee` package (`FEATURES`,
 `server-only/`) gates enterprise-tier functionality (advanced
 organisation/group management, some field types, etc.) behind claim
 flags. Because self-hosted orgs get the `ENTERPRISE` internal claim by
@@ -99,3 +96,19 @@ default (see above) rather than a free/starter claim, those features are
 available without a paid subscription in this fork — "unlocked" here
 means "the self-hosted claim path grants the enterprise flag set," not
 that the `packages/ee` code itself was rewritten.
+
+## Removed upstream route: `/api/webhook/trigger`
+
+Upstream marked the Remix route `apps/remix/app/routes/api+/webhook.trigger.ts`
+"delete after deployment". This fork removes it together with its handler
+under `packages/lib/server-only/webhooks/trigger/`. Nothing called the route:
+webhooks are queued in-process by `triggerWebhook()`
+(`packages/lib/server-only/webhooks/trigger/trigger-webhook.ts`). Its only
+protection was a signature keyed on `NEXT_PRIVATE_ENCRYPTION_KEY`, so it was an
+extra entry point for anyone holding that key. The Stripe webhook route
+(`apps/remix/app/routes/api+/stripe.webhook.ts`) now uses its own generated
+route types instead of the deleted module's. The guard test
+`packages/lib/utils/webhook-trigger-route-removed.test.ts` fails if the route
+file, the handler, or a `webhook.trigger` reference returns. Run it with
+`npx vitest run --project unit webhook-trigger-route-removed` from
+`packages/lib`.
