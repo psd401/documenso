@@ -9,7 +9,7 @@ import type { UseFormReturn } from 'react-hook-form';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
-import { isCcRecipient, normalizeRecipientSigningOrders, sortRecipientsForSigningOrder } from '../../utils/recipients';
+import { isCcRecipient, normalizeRecipientSigningSlots, sortRecipientsForSigningOrder } from '../../utils/recipients';
 
 const LocalRecipientSchema = z.object({
   formId: z.string().min(1),
@@ -82,6 +82,24 @@ export const validateEditorRecipientsForm = (formValues: unknown): TEditorRecipi
   return result.success ? result.data : null;
 };
 
+/**
+ * Maps persisted envelope recipients to editor form rows, sorted and normalized into
+ * contiguous signing-order slots. Recipients sharing a slot (parallel signers) stay together.
+ */
+export const toEditorFormRecipients = (recipients: TEditorEnvelope['recipients']): TLocalRecipient[] => {
+  const formRecipients = recipients.map((recipient, index) => ({
+    id: recipient.id,
+    formId: String(recipient.id),
+    name: recipient.name,
+    email: recipient.email,
+    role: recipient.role,
+    signingOrder: isCcRecipient(recipient) ? undefined : (recipient.signingOrder ?? index + 1),
+    actionAuth: ZRecipientAuthOptionsSchema.parse(recipient.authOptions)?.actionAuth ?? undefined,
+  }));
+
+  return normalizeRecipientSigningSlots(sortRecipientsForSigningOrder(formRecipients));
+};
+
 type EditorRecipientsProps = {
   envelope: TEditorEnvelope;
 };
@@ -102,19 +120,11 @@ export const useEditorRecipients = ({ envelope }: EditorRecipientsProps): UseEdi
   const generateDefaultValues = (options?: ResetFormOptions) => {
     const { recipients, documentMeta } = options ?? {};
 
-    const formRecipients = (recipients || envelope.recipients).map((recipient, index) => ({
-      id: recipient.id,
-      formId: String(recipient.id),
-      name: recipient.name,
-      email: recipient.email,
-      role: recipient.role,
-      signingOrder: isCcRecipient(recipient) ? undefined : (recipient.signingOrder ?? index + 1),
-      actionAuth: ZRecipientAuthOptionsSchema.parse(recipient.authOptions)?.actionAuth ?? undefined,
-    }));
+    const formRecipients = toEditorFormRecipients(recipients || envelope.recipients);
 
     const signers: TLocalRecipient[] =
       formRecipients.length > 0
-        ? normalizeRecipientSigningOrders(sortRecipientsForSigningOrder(formRecipients))
+        ? formRecipients
         : [
             {
               formId: initialId,

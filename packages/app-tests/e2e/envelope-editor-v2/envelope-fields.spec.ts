@@ -364,7 +364,8 @@ const runAllFieldTypesFlow = async (surface: TEnvelopeEditorSurface): Promise<TA
   await root.locator('[data-testid="field-form-placeholder"]').fill('Enter text here');
   await root.locator('[data-testid="field-form-text"]').fill('Default text value');
   await root.locator('[data-testid="field-form-characterLimit"]').fill('100');
-  await root.locator('[data-testid="field-form-required"]').click();
+  // Newly placed fields default to required in this fork (#165).
+  await expect(root.locator('[data-testid="field-form-required"]')).toBeChecked();
 
   // 7. Number: place and configure label, placeholder, numberFormat, minValue, maxValue, required.
   await placeFieldOnPdf(root, 'Number', { x: 120, y: 350 });
@@ -374,7 +375,8 @@ const runAllFieldTypesFlow = async (surface: TEnvelopeEditorSurface): Promise<TA
   await root.getByRole('option', { name: '123,456,789.00' }).click();
   await root.locator('[data-testid="field-form-minValue"]').fill('0');
   await root.locator('[data-testid="field-form-maxValue"]').fill('1000');
-  await root.locator('[data-testid="field-form-required"]').click();
+  // Newly placed fields default to required in this fork (#165).
+  await expect(root.locator('[data-testid="field-form-required"]')).toBeChecked();
 
   // 8. Radio: place and configure two options, pre-select first, set direction to horizontal.
   await placeFieldOnPdf(root, 'Radio', { x: 120, y: 400 });
