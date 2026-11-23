@@ -2,8 +2,6 @@ name: 'Continuous Integration'
 
 on:
   workflow_call:
-  push:
-    branches: ['main']
   pull_request:
     branches: ['main']
 
@@ -14,7 +12,7 @@ concurrency:
 jobs:
   build_app:
     name: Build App
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
       - name: Checkout
@@ -32,7 +30,7 @@ jobs:
 
   build_docker:
     name: Build Docker Image
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
       - name: Checkout
