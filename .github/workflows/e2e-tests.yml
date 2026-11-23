@@ -11,7 +11,7 @@ jobs:
   e2e_tests:
     name: 'E2E Tests (${{ matrix.shard }}/8)'
     timeout-minutes: 60
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
