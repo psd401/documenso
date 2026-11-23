@@ -2,8 +2,9 @@ name: 'CodeQL'
 
 on:
   workflow_dispatch:
-  push:
-    branches: ['main']
+  # Weekly run on main keeps the baseline that a PR's analysis is compared with.
+  schedule:
+    - cron: '0 9 * * 1'
   pull_request:
     branches: ['main']
 
