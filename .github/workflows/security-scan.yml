@@ -14,7 +14,11 @@ jobs:
   security-scan:
     permissions:
       contents: read
-    uses: PSD401/.github/.github/workflows/reusable-security-scan.yml@fbd855320864efeb08ada315f1f9b5a9b289a5d7 # v1.19.1
+    uses: PSD401/.github/.github/workflows/reusable-security-scan.yml@06915064e7cec3fcabdeac5425d2c205c4628ae4 # v1.15.0
+    # v1.15.0, not the newest release: from v1.16.0 the reusable fails on
+    # zizmor findings of medium severity, and this fork's workflows have 20
+    # (11 artipacked, 9 excessive-permissions; run 45738810440). v1.15.0
+    # fails on high severity only and already has the license step.
     with:
       # The org CodeBuild runner where this repo is in its runner group, a
       # GitHub-hosted runner otherwise (psd-dev-standards standards/04 rule 21).
