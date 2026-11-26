@@ -19,12 +19,11 @@ integration branch, not that feature branch.
 
 Stripe is **not deleted from the codebase** — it's gated. Full Stripe
 client code still lives under
-<!-- openwiki: broken internal link [../../packages/ee/server-only/stripe] file "../../packages/ee/server-only/stripe" does not exist. Fix the href or restore the target, then delete this comment. -->
-[`packages/ee/server-only/stripe/`](../../packages/ee/server-only/stripe)
+[`packages/ee/server-only/stripe/`](../../packages/ee/server-only/stripe/create-customer.ts)
 (customer creation, subscription lookups, webhook handlers) and is wired
 <!-- openwiki: broken internal link [../../packages/trpc/server/enterprise-router] file "../../packages/trpc/server/enterprise-router" does not exist. Fix the href or restore the target, then delete this comment. -->
 into [`packages/trpc/server/enterprise-router/`](../../packages/trpc/server/enterprise-router)
-and `admin-router/create-stripe-customer.ts`. `createOrganisation()`
+and [`admin-router/create-stripe-customer.ts`](../../packages/trpc/server/admin-router/create-stripe-customer.ts). `createOrganisation()`
 (`packages/lib/server-only/organisation/create-organisation.ts`) still
 calls Stripe's `createCustomer` when `IS_BILLING_ENABLED()` is true —
 that flag is what's turned off in this fork's configuration, not the code
@@ -70,9 +69,26 @@ do land at 0 for orgs created this way, but via a hardcoded object, not a
 schema default. **`envelopeItemCount` is `10` in that same object, not
 0** — any limit check reading `envelopeItemCount` on a non-Stripe org
 sees 10, not zero. Any code path relying on the "all three fields are
-zero" framing from CLAUDE.md's gotcha list should be corrected: only
+zero" framing from an older root `CLAUDE.md` gotcha note should be corrected
+(that file is gitignored; see [operations/deployment.md](../operations/deployment.md#evidence-gaps)): only
 `teamCount`/`memberCount` are zero, and even then it's because of this
 hardcoded claim, not a DB default.
+
+## Removed surfaces
+
+- **`/api/webhook/trigger` was deleted** (PR #201). The route module
+  `apps/remix/app/routes/api+/webhook.trigger.ts` and its handler
+  `packages/lib/server-only/webhooks/trigger/handler.ts` (with `schema.ts`) are
+  gone. The handler accepted a posted, signed body and queued one
+  `internal.execute-webhook` job per matching webhook. Its only check was a signature keyed on `NEXT_PRIVATE_ENCRYPTION_KEY`,
+  and nothing in the app called it. Webhook delivery is unchanged: it still runs
+  through `packages/lib/server-only/webhooks/` (for example
+  `trigger/trigger-webhook.ts` and `execute-webhook-call.ts`). The Stripe route
+  [`apps/remix/app/routes/api+/stripe.webhook.ts`](../../apps/remix/app/routes/api+/stripe.webhook.ts)
+  is the only remaining `api+` webhook route.
+- Guard: [`webhook-trigger-route-removed.test.ts`](../../packages/lib/utils/webhook-trigger-route-removed.test.ts)
+  fails if either deleted file reappears or the Stripe route refers to the old
+  route types. Run it with `npm run test -w @documenso/lib -- webhook-trigger-route-removed`.
 
 ## Self-hosted signup and access
 
@@ -90,11 +106,14 @@ hardcoded claim, not a DB default.
 
 ## What "Enterprise Edition unlocked" means in practice
 
-<!-- openwiki: broken internal link [../../packages/ee] file "../../packages/ee" does not exist. Fix the href or restore the target, then delete this comment. -->
-The [`packages/ee`](../../packages/ee) package (`FEATURES`,
+The [`packages/ee`](../../packages/ee/package.json) package (`FEATURES`,
 `server-only/`) gates enterprise-tier functionality (advanced
 organisation/group management, some field types, etc.) behind claim
 flags. Because self-hosted orgs get the `ENTERPRISE` internal claim by
+default (see above) rather than a free/starter claim, those features are
+available without a paid subscription in this fork — "unlocked" here
+means "the self-hosted claim path grants the enterprise flag set," not
+that the `packages/ee` code itself was rewritten.
 default (see above) rather than a free/starter claim, those features are
 available without a paid subscription in this fork — "unlocked" here
 means "the self-hosted claim path grants the enterprise flag set," not

@@ -28,9 +28,10 @@ session-based (browser) requests — there is no code path where a
 bearer-token request's team can be overridden by that header. A single
 API key therefore only ever sees its one team's envelopes; cross-team or
 district-wide access needs system `Role.ADMIN` via the admin panel
-instead (`adminFindDocuments` has no team filter) — see root `CLAUDE.md`
-for the operational tradeoffs of that (PSD docs span 40+ teams, so no
-single key can serve them all).
+instead (`adminFindDocuments` has no team filter). The operational tradeoffs
+are recorded in the maintainers' local root `CLAUDE.md`, which is gitignored and
+not in this checkout (see [deployment evidence gaps](../operations/deployment.md#evidence-gaps)).
+PSD docs span 40+ teams, so no single key can serve them all.
 
 ## The folderId contract every external caller must respect
 
@@ -51,7 +52,7 @@ integration that looks up an envelope by title or other criteria (an n8n
 webhook handler, for example) must pass the correct `folderId` once
 envelopes are being filed into folders, or the search silently returns
 zero rows with no error. This is the exact mechanism that broke transfer
-completion handling described in root `CLAUDE.md`: creator workflows
+completion handling, which the local root `CLAUDE.md` describes (not in this checkout): creator workflows
 started filing into named folders (e.g. `tsd_folder_transfers_in/out`)
 before the completion-handler search was updated to pass that same
 `folderId`.
@@ -64,7 +65,7 @@ lives in the `packages/lib/server-only/envelope/` version cited above.
 ## n8n
 
 There is no n8n integration code in this repository — n8n runs as a
-separate service (`n8n.psd401.net`, documented in root `CLAUDE.md`) that
+separate service (`n8n.psd401.net`; its setup lives outside this repository) that
 calls into Documenso's public API v2 as an external client, and receives
 webhooks/form submissions independently of this codebase. The only thing
 this repo needs to get right for n8n workflows to work is the API
@@ -72,5 +73,10 @@ contract above (team-scoped tokens, explicit `folderId` on every
 folder-scoped query) — there's nothing else n8n-specific to document
 here. Repo-side documenso work related to n8n workflows is limited to
 whatever the calling workflow sends over the public API, which is covered
+by the standard [`ARCHITECTURE.md`](../../ARCHITECTURE.md) API v2
+reference and this page.
+v2
+reference and this page.
+h is covered
 by the standard [`ARCHITECTURE.md`](../../ARCHITECTURE.md) API v2
 reference and this page.

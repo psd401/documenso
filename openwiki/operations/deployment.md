@@ -10,7 +10,8 @@ tags: [operations, deployment, docker, aws, ghcr]
 # Deployment
 
 PSD401 always deploys to on-prem dev first, verifies, then promotes to
-AWS production — never skip dev (`CLAUDE.md`).
+AWS production — never skip dev (source: the local root `CLAUDE.md`; see
+[evidence gaps](#evidence-gaps)).
 
 ## Local development
 
@@ -23,7 +24,13 @@ npm run dev
 ```
 
 See [quickstart.md](../quickstart.md) for the full command list and test
-commands.
+commands. The `minio` service in `docker/development/compose.yml` is opt-in
+(`profiles: ['s3']`): the compose file notes that `minio/minio` was removed from
+Docker Hub and that quay.io no longer serves anonymous pulls, so the plain `up -d`
+above does not start it. PSD401 stores
+uploads in the database, so MinIO is only needed for S3-transport testing.
+The CI E2E job sets `NEXT_PUBLIC_UPLOAD_TRANSPORT: database` for the same
+reason (see [ci-and-automation.md](ci-and-automation.md)).
 
 ## On-prem dev container stack
 
@@ -55,17 +62,17 @@ values, safe to read from the compose file itself):
 The district's actual on-prem dev environment
 (`documenso-dev.psd401.net`, Proxmox VM, Docker Compose with Caddy +
 Postgres + the published `ghcr.io/psd401/documenso:latest` image) is
-<!-- openwiki: broken internal link [../../CLAUDE.md#dev-on-prem] heading anchor "dev-on-prem" does not exist in "../../CLAUDE.md". Fix the href or restore the target, then delete this comment. -->
-documented in the root [`CLAUDE.md`](../../CLAUDE.md#dev-on-prem)
-Environments section — access details, SSH, and DB commands live there
-rather than duplicated here, since they involve internal hostnames/IPs.
+documented in the local root `CLAUDE.md`'s Environments section, which is not
+in this checkout. Access details, SSH, and DB commands live there rather than
+here, since they involve internal hostnames/IPs.
 
 ### Playwright E2E credentials (dev only)
 
 `packages/app-tests/e2e/fixtures/authentication.ts`'s `apiSignin()` posts
 to `/api/auth/email-password/authorize`, bypassing Google OAuth — used by
-Playwright specs against the dev environment. Credentials are documented
-in root `CLAUDE.md`.
+Playwright specs against the dev environment. The credentials are kept
+outside the repository (the local root `CLAUDE.md`); do not copy them into
+the wiki.
 
 ## Building and publishing the image
 
@@ -86,7 +93,9 @@ against shipping a build that can't convert DOCX (no soffice / no
 Liberation fonts) or decrypt encrypted PDFs (no qpdf), referencing past
 regressions (issues #95/#96, #28). The same three-command smoke test also
 runs in normal CI, in the `build_docker` job of
-[`.github/workflows/ci.yml`](../../.github/workflows/ci.yml).
+[`.github/workflows/ci.yml`](../../.github/workflows/ci.yml), which runs on
+pull requests to `main` only. Trigger details for every workflow are in
+[ci-and-automation.md](ci-and-automation.md).
 
 ## Docker image build stages
 
@@ -108,10 +117,9 @@ Production runs on an EC2 host in the INFRA-CORE VPC, digest-pinned (not
 `:latest` — the operator edits the pinned `sha256` digest in
 `docker-compose.yml` on the host and runs
 `docker compose pull && docker compose up -d documenso`). Full
-host/SSH/deploy details are in root
-<!-- openwiki: broken internal link [../../CLAUDE.md#prod-aws] heading anchor "prod-aws" does not exist in "../../CLAUDE.md". Fix the href or restore the target, then delete this comment. -->
-[`CLAUDE.md`](../../CLAUDE.md#prod-aws), since they include internal
-hostnames and access paths not appropriate to duplicate here.
+host/SSH/deploy details are in the local root `CLAUDE.md`'s Prod AWS
+section (not in this checkout), since they include internal hostnames and
+access paths not appropriate to duplicate here.
 
 The cutover from upstream's published image to this fork's custom-built
 image is documented in
@@ -125,11 +133,22 @@ and the Prisma migrations that had to be applied as part of the cutover.
 
 ## Backups
 
-Root `CLAUDE.md` documents a nightly `pg_dump` (plus n8n data and stack
+The local root `CLAUDE.md` documents a nightly `pg_dump` (plus n8n data and stack
 config) to `s3://psd401-documenso-backups/` via a cron job on the prod
 EC2 host — this is the recovery source for accidental data loss (e.g. a
 hard-deleted pending envelope; see the bulk-delete gotcha in
 [`docs/feature-backlog.md`](../../docs/feature-backlog.md)). No backup
-script lives in this repository to link to directly; treat root
+script lives in this repository to link to directly; treat the local root
 `CLAUDE.md`'s Prod Environment section as the source of truth for the
 exact schedule and script path.
+
+## Evidence gaps
+
+The root `CLAUDE.md` is gitignored (`.gitignore`), so the tracked checkout
+contains only its short OpenWiki pointer. Facts attributed to it on this site
+cannot be verified from source: the on-prem and prod environment details, SSH
+and DB access, the backup schedule and script path, the Playwright dev
+credentials, and the transfer-completion and folder gotchas. Read them from
+the maintainers' copy. Do not copy credentials or hostnames into the wiki. The
+tracked [`AGENTS.md`](../../AGENTS.md) is the verified source for build and
+type-check guidance: avoid `npm run build` unless asked, and use `npx tsc --noEmit`.

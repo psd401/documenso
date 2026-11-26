@@ -82,9 +82,17 @@ team-role visibility above. [`packages/lib/utils/folder-access.ts`](../../packag
 This filter is wired into `find-folders`, `find-folders-internal`,
 `get-folder-by-id`, `get-folder-breadcrumbs`, `update-folder`, and
 `delete-folder` under
-<!-- openwiki: broken internal link [../../packages/lib/server-only/folder] file "../../packages/lib/server-only/folder" does not exist. Fix the href or restore the target, then delete this comment. -->
-[`packages/lib/server-only/folder/`](../../packages/lib/server-only/folder) —
+[`packages/lib/server-only/folder/`](../../packages/lib/server-only/folder/find-folders.ts) —
 i.e. it governs **folder** listing and lookup.
+
+Bulk move is a separate destination check. `envelope.bulk.move`
+([`bulk-move-envelopes.ts`](../../packages/trpc/server/envelope-router/bulk-move-envelopes.ts))
+accepts a target folder when it belongs to the user's team and matches the
+envelope type, and either its `visibility` is in the user's team-role tier or
+the user is its creator (`userId`). It does not call `buildFolderAccessFilter`,
+so `allowedUserIds` and `allowedGroupIds` are not checked on that path. The
+creator exception was added so a folder's creator can always file into it
+regardless of its tier.
 
 **Confirmed gap: folder ACLs are not enforced on the documents inside a
 folder.** `find-envelopes.ts` filters strictly by
@@ -125,3 +133,28 @@ when billing is disabled (the active path in this fork — see
 have no guard of their own — any other server-only code calling them
 directly would bypass the restriction. Don't remove the route-level guard,
 and don't assume it protects a new call site added at the lib layer.
+
+## Admin grants on directory-mapped groups
+
+Directory data must never confer ADMIN, because membership in a directory-synced
+group is set by Google attributes that many people can edit. Two layers enforce
+this:
+
+- Directory sync ignores any mapping whose target group grants ADMIN, and an
+  active mapping blocks that group from gaining ADMIN. The rules and tests are in
+  [sso-and-provisioning.md](sso-and-provisioning.md#change-navigation).
+- The admin-facing group routes call `assertGroupsNotDirectoryMapped` from
+  [`assert-mapping-target-allowed.ts`](../../packages/lib/server-only/directory-sync/assert-mapping-target-allowed.ts)
+  before granting ADMIN. The three call sites are `updateOrganisationGroupRoute`
+  (organisation role `ADMIN`) in
+  [`update-organisation-group.ts`](../../packages/trpc/server/organisation-router/update-organisation-group.ts),
+  `createTeamGroupsRoute` in
+  [`create-team-groups.ts`](../../packages/trpc/server/team-router/create-team-groups.ts),
+  and `updateTeamGroupRoute` in
+  [`update-team-group.ts`](../../packages/trpc/server/team-router/update-team-group.ts)
+  (team role `ADMIN`). An active mapping on the group makes them reject the request
+  with `INVALID_REQUEST`, asking the admin to deactivate the mapping first.
+
+Tests: `assert-mapping-target-allowed.test.ts` covers the rejection, the allowed
+case, and the no-query case. This checkout has no route-level test for the three
+call sites, so route changes need a manual check.
